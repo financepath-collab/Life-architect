@@ -238,3 +238,48 @@ export interface ChannelInfo {
   niche: string;
   frequency: string;
 }
+
+export interface WishListItem {
+  id: string;
+  itemName: string;
+  store: string;
+  estimatedPrice: number; // MAD
+  priority: "Rêve" | "Peut-être" | "Bientôt";
+  link: string;
+  note: string;
+}
+
+export interface AchatCouteuxItem {
+  id: string;
+  itemName: string;
+  targetDate: string;
+  estimatedPrice: number; // MAD
+  status: "Planifié" | "Économise" | "Acheté";
+  store: string;
+  priority: "Prioritaire" | "Secondaire" | "Faible";
+}
+
+export interface BookItem {
+  id: string;
+  title: string;
+  author: string;
+  status: "À lire" | "En cours" | "Terminé";
+  currentPage: number;
+  totalPages: number;
+  genre: string;
+  rating: number; // 1-5
+  notes: string;
+}
+
+export interface ScreenMediaItem {
+  id: string;
+  title: string;
+  type: "Film" | "Série" | "Anime";
+  status: "À regarder" | "En cours" | "Terminé";
+  currentEpisode?: number;
+  totalEpisodes?: number;
+  rating: number; // 1-5
+  notes: string;
+  platform: string;
+}
+

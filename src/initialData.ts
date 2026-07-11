@@ -18,7 +18,11 @@ import {
   MediaItem, 
   Account, 
   ResourceLink, 
-  ChannelInfo 
+  ChannelInfo,
+  WishListItem,
+  AchatCouteuxItem,
+  BookItem,
+  ScreenMediaItem
 } from "./types";
 
 export const INITIAL_HABITS: DailyHabit[] = [
@@ -142,12 +146,19 @@ export const INITIAL_FORMATIONS: Formation[] = [
   { id: "f3", title: "Publicité Digitale Optimisée sur Facebook & TikTok ADS", instructor: "Sarah Kamal", platform: "E-learning Hub", durationHours: 12, progressPercent: 20, status: "En cours" }
 ];
 
-export const INITIAL_MEDIA_ITEMS: MediaItem[] = [
-  { id: "me1", title: "The Intelligent Investor", type: "Livre", authorOrDirector: "Benjamin Graham", progress: "Page 210 / 480", rating: 5, status: "En cours" },
-  { id: "me2", title: "Wall Street: Money Never Sleeps", type: "Film", authorOrDirector: "Oliver Stone", progress: "Terminé", rating: 4, status: "Terminé" },
-  { id: "me3", title: "Billions (Série TV)", type: "Série", authorOrDirector: "Brian Koppelman", progress: "Saison 4 Épisode 8", rating: 5, status: "En cours" },
-  { id: "me4", title: "Père Riche Père Pauvre", type: "Livre", authorOrDirector: "Robert Kiyosaki", progress: "Terminé", rating: 3, status: "Terminé" }
+export const INITIAL_BOOKS: BookItem[] = [
+  { id: "b1", title: "The Intelligent Investor", author: "Benjamin Graham", status: "En cours", currentPage: 210, totalPages: 480, genre: "Finance / Investissement", rating: 5, notes: "Une référence absolue sur la valeur d'investissement." },
+  { id: "b2", title: "Père Riche Père Pauvre", author: "Robert Kiyosaki", status: "Terminé", currentPage: 240, totalPages: 240, genre: "Éducation Financière", rating: 3, notes: "Idées de mindset sur la différence entre actif et passif." },
+  { id: "b3", title: "Zero to One", author: "Peter Thiel", status: "À lire", currentPage: 0, totalPages: 220, genre: "Entrepreneuriat", rating: 0, notes: "À lire pour comprendre les monopoles et l'innovation." }
 ];
+
+export const INITIAL_SCREENMEDIA: ScreenMediaItem[] = [
+  { id: "sm1", title: "Billions", type: "Série", status: "En cours", currentEpisode: 8, totalEpisodes: 12, rating: 5, notes: "Saison 4 - Excellente tension dramatique autour de la haute finance.", platform: "Netflix" },
+  { id: "sm2", title: "Wall Street: Money Never Sleeps", type: "Film", status: "Terminé", rating: 4, notes: "Bonne suite du classique, très axé sur la crise de 2008.", platform: "Prime Video" },
+  { id: "sm3", title: "Death Note", type: "Anime", status: "À regarder", currentEpisode: 0, totalEpisodes: 37, rating: 0, notes: "Recommandé pour le suspense tactique.", platform: "Netflix" },
+  { id: "sm4", title: "Spirited Away", type: "Anime", status: "Terminé", rating: 5, notes: "Chef-d'œuvre de Ghibli.", platform: "Crunchyroll" }
+];
+
 
 export const INITIAL_ACCOUNTS: Account[] = [
   { id: "acct1", name: "Attijariwafa Pro Main", type: "Bancaire", balance: 145800, currency: "MAD" },
@@ -170,3 +181,16 @@ export const INITIAL_CHANNELS: ChannelInfo[] = [
   { id: "ch3", name: "The Moroccan Economist", platform: "LinkedIn", subscriberCount: 11200, niche: "Analyses géopolitiques & Macroéconomie", frequency: "2 articles / semaine" },
   { id: "ch4", name: "Moroccan CFO Podcast", platform: "Spotify", subscriberCount: 1500, niche: "Interviews avec des leaders économiques", frequency: "1 épisode / 2 semaines" }
 ];
+
+export const INITIAL_WISHLIST: WishListItem[] = [
+  { id: "wl1", itemName: "Villa Éco-conçue à Bouskoura", store: "Immobilier Prestige", estimatedPrice: 4500000, priority: "Rêve", link: "https://www.prestige.ma", note: "Grand jardin et piscine solaire." },
+  { id: "wl2", itemName: "Porsche Taycan Électrique", store: "Centre Porsche Casablanca", estimatedPrice: 1200000, priority: "Rêve", link: "https://www.porsche.com/pap/_morocco_/", note: "Le summum de la technologie et de l'élégance." },
+  { id: "wl3", itemName: "Studio de Production Complet", store: "Casablanca Sound", estimatedPrice: 150000, priority: "Peut-être", link: "", note: "Pour des podcasts de qualité broadcast internationale." }
+];
+
+export const INITIAL_ACHATS_COUTEUX: AchatCouteuxItem[] = [
+  { id: "acc1", itemName: "Nouveau Drone DJI Inspire 3", targetDate: "2026-10-30", estimatedPrice: 85000, status: "Économise", store: "Drone Maroc", priority: "Prioritaire" },
+  { id: "acc2", itemName: "Objectif Cinéma Arri Alexa Mini", targetDate: "2026-12-15", estimatedPrice: 42000, status: "Planifié", store: "CineGears Casablanca", priority: "Secondaire" },
+  { id: "acc3", itemName: "Mac Studio M2 Ultra (128 Go RAM)", targetDate: "2026-09-01", estimatedPrice: 55000, status: "Économise", store: "iStyle Maroc", priority: "Prioritaire" }
+];
+

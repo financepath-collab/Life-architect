@@ -17,10 +17,13 @@ import {
   AchatMensuel, 
   Abonnement, 
   Formation, 
-  MediaItem, 
+  BookItem,
+  ScreenMediaItem, 
   Account, 
   ResourceLink, 
-  ChannelInfo
+  ChannelInfo,
+  WishListItem,
+  AchatCouteuxItem
 } from "./types";
 
 import { 
@@ -40,15 +43,20 @@ import {
   INITIAL_ACHATS_MENSUELS, 
   INITIAL_ABONNEMENTS, 
   INITIAL_FORMATIONS, 
-  INITIAL_MEDIA_ITEMS, 
+  INITIAL_BOOKS, 
+  INITIAL_SCREENMEDIA, 
   INITIAL_ACCOUNTS, 
   INITIAL_RESOURCELINKS, 
-  INITIAL_CHANNELS 
+  INITIAL_CHANNELS,
+  INITIAL_WISHLIST,
+  INITIAL_ACHATS_COUTEUX
 } from "./initialData";
 
 import InteractiveModuleTable, { TableColumn } from "./components/InteractiveModuleTable";
 import FinanceCharts from "./components/FinanceCharts";
 import FocusSport from "./components/FocusSport";
+import BooksSection from "./components/BooksSection";
+import ScreenMediaSection from "./components/ScreenMediaSection";
 import AlertsBanner from "./components/AlertsBanner";
 import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
 
@@ -94,7 +102,9 @@ import {
   Eye,
   EyeOff,
   Lock,
-  AlertCircle
+  AlertCircle,
+  Gift,
+  Hourglass
 } from "lucide-react";
 
 export default function App() {
@@ -200,9 +210,14 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_FORMATIONS;
   });
 
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>(() => {
-    const saved = localStorage.getItem("mp_media_v2");
-    return saved ? JSON.parse(saved) : INITIAL_MEDIA_ITEMS;
+  const [books, setBooks] = useState<BookItem[]>(() => {
+    const saved = localStorage.getItem("mp_books_v3");
+    return saved ? JSON.parse(saved) : INITIAL_BOOKS;
+  });
+
+  const [screenMedia, setScreenMedia] = useState<ScreenMediaItem[]>(() => {
+    const saved = localStorage.getItem("mp_screenmedia_v3");
+    return saved ? JSON.parse(saved) : INITIAL_SCREENMEDIA;
   });
 
   const [accounts, setAccounts] = useState<Account[]>(() => {
@@ -218,6 +233,16 @@ export default function App() {
   const [channels, setChannels] = useState<ChannelInfo[]>(() => {
     const saved = localStorage.getItem("mp_channels_v2");
     return saved ? JSON.parse(saved) : INITIAL_CHANNELS;
+  });
+
+  const [wishList, setWishList] = useState<WishListItem[]>(() => {
+    const saved = localStorage.getItem("mp_wishlist_v2");
+    return saved ? JSON.parse(saved) : INITIAL_WISHLIST;
+  });
+
+  const [achatsCouteux, setAchatsCouteux] = useState<AchatCouteuxItem[]>(() => {
+    const saved = localStorage.getItem("mp_achats_couteux_v2");
+    return saved ? JSON.parse(saved) : INITIAL_ACHATS_COUTEUX;
   });
 
   // Stats / Streaks
@@ -292,8 +317,12 @@ export default function App() {
   }, [formations]);
 
   useEffect(() => {
-    localStorage.setItem("mp_media_v2", JSON.stringify(mediaItems));
-  }, [mediaItems]);
+    localStorage.setItem("mp_books_v3", JSON.stringify(books));
+  }, [books]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_screenmedia_v3", JSON.stringify(screenMedia));
+  }, [screenMedia]);
 
   useEffect(() => {
     localStorage.setItem("mp_accounts_v2", JSON.stringify(accounts));
@@ -306,6 +335,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("mp_channels_v2", JSON.stringify(channels));
   }, [channels]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_wishlist_v2", JSON.stringify(wishList));
+  }, [wishList]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_achats_couteux_v2", JSON.stringify(achatsCouteux));
+  }, [achatsCouteux]);
 
   useEffect(() => {
     localStorage.setItem("mp_streak_count_v2", streakCount.toString());
@@ -396,11 +433,13 @@ export default function App() {
     },
     {
       id: "purchases",
-      label: "Achats & SaaS",
+      label: "Achats",
       icon: ShoppingCart,
       items: [
         { id: "achats", label: "Achats Mensuels", icon: ShoppingCart, desc: "Liste de shopping, matériel pro et fournitures." },
-        { id: "abonnements", label: "Abonnements", icon: Bell, desc: "Contrôle de vos dépenses récurrentes SaaS et hébergement." }
+        { id: "abonnements", label: "Abonnements & Charges", icon: Bell, desc: "Contrôle de vos dépenses récurrentes et hébergement." },
+        { id: "wishlist", label: "Wish List", icon: Gift, desc: "Objets de désir et grands projets d'achat à long terme." },
+        { id: "achats_couteux", label: "Achats Coûteux", icon: Hourglass, desc: "Achats importants de moyenne échelle prévus à moyen terme." }
       ]
     },
     {
@@ -409,7 +448,8 @@ export default function App() {
       icon: BookOpen,
       items: [
         { id: "formations", label: "Formations Udemy/Pro", icon: GraduationCap, desc: "Progression de vos cours et épisodes Udemy." },
-        { id: "media", label: "Média Library", icon: Film, desc: "Suivi de vos lectures de développement et divertissement." }
+        { id: "books", label: "Lectures & Livres", icon: BookOpen, desc: "Suivi détaillé de vos lectures en cours, terminées et wishlist." },
+        { id: "screenmedia", label: "Séries, Animes & Films", icon: Film, desc: "File de visionnage et progression d'épisodes de vos écrans." }
       ]
     },
     {
@@ -674,19 +714,57 @@ export default function App() {
 
       case "abonnements":
         return {
-          title: "Abonnements & Logiciels",
-          description: "Suivez vos charges récurrentes SaaS et annulez les services inutilisés.",
+          title: "Abonnements & Charges Récurrentes",
+          description: "Suivez vos charges récurrentes et annulez les services inutilisés.",
           data: abonnements,
           onAdd: (item: any) => setAbonnements(prev => [item, ...prev]),
           onEdit: (id: string, updated: any) => setAbonnements(prev => prev.map(x => x.id === id ? updated : x)),
           onDelete: (id: string) => setAbonnements(prev => prev.filter(x => x.id !== id)),
           onImport: (items: any[]) => setAbonnements(prev => [...items, ...prev]),
           columns: [
-            { key: "serviceName", label: "Nom du Service SaaS", type: "text", required: true },
+            { key: "serviceName", label: "Nom du Service", type: "text", required: true },
             { key: "costMonthly", label: "Coût Mensuel (MAD)", type: "number", required: true },
             { key: "billingPeriod", label: "Période Facturation", type: "select", options: ["Mensuel", "Annuel"] },
             { key: "nextBillingDate", label: "Prochain Prélèvement", type: "date" },
             { key: "status", label: "État", type: "select", options: ["Actif", "Suspendu"] }
+          ] as TableColumn[]
+        };
+
+      case "wishlist":
+        return {
+          title: "Wish List (Liste d'envies)",
+          description: "Vos rêves et grands projets d'achats à long terme de valeur importante.",
+          data: wishList,
+          onAdd: (item: any) => setWishList(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setWishList(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setWishList(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setWishList(prev => [...items, ...prev]),
+          columns: [
+            { key: "itemName", label: "Nom de l'Article", type: "text", required: true },
+            { key: "store", label: "Boutique / Site", type: "text" },
+            { key: "estimatedPrice", label: "Prix Estimé (MAD)", type: "number", required: true },
+            { key: "priority", label: "Priorité", type: "select", options: ["Rêve", "Peut-être", "Bientôt"] },
+            { key: "link", label: "Lien URL", type: "text" },
+            { key: "note", label: "Notes / Détails", type: "text" }
+          ] as TableColumn[]
+        };
+
+      case "achats_couteux":
+        return {
+          title: "Achats Coûteux (Moyen Terme)",
+          description: "Achats importants que vous prévoyez d'acquérir à moyen terme, mais pas immédiatement.",
+          data: achatsCouteux,
+          onAdd: (item: any) => setAchatsCouteux(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setAchatsCouteux(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setAchatsCouteux(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setAchatsCouteux(prev => [...items, ...prev]),
+          columns: [
+            { key: "itemName", label: "Nom de l'Article", type: "text", required: true },
+            { key: "store", label: "Boutique / Site", type: "text" },
+            { key: "estimatedPrice", label: "Prix Estimé (MAD)", type: "number", required: true },
+            { key: "targetDate", label: "Date Cible Prévue", type: "date" },
+            { key: "priority", label: "Priorité", type: "select", options: ["Prioritaire", "Secondaire", "Faible"] },
+            { key: "status", label: "Statut", type: "select", options: ["Planifié", "Économise", "Acheté"] }
           ] as TableColumn[]
         };
 
@@ -709,22 +787,45 @@ export default function App() {
           ] as TableColumn[]
         };
 
-      case "media":
+      case "books":
         return {
-          title: "Bibliothèque de Divertissement (Films, Séries, Livres)",
-          description: "Conservez un journal de vos lectures de développement et d'inspiration.",
-          data: mediaItems,
-          onAdd: (item: any) => setMediaItems(prev => [...prev, item]),
-          onEdit: (id: string, updated: any) => setMediaItems(prev => prev.map(x => x.id === id ? updated : x)),
-          onDelete: (id: string) => setMediaItems(prev => prev.filter(x => x.id !== id)),
-          onImport: (items: any[]) => setMediaItems(prev => [...prev, ...items]),
+          title: "Lectures & Bibliothèque de Livres",
+          description: "Conservez un journal de vos lectures de développement, d'inspiration et d'apprentissage.",
+          data: books,
+          onAdd: (item: any) => setBooks(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setBooks(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setBooks(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setBooks(prev => [...prev, ...items]),
+          columns: [
+            { key: "title", label: "Titre du Livre", type: "text", required: true },
+            { key: "author", label: "Auteur / Écrivain", type: "text", required: true },
+            { key: "genre", label: "Genre / Thématique", type: "text" },
+            { key: "currentPage", label: "Page Actuelle", type: "number" },
+            { key: "totalPages", label: "Pages Totales", type: "number" },
+            { key: "rating", label: "Note Personnelle", type: "rating" },
+            { key: "status", label: "Statut", type: "select", options: ["À lire", "En cours", "Terminé"] },
+            { key: "notes", label: "Commentaires / Résumé", type: "text" }
+          ] as TableColumn[]
+        };
+
+      case "screenmedia":
+        return {
+          title: "Séries, Animes & Films",
+          description: "Organisez votre file de visionnage pour vos films, séries TV et animes préférés.",
+          data: screenMedia,
+          onAdd: (item: any) => setScreenMedia(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setScreenMedia(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setScreenMedia(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setScreenMedia(prev => [...prev, ...items]),
           columns: [
             { key: "title", label: "Titre de l'Œuvre", type: "text", required: true },
-            { key: "type", label: "Type", type: "select", options: ["Film", "Série", "Livre"] },
-            { key: "authorOrDirector", label: "Auteur / Réalisateur", type: "text" },
-            { key: "progress", label: "Avancement (Page, Ep...)", type: "text" },
+            { key: "type", label: "Type", type: "select", options: ["Film", "Série", "Anime"] },
+            { key: "platform", label: "Plateforme (Netflix, Crunchyroll...)", type: "text" },
+            { key: "currentEpisode", label: "Épisode Actuel", type: "number" },
+            { key: "totalEpisodes", label: "Épisodes Totaux", type: "number" },
             { key: "rating", label: "Note Personnelle", type: "rating" },
-            { key: "status", label: "Statut", type: "select", options: ["À voir/lire", "En cours", "Terminé"] }
+            { key: "status", label: "Statut", type: "select", options: ["À regarder", "En cours", "Terminé"] },
+            { key: "notes", label: "Notes / Commentaires", type: "text" }
           ] as TableColumn[]
         };
 
@@ -991,8 +1092,8 @@ export default function App() {
             </div>
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
               <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">SaaS Actifs</span>
-                <span className="text-base font-extrabold font-mono text-neutral-900 block">{abonnements.filter(a => a.status === "Actif").length} Licences</span>
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Abonnements Actifs</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{abonnements.filter(a => a.status === "Actif").length} Services</span>
               </div>
               <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Bell className="w-4 h-4" /></div>
             </div>
@@ -1035,17 +1136,17 @@ export default function App() {
             </div>
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
               <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Médiathèque</span>
-                <span className="text-base font-extrabold font-mono text-neutral-900 block">{mediaItems.length} Titres</span>
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Lectures & Livres</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{books.length} Livres ({books.filter(b => b.status === "En cours").length} en cours)</span>
               </div>
-              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Film className="w-4 h-4" /></div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><BookOpen className="w-4 h-4" /></div>
             </div>
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
               <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-sans">Livres Terminés</span>
-                <span className="text-base font-extrabold font-mono text-neutral-900 block">{mediaItems.filter(m => m.type === "Livre" && m.status === "Terminé").length} Ouvrages</span>
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-sans">Séries & Films</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{screenMedia.length} Éléments ({screenMedia.filter(s => s.status === "En cours").length} en cours)</span>
               </div>
-              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><BookOpen className="w-4 h-4" /></div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Film className="w-4 h-4" /></div>
             </div>
           </div>
         );
@@ -2093,8 +2194,12 @@ export default function App() {
                         abonnements={abonnements}
                       />
                     </div>
-                  ) : activeMenu === "sport" ? (
+                                    ) : activeMenu === "sport" ? (
                     <FocusSport />
+                  ) : activeMenu === "books" ? (
+                    <BooksSection books={books} setBooks={setBooks} />
+                  ) : activeMenu === "screenmedia" ? (
+                    <ScreenMediaSection screenMedia={screenMedia} setScreenMedia={setScreenMedia} />
                   ) : (
                     <div>
                       {(() => {
