@@ -1,0 +1,6 @@
+{
+  "name": "Moroccan Content Creator Planner",
+  "description": "An interactive dashboard to manage and schedule multi-channel video content, weekly articles, courses, finances, habits, and AI token allocations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
