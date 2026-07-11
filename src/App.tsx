@@ -50,6 +50,7 @@ import InteractiveModuleTable, { TableColumn } from "./components/InteractiveMod
 import FinanceCharts from "./components/FinanceCharts";
 import FocusSport from "./components/FocusSport";
 import AlertsBanner from "./components/AlertsBanner";
+import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
 
 // Icons imports
 import { 
@@ -1314,6 +1315,12 @@ export default function App() {
                   Suivi de vos 3 chaînes de contenu (<span className="font-semibold">The Moroccan Analyst</span>, <span className="font-semibold">The Moroccan CFO</span>, <span className="font-semibold">The Moroccan Economist</span>) et de votre santé financière.
                 </p>
               </div>
+
+              {/* Critical Subscriptions Alert (Prélèvements imminents < 3 jours) */}
+              <CriticalSubscriptionsAlert
+                abonnements={abonnements}
+                onNavigateToModule={handleNavigateToModule}
+              />
 
               {/* Notifications & Visual Alerts Center */}
               <AlertsBanner
