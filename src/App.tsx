@@ -90,7 +90,9 @@ import {
   Clock,
   ExternalLink,
   ArrowLeft,
-  Dumbbell
+  Dumbbell,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 export default function App() {
@@ -98,6 +100,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string>("dashboard"); // "dashboard", or "submodule_id"
   const [dashboardTab, setDashboardTab] = useState<"routines" | "charts" | "launchpad">("routines");
+  const [focusMode, setFocusMode] = useState<boolean>(false);
   const [expandedCategories, setExpandedCategories] = useState<{ [key: string]: boolean }>({
     finance: true,
     productivity: true,
@@ -1082,36 +1085,36 @@ export default function App() {
       
       {/* UNIFIED STICKY TOP NAVIGATION BAR */}
       <header className="sticky top-0 z-50 w-full bg-white border-b border-neutral-200/80 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 xl:gap-4">
           
           {/* Logo & Brand (Left) */}
           <div 
             onClick={() => handleMenuClick("dashboard")}
-            className="flex items-center gap-2.5 cursor-pointer shrink-0 select-none"
+            className="flex items-center gap-2 cursor-pointer shrink-0 select-none"
           >
-            <div className="w-9 h-9 bg-neutral-900 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-xs font-display">
+            <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center font-black text-white text-xs shadow-xs font-display shrink-0">
               MC
             </div>
-            <div>
-              <span className="text-[9px] font-bold text-neutral-400 block tracking-wider uppercase font-mono leading-none">CREATOR WORKSPACE</span>
+            <div className="hidden xl:block">
+              <span className="text-[8px] font-bold text-neutral-400 block tracking-wider uppercase font-mono leading-none">CREATOR WORKSPACE</span>
               <span className="text-xs font-black text-neutral-900 block leading-tight mt-0.5">Moroccan Planner</span>
             </div>
           </div>
 
           {/* Horizontal Navigation Menus (Center - Desktop only) */}
-          <nav className="hidden lg:flex items-center gap-1.5 h-full">
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 h-full overflow-visible">
             
             {/* Dashboard Link */}
             <button
               onClick={() => handleMenuClick("dashboard")}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-extrabold tracking-wide transition-all cursor-pointer select-none ${
+              className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-lg text-[10px] xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
                 activeMenu === "dashboard"
                   ? "bg-neutral-900 text-white shadow-xs"
                   : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
               }`}
             >
-              <LayoutDashboard className={`w-4 h-4 shrink-0 ${activeMenu === "dashboard" ? "text-amber-400" : "text-neutral-400"}`} />
-              <span>TABLEAU DE BORD</span>
+              <LayoutDashboard className={`w-3.5 h-3.5 shrink-0 ${activeMenu === "dashboard" ? "text-amber-400" : "text-neutral-400"}`} />
+              <span>Tableau de Bord</span>
             </button>
 
             {/* Categories Hover Dropdowns */}
@@ -1122,19 +1125,19 @@ export default function App() {
                 <div key={cat.id} className="relative group h-full flex items-center">
                   <button
                     onClick={() => handleCategoryClick(cat.id)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer select-none ${
+                    className={`flex items-center gap-0.5 xl:gap-1 px-1.5 xl:px-2 py-1.5 rounded-lg text-[10px] xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
                       isCatActive
-                        ? "bg-neutral-100 text-neutral-950 font-extrabold"
+                        ? "bg-neutral-100 text-neutral-950 font-black"
                         : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
                     }`}
                   >
-                    <CatIcon className={`w-3.5 h-3.5 shrink-0 ${isCatActive ? "text-neutral-900" : "text-neutral-400"}`} />
-                    <span className="uppercase">{cat.label}</span>
-                    <ChevronDown className="w-3 h-3 text-neutral-400 opacity-60 group-hover:rotate-180 transition-transform duration-200" />
+                    <CatIcon className={`w-3.5 h-3.5 shrink-0 mr-0.5 ${isCatActive ? "text-neutral-900" : "text-neutral-400"}`} />
+                    <span>{cat.label}</span>
+                    <ChevronDown className="w-3 h-3 text-neutral-400 opacity-60 group-hover:rotate-180 transition-transform duration-200 shrink-0 ml-0.5" />
                   </button>
 
                   {/* Floating Sub-items Menu Card */}
-                  <div className="absolute top-12 left-0 mt-1 hidden group-hover:block bg-white border border-neutral-200/80 rounded-2xl shadow-lg p-2 min-w-[240px] z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="absolute top-13 left-0 mt-0.5 hidden group-hover:block bg-white border border-neutral-200/80 rounded-2xl shadow-lg p-2 min-w-[240px] z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                     <div className="text-[9px] font-black text-neutral-400 tracking-wider uppercase px-3 py-2 border-b border-neutral-50 mb-1">
                       Secteur {cat.label}
                     </div>
@@ -1149,7 +1152,7 @@ export default function App() {
                               setExpandedCategories(prev => ({ ...prev, [cat.id]: true }));
                               handleMenuClick(subItem.id);
                             }}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                               isSubActive
                                 ? "bg-neutral-50 text-neutral-950 font-extrabold"
                                 : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/70"
@@ -1168,26 +1171,38 @@ export default function App() {
           </nav>
 
           {/* Quick Metrics & Actions (Right) */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 xl:gap-2.5 shrink-0">
             
             {/* Discipline Streak Count */}
-            <div className="hidden sm:flex items-center gap-2 bg-neutral-50 border border-neutral-200 px-3 py-1.5 rounded-xl text-xs font-bold text-neutral-800">
-              <Flame className="w-4 h-4 text-orange-500 fill-orange-500 shrink-0" />
-              <span className="font-mono">{streakCount} Jours</span>
+            <div 
+              className="hidden sm:flex items-center gap-1 bg-orange-50/70 border border-orange-200/60 px-2 py-1 rounded-lg text-[10px] xl:text-[11px] font-bold text-orange-950 shadow-3xs"
+              title="Votre série de discipline quotidienne"
+            >
+              <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 shrink-0" />
+              <span className="font-mono whitespace-nowrap">{streakCount}j</span>
             </div>
 
             {/* Total Patrimoine Estimate */}
-            <div className="hidden md:flex items-center gap-2 bg-neutral-50 border border-neutral-200 px-3 py-1.5 rounded-xl text-xs font-bold text-neutral-800">
-              <span className="text-neutral-400 text-[10px] tracking-wider uppercase font-mono">Patrimoine:</span>
-              <span className="font-mono text-neutral-900">{dashboardStats.netWorth.toLocaleString("fr-FR")} MAD</span>
+            <div 
+              className="hidden md:flex items-center gap-1 bg-neutral-50 border border-neutral-200/80 px-2 py-1 rounded-lg text-[10px] xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
+              title={focusMode ? "Patrimoine masqué en mode Concentration" : "Estimation totale du Patrimoine (Comptes + Actions)"}
+            >
+              <Coins className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+              {focusMode ? (
+                <span className="font-mono text-[10px] tracking-widest text-neutral-400 select-none">•••••• MAD</span>
+              ) : (
+                <span className="font-mono whitespace-nowrap">{dashboardStats.netWorth.toLocaleString("fr-FR")} MAD</span>
+              )}
             </div>
 
             {/* Daily Reset Routine Button */}
             <button
               onClick={resetDailyRoutines}
-              className="text-xs bg-neutral-900 hover:bg-neutral-800 text-white px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer select-none"
+              className="text-[10px] xl:text-[11px] bg-neutral-900 hover:bg-neutral-800 text-white px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1"
+              title="Réinitialiser les routines quotidiennes pour un nouveau jour"
             >
-              Nouveau Jour
+              <RefreshCw className="w-3 h-3 shrink-0" />
+              <span>Nouveau Jour</span>
             </button>
 
             {/* Responsive Mobile Menu Button */}
@@ -1307,134 +1322,212 @@ export default function App() {
             <div className="space-y-8 animate-in fade-in duration-300">
               
               {/* Minimalist Intro Header */}
-              <div className="space-y-1">
-                <h1 className="text-2xl font-black text-neutral-900 tracking-tight font-sans">
-                  Bonjour ! Prêt à créer aujourd'hui ?
-                </h1>
-                <p className="text-xs text-neutral-500 max-w-2xl">
-                  Suivi de vos 3 chaînes de contenu (<span className="font-semibold">The Moroccan Analyst</span>, <span className="font-semibold">The Moroccan CFO</span>, <span className="font-semibold">The Moroccan Economist</span>) et de votre santé financière.
-                </p>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-neutral-200/60">
+                <div className="space-y-1">
+                  <h1 className="text-2xl font-black text-neutral-900 tracking-tight font-sans">
+                    Bonjour ! Prêt à créer aujourd'hui ?
+                  </h1>
+                  <p className="text-xs text-neutral-500 max-w-2xl">
+                    {focusMode ? (
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-neutral-800 bg-neutral-100 py-1 px-2.5 rounded-lg border border-neutral-200/50">
+                        <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 animate-pulse shrink-0" />
+                        Mode Concentration activé. Vos statistiques financières sont masquées pour vous focaliser sur vos disciplines et objectifs.
+                      </span>
+                    ) : (
+                      <>
+                        Suivi de vos 3 chaînes de contenu (<span className="font-semibold">The Moroccan Analyst</span>, <span className="font-semibold">The Moroccan CFO</span>, <span className="font-semibold">The Moroccan Economist</span>) et de votre santé financière.
+                      </>
+                    )}
+                  </p>
+                </div>
+                
+                {/* Focus Mode Toggle */}
+                <button
+                  onClick={() => {
+                    setFocusMode(!focusMode);
+                    if (!focusMode) {
+                      setDashboardTab("routines");
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer select-none font-sans text-xs font-bold ${
+                    focusMode
+                      ? "bg-neutral-900 border-neutral-900 text-white shadow-xs hover:bg-neutral-800"
+                      : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+                  }`}
+                  title="Masquer le financier et se concentrer sur les disciplines quotidiennes"
+                >
+                  <div className="relative w-7 h-4 rounded-full bg-neutral-200 transition-colors shrink-0">
+                    <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-xs transition-transform duration-205 ${
+                      focusMode ? "translate-x-3 bg-neutral-900" : "bg-neutral-400"
+                    }`} />
+                  </div>
+                  <span className="whitespace-nowrap uppercase tracking-wider text-[10px]">
+                    {focusMode ? "Concentration Active" : "Mode Concentration"}
+                  </span>
+                </button>
               </div>
 
               {/* Critical Subscriptions Alert (Prélèvements imminents < 3 jours) */}
-              <CriticalSubscriptionsAlert
-                abonnements={abonnements}
-                onNavigateToModule={handleNavigateToModule}
-              />
+              {!focusMode && (
+                <CriticalSubscriptionsAlert
+                  abonnements={abonnements}
+                  onNavigateToModule={handleNavigateToModule}
+                />
+              )}
 
               {/* Notifications & Visual Alerts Center */}
-              <AlertsBanner
-                abonnements={abonnements}
-                profilAmeliorations={profilAmeliorations}
-                epargnes={epargnes}
-                onNavigateToModule={handleNavigateToModule}
-              />
+              {!focusMode && (
+                <AlertsBanner
+                  abonnements={abonnements}
+                  profilAmeliorations={profilAmeliorations}
+                  epargnes={epargnes}
+                  onNavigateToModule={handleNavigateToModule}
+                />
+              )}
 
               {/* General Statistics Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Net Worth */}
-                <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Patrimoine Est.</span>
-                    <h4 className="text-xl font-bold font-mono text-neutral-900">
-                      {dashboardStats.netWorth.toLocaleString("fr-FR")} MAD
-                    </h4>
-                    <span className="text-[10px] text-neutral-400 font-medium">BVC + Soldes bancaires</span>
+              {!focusMode ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Net Worth */}
+                  <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Patrimoine Est.</span>
+                      <h4 className="text-xl font-bold font-mono text-neutral-900">
+                        {dashboardStats.netWorth.toLocaleString("fr-FR")} MAD
+                      </h4>
+                      <span className="text-[10px] text-neutral-400 font-medium">BVC + Soldes bancaires</span>
+                    </div>
+                    <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                      <Coins className="w-5 h-5" />
+                    </div>
                   </div>
-                  <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                    <Coins className="w-5 h-5" />
-                  </div>
-                </div>
 
-                {/* Habits Completion */}
-                <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Discipline du jour</span>
-                    <h4 className="text-xl font-bold font-mono text-neutral-900">
-                      {dashboardStats.habitsRate.toFixed(0)}%
-                    </h4>
-                    <span className="text-[10px] text-neutral-400 font-medium">
-                      {dashboardStats.habitsCompleted} / {dailyHabits.length} habitudes validées
-                    </span>
+                  {/* Habits Completion */}
+                  <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Discipline du jour</span>
+                      <h4 className="text-xl font-bold font-mono text-neutral-900">
+                        {dashboardStats.habitsRate.toFixed(0)}%
+                      </h4>
+                      <span className="text-[10px] text-neutral-400 font-medium">
+                        {dashboardStats.habitsCompleted} / {dailyHabits.length} habitudes validées
+                      </span>
+                    </div>
+                    <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                      <Flame className="w-5 h-5" />
+                    </div>
                   </div>
-                  <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                    <Flame className="w-5 h-5" />
-                  </div>
-                </div>
 
-                {/* Savings goals */}
-                <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Objectifs Épargne</span>
-                    <h4 className="text-xl font-bold font-mono text-neutral-900">
-                      {dashboardStats.activeEpargnes} En cours
-                    </h4>
-                    <span className="text-[10px] text-neutral-400 font-medium">Projets immobiliers & tech</span>
+                  {/* Savings goals */}
+                  <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Objectifs Épargne</span>
+                      <h4 className="text-xl font-bold font-mono text-neutral-900">
+                        {dashboardStats.activeEpargnes} En cours
+                      </h4>
+                      <span className="text-[10px] text-neutral-400 font-medium">Projets immobiliers & tech</span>
+                    </div>
+                    <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                      <PiggyBank className="w-5 h-5" />
+                    </div>
                   </div>
-                  <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                    <PiggyBank className="w-5 h-5" />
-                  </div>
-                </div>
 
-                {/* Active SaaS Subscriptions */}
-                <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">SaaS & Abonnements</span>
-                    <h4 className="text-xl font-bold font-mono text-neutral-900">
-                      {dashboardStats.activeSubscribers} Actifs
-                    </h4>
-                    <span className="text-[10px] text-neutral-400 font-medium">Logiciels pro & serveurs</span>
-                  </div>
-                  <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                    <Bell className="w-5 h-5" />
+                  {/* Active SaaS Subscriptions */}
+                  <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">SaaS & Abonnements</span>
+                      <h4 className="text-xl font-bold font-mono text-neutral-900">
+                        {dashboardStats.activeSubscribers} Actifs
+                      </h4>
+                      <span className="text-[10px] text-neutral-400 font-medium">Logiciels pro & serveurs</span>
+                    </div>
+                    <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                      <Bell className="w-5 h-5" />
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Habits Completion (Discipline) - Expanded and stylized */}
+                  <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 flex items-center justify-between shadow-md text-white">
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest block">Discipline du Jour</span>
+                      <h4 className="text-3xl font-black font-mono">
+                        {dashboardStats.habitsRate.toFixed(0)}%
+                      </h4>
+                      <p className="text-xs text-neutral-400 font-medium leading-relaxed">
+                        {dashboardStats.habitsCompleted} de vos {dailyHabits.length} habitudes quotidiennes validées. Continuez ainsi !
+                      </p>
+                    </div>
+                    <div className="p-4 bg-neutral-800 rounded-2xl text-amber-400 border border-neutral-700 shrink-0">
+                      <Flame className="w-8 h-8 animate-pulse fill-amber-400" />
+                    </div>
+                  </div>
+
+                  {/* Active 30-Day Sprint Stats Card */}
+                  <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 flex items-center justify-between shadow-2xs">
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest block">Sprints de Combat Actifs</span>
+                      <h4 className="text-3xl font-black font-mono text-neutral-900">
+                        {actions30Jours.length} Sprints
+                      </h4>
+                      <p className="text-xs text-neutral-500 font-medium leading-relaxed">
+                        Vos plans d'action à 30 jours pour rester focalisé sur le long terme de vos projets.
+                      </p>
+                    </div>
+                    <div className="p-4 bg-neutral-100 rounded-2xl text-neutral-800 border border-neutral-200 shrink-0">
+                      <Award className="w-8 h-8 text-neutral-700" />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* INTERACTIVE DASHBOARD SECTION TABS */}
-              <div className="border-b border-neutral-200/80 pt-2">
-                <div className="flex items-center gap-1 overflow-x-auto pb-px scrollbar-none">
-                  <button
-                    onClick={() => setDashboardTab("routines")}
-                    className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
-                      dashboardTab === "routines"
-                        ? "border-neutral-900 text-neutral-900 font-extrabold"
-                        : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
-                    }`}
-                  >
-                    <Flame className="w-4 h-4 text-orange-500 fill-orange-500 shrink-0" />
-                    <span>🎯 DISCIPLINES & OBJECTIFS</span>
-                  </button>
+              {!focusMode && (
+                <div className="border-b border-neutral-200/80 pt-2">
+                  <div className="flex items-center gap-1 overflow-x-auto pb-px scrollbar-none">
+                    <button
+                      onClick={() => setDashboardTab("routines")}
+                      className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
+                        dashboardTab === "routines"
+                          ? "border-neutral-900 text-neutral-900 font-extrabold"
+                          : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
+                      }`}
+                    >
+                      <Flame className="w-4 h-4 text-orange-500 fill-orange-500 shrink-0" />
+                      <span>🎯 DISCIPLINES & OBJECTIFS</span>
+                    </button>
 
-                  <button
-                    onClick={() => setDashboardTab("charts")}
-                    className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
-                      dashboardTab === "charts"
-                        ? "border-neutral-900 text-neutral-900 font-extrabold"
-                        : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
-                    }`}
-                  >
-                    <BarChart3 className="w-4 h-4 text-neutral-400" />
-                    <span>📊 RAPPORT FINANCIER SYNTHÉTIQUE</span>
-                  </button>
+                    <button
+                      onClick={() => setDashboardTab("charts")}
+                      className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
+                        dashboardTab === "charts"
+                          ? "border-neutral-900 text-neutral-900 font-extrabold"
+                          : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
+                      }`}
+                    >
+                      <BarChart3 className="w-4 h-4 text-neutral-400" />
+                      <span>📊 RAPPORT FINANCIER SYNTHÉTIQUE</span>
+                    </button>
 
-                  <button
-                    onClick={() => setDashboardTab("launchpad")}
-                    className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
-                      dashboardTab === "launchpad"
-                        ? "border-neutral-900 text-neutral-900 font-extrabold"
-                        : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
-                    }`}
-                  >
-                    <Layers className="w-4 h-4 text-neutral-400" />
-                    <span>🔌 CONSOLE DE LANCEMENT (MODULES)</span>
-                  </button>
+                    <button
+                      onClick={() => setDashboardTab("launchpad")}
+                      className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
+                        dashboardTab === "launchpad"
+                          ? "border-neutral-900 text-neutral-900 font-extrabold"
+                          : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
+                      }`}
+                    >
+                      <Layers className="w-4 h-4 text-neutral-400" />
+                      <span>🔌 CONSOLE DE LANCEMENT (MODULES)</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* TAB CONTENT RENDERING */}
               <AnimatePresence mode="wait">
-                {dashboardTab === "routines" && (
+                {(dashboardTab === "routines" || focusMode) && (
                   <motion.div
                     key="routines"
                     initial={{ opacity: 0, y: 10 }}
@@ -1577,7 +1670,7 @@ export default function App() {
                   </motion.div>
                 )}
 
-                {dashboardTab === "launchpad" && (
+                {dashboardTab === "launchpad" && !focusMode && (
                   <motion.div
                     key="launchpad"
                     initial={{ opacity: 0, y: 10 }}
@@ -1641,7 +1734,7 @@ export default function App() {
                   </motion.div>
                 )}
 
-                {dashboardTab === "charts" && (
+                {dashboardTab === "charts" && !focusMode && (
                   <motion.div
                     key="charts"
                     initial={{ opacity: 0, y: 10 }}
