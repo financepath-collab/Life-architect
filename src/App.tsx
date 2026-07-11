@@ -1,456 +1,1405 @@
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   DailyHabit, 
-  VideoFocus, 
-  WeeklyArticle, 
-  CourseDeliverable, 
-  PurchaseEntry, 
+  WeeklyObjective,
+  FinanceTransaction, 
+  FinanceVirement, 
   StockEntry, 
-  AiTask, 
-  TokenStatus 
+  FinanceBudget, 
+  FinanceSalaire, 
+  FinanceEpargne, 
+  Action30Jours, 
+  ProfilAmelioration, 
+  PossibiliteGoal, 
+  SkinTracker, 
+  MealPlanner, 
+  AchatMensuel, 
+  Abonnement, 
+  Formation, 
+  MediaItem, 
+  Account, 
+  ResourceLink, 
+  ChannelInfo
 } from "./types";
-import DashboardView from "./components/DashboardView";
-import WeeklyContent from "./components/WeeklyContent";
-import FinanceTracker from "./components/FinanceTracker";
-import AiAssistant from "./components/AiAssistant";
+
 import { 
-  Tv, 
-  FileSpreadsheet, 
-  Sparkles, 
+  INITIAL_HABITS, 
+  INITIAL_WEEKLY_OBJECTIVES,
+  INITIAL_TRANSACTIONS, 
+  INITIAL_VIREMENTS, 
+  INITIAL_STOCKS, 
+  INITIAL_BUDGETS, 
+  INITIAL_SALAIRES, 
+  INITIAL_EPARGNES, 
+  INITIAL_ACTIONS_30_JOURS, 
+  INITIAL_PROFIL_AMELIORATIONS, 
+  INITIAL_POSSIBILITES_GOALS, 
+  INITIAL_SKIN_TRACKERS, 
+  INITIAL_MEAL_PLANNERS, 
+  INITIAL_ACHATS_MENSUELS, 
+  INITIAL_ABONNEMENTS, 
+  INITIAL_FORMATIONS, 
+  INITIAL_MEDIA_ITEMS, 
+  INITIAL_ACCOUNTS, 
+  INITIAL_RESOURCELINKS, 
+  INITIAL_CHANNELS 
+} from "./initialData";
+
+import InteractiveModuleTable, { TableColumn } from "./components/InteractiveModuleTable";
+import FinanceCharts from "./components/FinanceCharts";
+import FocusSport from "./components/FocusSport";
+
+// Icons imports
+import { 
   LayoutDashboard, 
-  BookOpen, 
-  CheckSquare, 
-  Video, 
-  TrendingUp, 
   Coins, 
-  Moon, 
-  Sun,
-  Flame,
-  User,
-  Coffee
+  TrendingUp, 
+  TrendingDown, 
+  Wallet, 
+  Briefcase, 
+  PiggyBank, 
+  Landmark, 
+  BarChart3, 
+  CheckSquare, 
+  Calendar, 
+  User, 
+  Award, 
+  Sparkles, 
+  Flame, 
+  Heart, 
+  Layers, 
+  BookOpen, 
+  ShoppingCart, 
+  Bell, 
+  GraduationCap, 
+  Film, 
+  Link2, 
+  Tv, 
+  ChevronDown, 
+  ChevronRight, 
+  Menu, 
+  X,
+  Plus,
+  Trash2,
+  CheckCircle,
+  Square,
+  RefreshCw,
+  Clock,
+  ExternalLink,
+  ArrowLeft,
+  Dumbbell
 } from "lucide-react";
 
-// Initial Habits template
-const INITIAL_HABITS: DailyHabit[] = [
-  { id: "h1", name: "Lire pendant 10 minutes", description: "S'évader et stimuler l'imagination", completed: false, category: "professional" },
-  { id: "h2", name: "Apprendre pendant 30 minutes", description: "Suivre une formation ou lire un article technique", completed: false, category: "professional" },
-  { id: "h3", name: "Faire du sport", description: "Activité physique (Idéalement chaque jour, min 4x/semaine)", completed: false, category: "personal" },
-  { id: "h4", name: "Préparer le dîner de demain", description: "Planifier ses repas pour gagner du temps", completed: false, category: "personal" },
-  { id: "h5", name: "Préparer les vêtements de demain", description: "Éviter la fatigue de décision matinale", completed: false, category: "personal" },
-  { id: "h6", name: "Routine de soins (Skin care)", description: "Prendre soin de sa peau matin ou soir", completed: false, category: "personal" },
-  { id: "h7", name: "Routine dentaire (Teeth care)", description: "Brossage complet et fil dentaire", completed: false, category: "personal" },
-  { id: "h8", name: "Nettoyage rapide de l'espace", description: "Ranger son bureau et sa pièce de travail", completed: false, category: "personal" },
-];
-
-const INITIAL_VIDEO: VideoFocus = {
-  id: "v1",
-  channel: "The Moroccan Analyst",
-  videoTitle: "Analyse économique de la semaine",
-  isCompleted: false,
-  publishedFB: false,
-  publishedTikTok: false,
-  publishedSpotify: false,
-};
-
-const INITIAL_ARTICLES: WeeklyArticle[] = [
-  { id: "a1", title: "L'essor de la Fintech au Maroc en 2026", platforms: { facebook: true, linkedin: true, instagram: false, website: true }, isCompleted: true },
-  { id: "a2", title: "3 conseils financiers pour les PME marocaines", platforms: { facebook: false, linkedin: true, instagram: false, website: false }, isCompleted: false },
-];
-
-const INITIAL_COURSES: CourseDeliverable[] = [
-  { id: "c1", type: "Udemy", title: "Analyse Financière Marocaine - Leçon 1", episodeNumber: 1, isPrepared: true, isPublished: true },
-  { id: "c2", type: "Website", title: "Stratégies de couverture de change - Intro", episodeNumber: 1, isPrepared: false, isPublished: false },
-];
-
-const INITIAL_PURCHASES: PurchaseEntry[] = [
-  { id: "p1", date: "2026-07-08", description: "Abonnement Canva Pro", category: "Business", amount: 150 },
-  { id: "p2", date: "2026-07-10", description: "Publicité sponsorisée Facebook - CFA", category: "Marketing", amount: 300 },
-];
-
-const INITIAL_STOCKS: StockEntry[] = [
-  { id: "s1", symbol: "ATW", name: "Attijariwafa Bank", buyPrice: 505.0, currentPrice: 512.5, quantity: 20, lastUpdated: "2026-07-10" },
-  { id: "s2", symbol: "IAM", name: "Maroc Telecom", buyPrice: 92.4, currentPrice: 91.8, quantity: 150, lastUpdated: "2026-07-10" },
-  { id: "s3", symbol: "BCP", name: "Banque Centrale Populaire", buyPrice: 295.0, currentPrice: 302.0, quantity: 35, lastUpdated: "2026-07-11" },
-];
-
 export default function App() {
-  // Navigation State
-  const [activeTab, setActiveTab] = useState<"dashboard" | "content" | "finance" | "ai">("dashboard");
+  // --- RESPONSIVE SIDEBAR & NAVIGATION STATES ---
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<string>("dashboard"); // "dashboard", or "submodule_id"
+  const [expandedCategories, setExpandedCategories] = useState<{ [key: string]: boolean }>({
+    finance: true,
+    productivity: true,
+    health: false,
+    purchases: false,
+    formation: false,
+    accounts: false
+  });
 
-  // Core App States (loaded from localStorage or initialized)
+  // --- CORE SYSTEM STATES (Persistent via LocalStorage) ---
   const [dailyHabits, setDailyHabits] = useState<DailyHabit[]>(() => {
-    const saved = localStorage.getItem("moroccan_planner_habits");
+    const saved = localStorage.getItem("mp_habits_v2");
     return saved ? JSON.parse(saved) : INITIAL_HABITS;
   });
 
-  const [videoFocus, setVideoFocus] = useState<VideoFocus>(() => {
-    const saved = localStorage.getItem("moroccan_planner_video");
-    return saved ? JSON.parse(saved) : INITIAL_VIDEO;
+  const [weeklyObjectives, setWeeklyObjectives] = useState<WeeklyObjective[]>(() => {
+    const saved = localStorage.getItem("mp_weekly_objectives_v2");
+    return saved ? JSON.parse(saved) : INITIAL_WEEKLY_OBJECTIVES;
   });
 
-  const [articles, setArticles] = useState<WeeklyArticle[]>(() => {
-    const saved = localStorage.getItem("moroccan_planner_articles");
-    return saved ? JSON.parse(saved) : INITIAL_ARTICLES;
+  const [transactions, setTransactions] = useState<FinanceTransaction[]>(() => {
+    const saved = localStorage.getItem("mp_transactions_v2");
+    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
   });
 
-  const [courses, setCourses] = useState<CourseDeliverable[]>(() => {
-    const saved = localStorage.getItem("moroccan_planner_courses");
-    return saved ? JSON.parse(saved) : INITIAL_COURSES;
-  });
-
-  const [purchases, setPurchases] = useState<PurchaseEntry[]>(() => {
-    const saved = localStorage.getItem("moroccan_planner_purchases");
-    return saved ? JSON.parse(saved) : INITIAL_PURCHASES;
+  const [virements, setVirements] = useState<FinanceVirement[]>(() => {
+    const saved = localStorage.getItem("mp_virements_v2");
+    return saved ? JSON.parse(saved) : INITIAL_VIREMENTS;
   });
 
   const [stocks, setStocks] = useState<StockEntry[]>(() => {
-    const saved = localStorage.getItem("moroccan_planner_stocks");
+    const saved = localStorage.getItem("mp_stocks_v2");
     return saved ? JSON.parse(saved) : INITIAL_STOCKS;
   });
 
-  const [aiTasks, setAiTasks] = useState<AiTask[]>(() => {
-    const saved = localStorage.getItem("moroccan_planner_aitasks");
-    return saved ? JSON.parse(saved) : [];
+  const [budgets, setBudgets] = useState<FinanceBudget[]>(() => {
+    const saved = localStorage.getItem("mp_budgets_v2");
+    return saved ? JSON.parse(saved) : INITIAL_BUDGETS;
   });
 
-  const [tokenStatus, setTokenStatus] = useState<TokenStatus>(() => {
-    const saved = localStorage.getItem("moroccan_planner_tokens");
-    return saved ? JSON.parse(saved) : { dailyLimit: 50000, consumed: 1500 };
+  const [salaires, setSalaires] = useState<FinanceSalaire[]>(() => {
+    const saved = localStorage.getItem("mp_salaires_v2");
+    return saved ? JSON.parse(saved) : INITIAL_SALAIRES;
   });
 
+  const [epargnes, setEpargnes] = useState<FinanceEpargne[]>(() => {
+    const saved = localStorage.getItem("mp_epargnes_v2");
+    return saved ? JSON.parse(saved) : INITIAL_EPARGNES;
+  });
+
+  const [actions30Jours, setActions30Jours] = useState<Action30Jours[]>(() => {
+    const saved = localStorage.getItem("mp_actions30_v2");
+    return saved ? JSON.parse(saved) : INITIAL_ACTIONS_30_JOURS;
+  });
+
+  const [profilAmeliorations, setProfilAmeliorations] = useState<ProfilAmelioration[]>(() => {
+    const saved = localStorage.getItem("mp_profil_v2");
+    return saved ? JSON.parse(saved) : INITIAL_PROFIL_AMELIORATIONS;
+  });
+
+  const [possibilitesGoals, setPossibilitesGoals] = useState<PossibiliteGoal[]>(() => {
+    const saved = localStorage.getItem("mp_possibilites_v2");
+    return saved ? JSON.parse(saved) : INITIAL_POSSIBILITES_GOALS;
+  });
+
+  const [skinTrackers, setSkinTrackers] = useState<SkinTracker[]>(() => {
+    const saved = localStorage.getItem("mp_skin_v2");
+    return saved ? JSON.parse(saved) : INITIAL_SKIN_TRACKERS;
+  });
+
+  const [mealPlanners, setMealPlanners] = useState<MealPlanner[]>(() => {
+    const saved = localStorage.getItem("mp_meal_v2");
+    return saved ? JSON.parse(saved) : INITIAL_MEAL_PLANNERS;
+  });
+
+  const [achatsMensuels, setAchatsMensuels] = useState<AchatMensuel[]>(() => {
+    const saved = localStorage.getItem("mp_achats_v2");
+    return saved ? JSON.parse(saved) : INITIAL_ACHATS_MENSUELS;
+  });
+
+  const [abonnements, setAbonnements] = useState<Abonnement[]>(() => {
+    const saved = localStorage.getItem("mp_abonnements_v2");
+    return saved ? JSON.parse(saved) : INITIAL_ABONNEMENTS;
+  });
+
+  const [formations, setFormations] = useState<Formation[]>(() => {
+    const saved = localStorage.getItem("mp_formations_v2");
+    return saved ? JSON.parse(saved) : INITIAL_FORMATIONS;
+  });
+
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>(() => {
+    const saved = localStorage.getItem("mp_media_v2");
+    return saved ? JSON.parse(saved) : INITIAL_MEDIA_ITEMS;
+  });
+
+  const [accounts, setAccounts] = useState<Account[]>(() => {
+    const saved = localStorage.getItem("mp_accounts_v2");
+    return saved ? JSON.parse(saved) : INITIAL_ACCOUNTS;
+  });
+
+  const [links, setLinks] = useState<ResourceLink[]>(() => {
+    const saved = localStorage.getItem("mp_links_v2");
+    return saved ? JSON.parse(saved) : INITIAL_RESOURCELINKS;
+  });
+
+  const [channels, setChannels] = useState<ChannelInfo[]>(() => {
+    const saved = localStorage.getItem("mp_channels_v2");
+    return saved ? JSON.parse(saved) : INITIAL_CHANNELS;
+  });
+
+  // Stats / Streaks
   const [streakCount, setStreakCount] = useState<number>(() => {
-    const saved = localStorage.getItem("moroccan_planner_streak");
-    return saved ? parseInt(saved) : 5;
+    const saved = localStorage.getItem("mp_streak_count_v2");
+    return saved ? parseInt(saved) : 7;
   });
 
-  // Synchronize States to LocalStorage on updates
+  // --- LOCALSTORAGE SYNC EFFECT ---
   useEffect(() => {
-    localStorage.setItem("moroccan_planner_habits", JSON.stringify(dailyHabits));
+    localStorage.setItem("mp_habits_v2", JSON.stringify(dailyHabits));
   }, [dailyHabits]);
 
   useEffect(() => {
-    localStorage.setItem("moroccan_planner_video", JSON.stringify(videoFocus));
-  }, [videoFocus]);
+    localStorage.setItem("mp_weekly_objectives_v2", JSON.stringify(weeklyObjectives));
+  }, [weeklyObjectives]);
 
   useEffect(() => {
-    localStorage.setItem("moroccan_planner_articles", JSON.stringify(articles));
-  }, [articles]);
+    localStorage.setItem("mp_transactions_v2", JSON.stringify(transactions));
+  }, [transactions]);
 
   useEffect(() => {
-    localStorage.setItem("moroccan_planner_courses", JSON.stringify(courses));
-  }, [courses]);
+    localStorage.setItem("mp_virements_v2", JSON.stringify(virements));
+  }, [virements]);
 
   useEffect(() => {
-    localStorage.setItem("moroccan_planner_purchases", JSON.stringify(purchases));
-  }, [purchases]);
-
-  useEffect(() => {
-    localStorage.setItem("moroccan_planner_stocks", JSON.stringify(stocks));
+    localStorage.setItem("mp_stocks_v2", JSON.stringify(stocks));
   }, [stocks]);
 
   useEffect(() => {
-    localStorage.setItem("moroccan_planner_aitasks", JSON.stringify(aiTasks));
-  }, [aiTasks]);
+    localStorage.setItem("mp_budgets_v2", JSON.stringify(budgets));
+  }, [budgets]);
 
   useEffect(() => {
-    localStorage.setItem("moroccan_planner_tokens", JSON.stringify(tokenStatus));
-  }, [tokenStatus]);
+    localStorage.setItem("mp_salaires_v2", JSON.stringify(salaires));
+  }, [salaires]);
 
   useEffect(() => {
-    localStorage.setItem("moroccan_planner_streak", streakCount.toString());
+    localStorage.setItem("mp_epargnes_v2", JSON.stringify(epargnes));
+  }, [epargnes]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_actions30_v2", JSON.stringify(actions30Jours));
+  }, [actions30Jours]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_profil_v2", JSON.stringify(profilAmeliorations));
+  }, [profilAmeliorations]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_possibilites_v2", JSON.stringify(possibilitesGoals));
+  }, [possibilitesGoals]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_skin_v2", JSON.stringify(skinTrackers));
+  }, [skinTrackers]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_meal_v2", JSON.stringify(mealPlanners));
+  }, [mealPlanners]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_achats_v2", JSON.stringify(achatsMensuels));
+  }, [achatsMensuels]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_abonnements_v2", JSON.stringify(abonnements));
+  }, [abonnements]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_formations_v2", JSON.stringify(formations));
+  }, [formations]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_media_v2", JSON.stringify(mediaItems));
+  }, [mediaItems]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_accounts_v2", JSON.stringify(accounts));
+  }, [accounts]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_links_v2", JSON.stringify(links));
+  }, [links]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_channels_v2", JSON.stringify(channels));
+  }, [channels]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_streak_count_v2", streakCount.toString());
   }, [streakCount]);
 
-  // -- STATE MODIFICATION HANDLERS --
 
-  // Habits Handlers
+  // --- UTILITY ACTION HANDLERS ---
+
+  // Habit toggling
   const toggleHabit = (id: string) => {
-    setDailyHabits(prev => {
-      const updated = prev.map(h => h.id === id ? { ...h, completed: !h.completed } : h);
-      
-      // If all habits completed, boost streak
-      const allDone = updated.every(h => h.completed);
-      if (allDone) {
-        setStreakCount(s => s + 1);
-      }
-      return updated;
-    });
+    setDailyHabits(prev => prev.map(h => h.id === id ? { ...h, completed: !h.completed } : h));
   };
 
-  // Video Handlers
-  const updateVideoFocus = (updated: Partial<VideoFocus>) => {
-    setVideoFocus(prev => ({ ...prev, ...updated }));
-  };
-
-  // Article Handlers
-  const addArticle = (title: string) => {
-    const newArt: WeeklyArticle = {
-      id: "a_" + Date.now(),
-      title,
-      platforms: { facebook: false, linkedin: false, instagram: false, website: false },
-      isCompleted: false
+  // Weekly objective handlers
+  const [newObjectiveText, setNewObjectiveText] = useState("");
+  const handleAddObjectiveSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newObjectiveText.trim()) return;
+    const newObj: WeeklyObjective = {
+      id: "obj_" + Date.now(),
+      text: newObjectiveText.trim(),
+      completed: false
     };
-    setArticles(prev => [newArt, ...prev]);
+    setWeeklyObjectives(prev => [...prev, newObj]);
+    setNewObjectiveText("");
   };
 
-  const toggleArticlePlatform = (id: string, platform: keyof WeeklyArticle["platforms"]) => {
-    setArticles(prev => prev.map(art => {
-      if (art.id === id) {
-        const nextPlatforms = {
-          ...art.platforms,
-          [platform]: !art.platforms[platform]
-        };
-        const anyPlatformPublished = Object.values(nextPlatforms).some(Boolean);
-        return {
-          ...art,
-          platforms: nextPlatforms,
-          isCompleted: anyPlatformPublished
-        };
-      }
-      return art;
-    }));
+  const toggleWeeklyObjective = (id: string) => {
+    setWeeklyObjectives(prev => prev.map(o => o.id === id ? { ...o, completed: !o.completed } : o));
   };
 
-  const deleteArticle = (id: string) => {
-    setArticles(prev => prev.filter(art => art.id !== id));
+  const deleteWeeklyObjective = (id: string) => {
+    setWeeklyObjectives(prev => prev.filter(o => o.id !== id));
   };
 
-  // Course Handlers
-  const addCourseItem = (type: "Udemy" | "Website", title: string, episodeNum: number) => {
-    const newCourse: CourseDeliverable = {
-      id: "c_" + Date.now(),
-      type,
-      title,
-      episodeNumber: episodeNum,
-      isPrepared: false,
-      isPublished: false
-    };
-    setCourses(prev => [newCourse, ...prev]);
-  };
-
-  const toggleCourseStatus = (id: string, field: "isPrepared" | "isPublished") => {
-    setCourses(prev => prev.map(c => {
-      if (c.id === id) {
-        const nextVal = !c[field];
-        return { ...c, [field]: nextVal };
-      }
-      return c;
-    }));
-  };
-
-  const deleteCourseItem = (id: string) => {
-    setCourses(prev => prev.filter(c => c.id !== id));
-  };
-
-  // Purchases Handlers
-  const addPurchase = (entry: Omit<PurchaseEntry, "id">) => {
-    const item: PurchaseEntry = {
-      id: "p_" + Date.now(),
-      ...entry
-    };
-    setPurchases(prev => [item, ...prev]);
-  };
-
-  const deletePurchase = (id: string) => {
-    setPurchases(prev => prev.filter(p => p.id !== id));
-  };
-
-  // Stocks Handlers
-  const addStock = (entry: Omit<StockEntry, "id" | "lastUpdated">) => {
-    const item: StockEntry = {
-      id: "s_" + Date.now(),
-      ...entry,
-      lastUpdated: new Date().toISOString().split("T")[0]
-    };
-    setStocks(prev => [item, ...prev]);
-  };
-
-  const updateStockPrice = (id: string, currentPrice: number) => {
-    setStocks(prev => prev.map(s => s.id === id ? {
-      ...s,
-      currentPrice,
-      lastUpdated: new Date().toISOString().split("T")[0]
-    } : s));
-  };
-
-  const deleteStock = (id: string) => {
-    setStocks(prev => prev.filter(s => s.id !== id));
-  };
-
-  // AI Task Handlers
-  const addAiTask = (task: Omit<AiTask, "id" | "date">) => {
-    const item: AiTask = {
-      id: "ai_" + Date.now(),
-      date: new Date().toISOString().split("T")[0],
-      ...task
-    };
-    setAiTasks(prev => [item, ...prev]);
-    setTokenStatus(prev => ({
-      ...prev,
-      consumed: Math.min(prev.dailyLimit, prev.consumed + task.tokensUsed)
-    }));
-  };
-
-  const resetTokens = () => {
-    setTokenStatus({ dailyLimit: 50000, consumed: 0 });
-  };
-
-  // Quick reset for start of a new week or day
+  // Reset daily routines
   const resetDailyRoutines = () => {
-    if (window.confirm("Voulez-vous réinitialiser vos habitudes pour une nouvelle journée ?")) {
-      setDailyHabits(prev => prev.map(h => ({ ...h, completed: false })));
-      // Reset daily video publication state too
-      setVideoFocus(prev => ({
-        ...prev,
-        isCompleted: false,
-        publishedFB: false,
-        publishedTikTok: false,
-        publishedSpotify: false
-      }));
+    setDailyHabits(prev => prev.map(h => ({ ...h, completed: false })));
+    setStreakCount(prev => prev + 1);
+  };
+
+  // Toggle Category Collapsibles
+  const toggleCategoryExpand = (catId: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [catId]: !prev[catId]
+    }));
+  };
+
+
+  // --- DYNAMIC MODULE RENDERING SCHEMA & CONTROLLER MAP ---
+
+  const categories = [
+    {
+      id: "finance",
+      label: "Finance",
+      icon: Coins,
+      items: [
+        { id: "transactions", label: "Transactions", icon: Briefcase, desc: "Historique complet de vos entrées d'argent et dépenses." },
+        { id: "virements", label: "Virements", icon: RefreshCw, desc: "Planification et suivi des virements inter-comptes." },
+        { id: "stocks", label: "Portefeuille Bourse", icon: Wallet, desc: "Suivi de vos investissements en BVC." },
+        { id: "budgets", label: "Budgets Mensuels", icon: Landmark, desc: "Gestion de vos plafonds de dépenses par enveloppe." },
+        { id: "salaires", label: "Salaires & Revenus", icon: TrendingUp, desc: "Suivi de vos rentrées professionnelles et AdSense." },
+        { id: "epargnes", label: "Objectifs Épargne", icon: PiggyBank, desc: "Progression vers vos projets immobiliers ou d'équipements." },
+        { id: "charts", label: "Graphiques & Analyses", icon: BarChart3, desc: "Visualisation complète de votre santé financière." }
+      ]
+    },
+    {
+      id: "productivity",
+      label: "Productivité",
+      icon: CheckSquare,
+      items: [
+        { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines créatives." },
+        { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour projets créateurs." },
+        { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." },
+        { id: "goals", label: "Possibilités & Goals", icon: Award, desc: "Planification de vos buts de vie majeurs." }
+      ]
+    },
+    {
+      id: "health",
+      label: "Santé & Soins",
+      icon: Heart,
+      items: [
+        { id: "skin", label: "Skin Tracker", icon: Sparkles, desc: "Consistance beauté, SPF et routine cutanée journalière." },
+        { id: "meal", label: "Meal Planner", icon: Layers, desc: "Planification des menus, calories et dîners de demain." },
+        { id: "sport", label: "Focus Sport", icon: Dumbbell, desc: "Minuterie de 30 min, exercices de sport et playlist d'entraînement." }
+      ]
+    },
+    {
+      id: "purchases",
+      label: "Achats & SaaS",
+      icon: ShoppingCart,
+      items: [
+        { id: "achats", label: "Achats Mensuels", icon: ShoppingCart, desc: "Liste de shopping, matériel pro et fournitures." },
+        { id: "abonnements", label: "Abonnements", icon: Bell, desc: "Contrôle de vos dépenses récurrentes SaaS et hébergement." }
+      ]
+    },
+    {
+      id: "formation",
+      label: "Formation & Culture",
+      icon: BookOpen,
+      items: [
+        { id: "formations", label: "Formations Udemy/Pro", icon: GraduationCap, desc: "Progression de vos cours et épisodes Udemy." },
+        { id: "media", label: "Média Library", icon: Film, desc: "Suivi de vos lectures de développement et divertissement." }
+      ]
+    },
+    {
+      id: "accounts",
+      label: "Comptes & Liens",
+      icon: Landmark,
+      items: [
+        { id: "comptes", label: "Comptes Bancaires", icon: Landmark, desc: "Gestion des comptes pro, perso et liquidités." },
+        { id: "links", label: "Liens Favoris", icon: Link2, desc: "Signets rapides vers vos ressources de marché bourse." },
+        { id: "channels", label: "Chaînes & Médias", icon: Tv, desc: "Abonnés et fréquence de publication de vos chaînes." }
+      ]
+    }
+  ];
+
+  const getModuleConfig = (moduleId: string) => {
+    switch (moduleId) {
+      case "transactions":
+        return {
+          title: "Transactions Réelles",
+          description: "Historique complet de vos entrées d'argent et vos dépenses courantes.",
+          data: transactions,
+          onAdd: (item: any) => setTransactions(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setTransactions(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setTransactions(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setTransactions(prev => [...items, ...prev]),
+          columns: [
+            { key: "date", label: "Date", type: "date", required: true },
+            { key: "description", label: "Description", type: "text", required: true },
+            { 
+              key: "category", 
+              label: "Catégorie", 
+              type: "select", 
+              options: ["Revenus Pro", "Sponsor", "AdSense", "Équipement", "Repas", "Logiciels", "Alimentation", "Transport", "Loisirs", "Autres"] 
+            },
+            { key: "type", label: "Type", type: "select", options: ["Revenue", "Dépense"] },
+            { key: "amount", label: "Montant (MAD)", type: "number", required: true },
+            { key: "account", label: "Compte", type: "text" }
+          ] as TableColumn[]
+        };
+
+      case "virements":
+        return {
+          title: "Virements & Transferts",
+          description: "Planification et suivi des virements de compte à compte ou d'épargne.",
+          data: virements,
+          onAdd: (item: any) => setVirements(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setVirements(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setVirements(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setVirements(prev => [...items, ...prev]),
+          columns: [
+            { key: "date", label: "Date", type: "date", required: true },
+            { key: "description", label: "Description", type: "text", required: true },
+            { key: "sourceAccount", label: "Compte Source", type: "text", required: true },
+            { key: "targetAccount", label: "Compte Cible", type: "text", required: true },
+            { key: "amount", label: "Montant (MAD)", type: "number", required: true },
+            { key: "status", label: "Statut", type: "select", options: ["Planifié", "Exécuté", "Annulé"] }
+          ] as TableColumn[]
+        };
+
+      case "stocks":
+        return {
+          title: "Portefeuille Actions (BVC)",
+          description: "Suivez vos actifs financiers en direct sur la Bourse de Casablanca.",
+          data: stocks,
+          onAdd: (item: any) => setStocks(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setStocks(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setStocks(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setStocks(prev => [...items, ...prev]),
+          columns: [
+            { key: "symbol", label: "Symbole", type: "text", required: true },
+            { key: "name", label: "Nom Action", type: "text", required: true },
+            { key: "buyPrice", label: "Prix d'Achat", type: "number", required: true },
+            { key: "currentPrice", label: "Prix Actuel", type: "number", required: true },
+            { key: "quantity", label: "Quantité", type: "number", required: true },
+            { key: "lastUpdated", label: "Mise à jour", type: "date" }
+          ] as TableColumn[]
+        };
+
+      case "budgets":
+        return {
+          title: "Budgets par Catégorie",
+          description: "Limitez vos dépenses mensuelles par enveloppes budgétaires.",
+          data: budgets,
+          onAdd: (item: any) => setBudgets(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setBudgets(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setBudgets(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setBudgets(prev => [...items, ...prev]),
+          columns: [
+            { 
+              key: "category", 
+              label: "Catégorie", 
+              type: "select", 
+              options: ["Alimentation", "Équipement & Matériel", "Logiciels & SaaS", "Marketing & Publicité", "Transport & Carburant", "Loisirs & Sorties", "Autres"] 
+            },
+            { key: "limitAmount", label: "Budget Limite (MAD)", type: "number", required: true },
+            { key: "spentAmount", label: "Dépensé Réel", type: "number", required: true },
+            { key: "period", label: "Période", type: "select", options: ["Mensuel", "Annuel"] }
+          ] as TableColumn[]
+        };
+
+      case "salaires":
+        return {
+          title: "Salaire, Revenus & Factures",
+          description: "Suivi des revenus professionnels, dividendes et rentrées d'argent.",
+          data: salaires,
+          onAdd: (item: any) => setSalaires(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setSalaires(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setSalaires(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setSalaires(prev => [...items, ...prev]),
+          columns: [
+            { key: "date", label: "Date de Réception", type: "date", required: true },
+            { key: "source", label: "Source / Employeur", type: "text", required: true },
+            { key: "grossAmount", label: "Montant Brut", type: "number", required: true },
+            { key: "netAmount", label: "Montant Net Reçu", type: "number", required: true },
+            { key: "status", label: "Statut", type: "select", options: ["Reçu", "En attente"] }
+          ] as TableColumn[]
+        };
+
+      case "epargnes":
+        return {
+          title: "Objectifs d'Épargne",
+          description: "Prévoyez vos grands projets de vie (Immobilier, Voyage, Matériel).",
+          data: epargnes,
+          onAdd: (item: any) => setEpargnes(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setEpargnes(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setEpargnes(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setEpargnes(prev => [...items, ...prev]),
+          columns: [
+            { key: "name", label: "Intitulé du Projet", type: "text", required: true },
+            { key: "targetAmount", label: "Montant Cible (MAD)", type: "number", required: true },
+            { key: "currentAmount", label: "Montant Actuel", type: "number", required: true },
+            { key: "deadline", label: "Échéance Cible", type: "date", required: true },
+            { key: "status", label: "Statut", type: "select", options: ["En cours", "Atteint"] }
+          ] as TableColumn[]
+        };
+
+      case "habits":
+        return {
+          title: "Habits Tracker (Habitudes)",
+          description: "Cochez vos disciplines journalières pour maintenir votre niveau d'excellence.",
+          data: dailyHabits,
+          onAdd: (item: any) => setDailyHabits(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setDailyHabits(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setDailyHabits(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setDailyHabits(prev => [...prev, ...items]),
+          columns: [
+            { key: "name", label: "Habitude", type: "text", required: true },
+            { key: "description", label: "Description / Fréquence", type: "text" },
+            { key: "category", label: "Catégorie", type: "select", options: ["personal", "professional"] },
+            { key: "completed", label: "Fait Aujourd'hui", type: "boolean" }
+          ] as TableColumn[]
+        };
+
+      case "actions30":
+        return {
+          title: "Actions 30 Jours (Sprint)",
+          description: "Plan d'attaque quotidien intensif de 30 jours pour lancer un projet créateur.",
+          data: actions30Jours,
+          onAdd: (item: any) => setActions30Jours(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setActions30Jours(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setActions30Jours(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setActions30Jours(prev => [...prev, ...items]),
+          columns: [
+            { key: "dayNumber", label: "Jour de Sprint", type: "number", required: true },
+            { key: "taskDescription", label: "Tâche de Combat", type: "text", required: true },
+            { key: "completed", label: "Terminé", type: "boolean" },
+            { key: "note", label: "Livrable / Note", type: "text" }
+          ] as TableColumn[]
+        };
+
+      case "profil":
+        return {
+          title: "Profil & Améliorations de Compétences",
+          description: "Formez-vous de façon structurée sur vos points de friction.",
+          data: profilAmeliorations,
+          onAdd: (item: any) => setProfilAmeliorations(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setProfilAmeliorations(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setProfilAmeliorations(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setProfilAmeliorations(prev => [...prev, ...items]),
+          columns: [
+            { key: "focusArea", label: "Compétence Visée", type: "text", required: true },
+            { key: "status", label: "Statut Actuel", type: "select", options: ["À travailler", "En cours", "Maîtrisé"] },
+            { key: "targetDate", label: "Date de Maîtrise", type: "date" },
+            { key: "actionPlan", label: "Plan d'Action / Exercices", type: "text" }
+          ] as TableColumn[]
+        };
+
+      case "goals":
+        return {
+          title: "Possibilités & Goals (Objectifs de Vie)",
+          description: "Réglez vos objectifs stratégiques à court, moyen et long terme.",
+          data: possibilitesGoals,
+          onAdd: (item: any) => setPossibilitesGoals(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setPossibilitesGoals(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setPossibilitesGoals(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setPossibilitesGoals(prev => [...prev, ...items]),
+          columns: [
+            { key: "title", label: "Intitulé du Goal", type: "text", required: true },
+            { key: "type", label: "Période", type: "select", options: ["Court Terme", "Moyen Terme", "Long Terme"] },
+            { key: "targetYear", label: "Année Cible", type: "text", required: true },
+            { key: "description", label: "Pourquoi & Comment", type: "text" },
+            { key: "completed", label: "Atteint", type: "boolean" }
+          ] as TableColumn[]
+        };
+
+      case "skin":
+        return {
+          title: "Skin Tracker (Routine Beauté & Santé)",
+          description: "Vérifiez la consistance de votre routine de soins et l'état de votre peau.",
+          data: skinTrackers,
+          onAdd: (item: any) => setSkinTrackers(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setSkinTrackers(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setSkinTrackers(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setSkinTrackers(prev => [...items, ...prev]),
+          columns: [
+            { key: "date", label: "Date", type: "date", required: true },
+            { key: "morningRoutine", label: "Routine Matin (SPF)", type: "boolean" },
+            { key: "eveningRoutine", label: "Routine Soir (Sérum)", type: "boolean" },
+            { key: "skinCondition", label: "État Cutané", type: "select", options: ["Excellente", "Bonne", "Sensible", "Acné/Irritée"] },
+            { key: "productsUsed", label: "Produits Appliqués", type: "text" },
+            { key: "waterIntakeLiters", label: "Eau Bue (Litres)", type: "number" }
+          ] as TableColumn[]
+        };
+
+      case "meal":
+        return {
+          title: "Meal Planner (Planificateur de Repas)",
+          description: "Mangez sainement, prévoyez vos recettes et suivez les calories.",
+          data: mealPlanners,
+          onAdd: (item: any) => setMealPlanners(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setMealPlanners(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setMealPlanners(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setMealPlanners(prev => [...prev, ...items]),
+          columns: [
+            { key: "dayOfWeek", label: "Jour", type: "select", options: ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"] },
+            { key: "mealType", label: "Repas", type: "select", options: ["Petit Déjeuner", "Déjeuner", "Dîner", "Collation"] },
+            { key: "description", label: "Menu Recette", type: "text", required: true },
+            { key: "calories", label: "Calories Estimées", type: "number" },
+            { key: "prepared", label: "Préparé", type: "boolean" }
+          ] as TableColumn[]
+        };
+
+      case "achats":
+        return {
+          title: "Achats Mensuels (Shopping)",
+          description: "Évitez les achats compulsifs. Planifiez le matériel nécessaire pour vos projets.",
+          data: achatsMensuels,
+          onAdd: (item: any) => setAchatsMensuels(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setAchatsMensuels(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setAchatsMensuels(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setAchatsMensuels(prev => [...items, ...prev]),
+          columns: [
+            { key: "date", label: "Date de Planification", type: "date" },
+            { key: "itemName", label: "Nom de l'Article", type: "text", required: true },
+            { key: "store", label: "Boutique / Site", type: "text" },
+            { key: "category", label: "Catégorie", type: "select", options: ["Matériel", "Logiciel", "Mobilier", "Bureau", "Perso", "Autres"] },
+            { key: "amount", label: "Prix Estimé (MAD)", type: "number", required: true },
+            { key: "priority", label: "Priorité", type: "select", options: ["Élevée", "Moyenne", "Faible"] },
+            { key: "status", label: "Statut", type: "select", options: ["Acheté", "À acheter"] }
+          ] as TableColumn[]
+        };
+
+      case "abonnements":
+        return {
+          title: "Abonnements & Logiciels",
+          description: "Suivez vos charges récurrentes SaaS et annulez les services inutilisés.",
+          data: abonnements,
+          onAdd: (item: any) => setAbonnements(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setAbonnements(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setAbonnements(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setAbonnements(prev => [...items, ...prev]),
+          columns: [
+            { key: "serviceName", label: "Nom du Service SaaS", type: "text", required: true },
+            { key: "costMonthly", label: "Coût Mensuel (MAD)", type: "number", required: true },
+            { key: "billingPeriod", label: "Période Facturation", type: "select", options: ["Mensuel", "Annuel"] },
+            { key: "nextBillingDate", label: "Prochain Prélèvement", type: "date" },
+            { key: "status", label: "État", type: "select", options: ["Actif", "Suspendu"] }
+          ] as TableColumn[]
+        };
+
+      case "formations":
+        return {
+          title: "Formations & Cours",
+          description: "Mesurez votre progression de montée en compétences professionnelles.",
+          data: formations,
+          onAdd: (item: any) => setFormations(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setFormations(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setFormations(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setFormations(prev => [...prev, ...items]),
+          columns: [
+            { key: "title", label: "Intitulé du Cours", type: "text", required: true },
+            { key: "instructor", label: "Formateur / Expert", type: "text" },
+            { key: "platform", label: "Plateforme (Udemy...)", type: "text" },
+            { key: "durationHours", label: "Durée (Heures)", type: "number" },
+            { key: "progressPercent", label: "Avancement (%)", type: "progress" },
+            { key: "status", label: "Statut", type: "select", options: ["Non commencé", "En cours", "Terminé"] }
+          ] as TableColumn[]
+        };
+
+      case "media":
+        return {
+          title: "Bibliothèque de Divertissement (Films, Séries, Livres)",
+          description: "Conservez un journal de vos lectures de développement et d'inspiration.",
+          data: mediaItems,
+          onAdd: (item: any) => setMediaItems(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setMediaItems(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setMediaItems(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setMediaItems(prev => [...prev, ...items]),
+          columns: [
+            { key: "title", label: "Titre de l'Œuvre", type: "text", required: true },
+            { key: "type", label: "Type", type: "select", options: ["Film", "Série", "Livre"] },
+            { key: "authorOrDirector", label: "Auteur / Réalisateur", type: "text" },
+            { key: "progress", label: "Avancement (Page, Ep...)", type: "text" },
+            { key: "rating", label: "Note Personnelle", type: "rating" },
+            { key: "status", label: "Statut", type: "select", options: ["À voir/lire", "En cours", "Terminé"] }
+          ] as TableColumn[]
+        };
+
+      case "comptes":
+        return {
+          title: "Comptes Bancaires & Trésorerie",
+          description: "La balance globale en temps réel de tous vos portefeuilles et comptes.",
+          data: accounts,
+          onAdd: (item: any) => setAccounts(prev => [item, ...prev]),
+          onEdit: (id: string, updated: any) => setAccounts(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setAccounts(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setAccounts(prev => [...items, ...prev]),
+          columns: [
+            { key: "name", label: "Nom du Compte / Banque", type: "text", required: true },
+            { key: "type", label: "Catégorie de Compte", type: "select", options: ["Bancaire", "Espèces", "Crypto"] },
+            { key: "balance", label: "Solde", type: "number", required: true },
+            { key: "currency", label: "Devise", type: "select", options: ["MAD", "EUR", "USD"] }
+          ] as TableColumn[]
+        };
+
+      case "links":
+        return {
+          title: "Liens Utiles & Outils favoris",
+          description: "Sauvegardez vos plateformes favorites de ressources de marché ou de bourse.",
+          data: links,
+          onAdd: (item: any) => setLinks(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setLinks(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setLinks(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setLinks(prev => [...prev, ...items]),
+          columns: [
+            { key: "title", label: "Nom du Lien / Outil", type: "text", required: true },
+            { key: "url", label: "Adresse URL (Lien)", type: "text", required: true },
+            { key: "category", label: "Catégorie", type: "select", options: ["Outils", "Ressources", "Inspiration", "Autres"] },
+            { key: "rating", label: "Utilité", type: "rating" }
+          ] as TableColumn[]
+        };
+
+      case "channels":
+        return {
+          title: "Suivi des Chaînes & Médias du Créateur",
+          description: "Mesurez vos statistiques de croissance et fréquences de publication.",
+          data: channels,
+          onAdd: (item: any) => setChannels(prev => [...prev, item]),
+          onEdit: (id: string, updated: any) => setChannels(prev => prev.map(x => x.id === id ? updated : x)),
+          onDelete: (id: string) => setChannels(prev => prev.filter(x => x.id !== id)),
+          onImport: (items: any[]) => setChannels(prev => [...prev, ...items]),
+          columns: [
+            { key: "name", label: "Nom de la Chaîne", type: "text", required: true },
+            { key: "platform", label: "Réseau Social", type: "select", options: ["YouTube", "TikTok", "LinkedIn", "Instagram", "Spotify"] },
+            { key: "subscriberCount", label: "Abonnés / Followers", type: "number", required: true },
+            { key: "niche", label: "Niche Éditioriale", type: "text" },
+            { key: "frequency", label: "Fréquence de Publication", type: "text" }
+          ] as TableColumn[]
+        };
+
+      default:
+        return null;
     }
   };
 
+  // --- STATS COMPUTATION FOR DASHBOARD OVERVIEW ---
+  const dashboardStats = React.useMemo(() => {
+    const totalBankBalance = accounts.reduce((sum, acc) => {
+      let rate = 1;
+      if (acc.currency === "USD") rate = 10.1;
+      else if (acc.currency === "EUR") rate = 10.9;
+      return sum + acc.balance * rate;
+    }, 0);
+
+    const totalStockValue = stocks.reduce((sum, s) => sum + s.currentPrice * s.quantity, 0);
+    const netWorth = totalBankBalance + totalStockValue;
+
+    const habitsCompleted = dailyHabits.filter(h => h.completed).length;
+    const habitsRate = dailyHabits.length > 0 ? (habitsCompleted / dailyHabits.length) * 100 : 0;
+
+    const activeEpargnes = epargnes.filter(e => e.status === "En cours").length;
+    const activeSubscribers = abonnements.filter(a => a.status === "Actif").length;
+
+    return {
+      netWorth,
+      habitsRate,
+      activeEpargnes,
+      activeSubscribers,
+      habitsCompleted
+    };
+  }, [accounts, stocks, dailyHabits, epargnes, abonnements]);
+
+  // Handle clicking a menu item
+  const handleMenuClick = (itemId: string) => {
+    setActiveMenu(itemId);
+    setSidebarOpen(false); // Close responsive drawer on mobile
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
-    <div className="min-h-screen bg-[#0b1329] text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-900">
+    <div className="min-h-screen bg-[#F8F9FA] text-neutral-800 flex font-sans antialiased">
       
-      {/* Dynamic Global Top Bar */}
-      <header className="bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-50 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          
-          {/* Logo / Title */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-md shadow-emerald-500/20">
-              <Sparkles className="w-5 h-5" />
+      {/* MOBILE HEADER RESPONSIVE TOP-BAR */}
+      <div className="lg:hidden w-full bg-white border-b border-neutral-200 px-5 py-4 flex items-center justify-between fixed top-0 left-0 z-40 shadow-xs">
+        <div 
+          onClick={() => handleMenuClick("dashboard")}
+          className="flex items-center gap-2.5 cursor-pointer"
+        >
+          <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center font-bold text-white font-display">
+            M
+          </div>
+          <div>
+            <span className="text-[9px] font-bold text-neutral-400 block tracking-wider uppercase font-mono leading-none">PRO WORKSPACE</span>
+            <span className="text-sm font-black text-neutral-900 block leading-tight">Moroccan Planner</span>
+          </div>
+        </div>
+
+        <button 
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2 bg-neutral-100 rounded-xl border border-neutral-200 text-neutral-800 focus:outline-none"
+        >
+          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {/* LEFT SIDEBAR NAVIGATION (Pure Minimalist Light Theme) */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 lg:z-30 w-72 bg-white border-r border-neutral-200/80 p-6 flex flex-col justify-between transition-transform duration-300 ease-out lg:translate-x-0 lg:static
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+      `}>
+        
+        <div className="space-y-6">
+          {/* Brand Header */}
+          <div 
+            onClick={() => handleMenuClick("dashboard")}
+            className="hidden lg:flex items-center gap-3 pb-5 border-b border-neutral-100 cursor-pointer"
+          >
+            <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center font-black text-white text-base shadow-xs font-display">
+              MC
             </div>
             <div>
-              <h1 className="text-lg font-bold font-display text-white flex items-center gap-2">
-                Moroccan Content Creator Planner
-              </h1>
-              <p className="text-[11px] text-slate-400 font-mono uppercase tracking-wider">
-                Elite Workflow • Business, Finance & Académie
-              </p>
+              <span className="text-[10px] font-bold text-neutral-400 tracking-wider font-mono uppercase flex items-center gap-1.5 leading-none">
+                <span className="w-1.5 h-1.5 bg-neutral-900 rounded-full"></span>
+                CREATOR WORKSPACE
+              </span>
+              <h1 className="text-sm font-black font-display text-neutral-900 tracking-tight mt-1.5">Moroccan Planner</h1>
             </div>
           </div>
 
-          {/* Quick Stats Banner */}
-          <div className="flex items-center gap-3 bg-slate-950/60 border border-slate-800 px-4 py-2 rounded-xl text-xs">
-            <div className="flex items-center gap-1.5 border-r border-slate-800 pr-3 mr-1">
-              <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
-              <span className="text-slate-300">Streak:</span>
-              <strong className="text-white font-mono">{streakCount} Jours</strong>
+          {/* Serie Discipline box */}
+          <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-xl flex items-center gap-3.5 shadow-2xs">
+            <div className="w-9 h-9 bg-neutral-900 rounded-lg flex items-center justify-center text-white shrink-0">
+              <Flame className="w-5 h-5" />
             </div>
-            <div className="flex items-center gap-1.5">
-              <Coins className="w-4 h-4 text-emerald-400" />
-              <span className="text-slate-400">Tokens IA:</span>
-              <span className="text-white font-mono">
-                {((tokenStatus.dailyLimit - tokenStatus.consumed)).toLocaleString()} / {tokenStatus.dailyLimit.toLocaleString()}
+            <div>
+              <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block">SÉRIE DISCIPLINE</span>
+              <span className="text-xs font-bold text-neutral-900 block">{streakCount} Jours Consécutifs</span>
+            </div>
+          </div>
+
+          {/* Navigation links scroll area */}
+          <nav className="space-y-4 max-h-[58vh] overflow-y-auto pr-1">
+            
+            <button
+              onClick={() => handleMenuClick("dashboard")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all ${
+                activeMenu === "dashboard"
+                  ? "bg-neutral-100 text-neutral-900 font-extrabold"
+                  : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4 shrink-0" />
+              <span>TABLEAU DE BORD</span>
+            </button>
+
+            {/* Collapsible Sectors */}
+            {categories.map(cat => {
+              const isExpanded = !!expandedCategories[cat.id];
+              const CatIcon = cat.icon;
+
+              return (
+                <div key={cat.id} className="space-y-1">
+                  <button
+                    onClick={() => toggleCategoryExpand(cat.id)}
+                    className="w-full flex items-center justify-between text-neutral-400 hover:text-neutral-900 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-left select-none transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <CatIcon className="w-3.5 h-3.5" />
+                      <span>{cat.label}</span>
+                    </div>
+                    {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                  </button>
+
+                  {isExpanded && (
+                    <div className="space-y-0.5 pl-2 border-l border-neutral-200 ml-2.5">
+                      {cat.items.map(sub => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = activeMenu === sub.id;
+
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => handleMenuClick(sub.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left ${
+                              isSubActive
+                                ? "bg-neutral-100 text-neutral-900 font-semibold"
+                                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
+                            }`}
+                          >
+                            <SubIcon className={`w-3.5 h-3.5 ${isSubActive ? "text-neutral-900" : "text-neutral-400"}`} />
+                            <span className="truncate">{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+          </nav>
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="pt-4 border-t border-neutral-150 space-y-2 text-[10px] text-neutral-400">
+          <div className="flex items-center justify-between">
+            <span>ADMINISTRATEUR</span>
+            <span className="font-bold text-neutral-900">ACTIF</span>
+          </div>
+          <p className="leading-tight">
+            Nouveau Jour réinitialise les habitudes quotidiennes.
+          </p>
+        </div>
+
+      </aside>
+
+      {/* OVERLAY FOR MOBILE SIDEBAR */}
+      {sidebarOpen && (
+        <div 
+          onClick={() => setSidebarOpen(false)}
+          className="lg:hidden fixed inset-0 z-40 bg-neutral-950/20 backdrop-blur-xs"
+        />
+      )}
+
+      {/* MAIN CONTENT WORKSPACE */}
+      <div className="flex-1 flex flex-col min-w-0 pt-16 lg:pt-0">
+        
+        {/* TOP BAR HEADER */}
+        <header className="bg-white border-b border-neutral-200/80 px-8 py-5 flex items-center justify-between shadow-2xs shrink-0">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-bold font-mono tracking-wide uppercase">
+              <span>MOROCCAN WEB SUITE</span>
+              <span>•</span>
+              <span className="text-neutral-900 font-bold">Workspace v2.0</span>
+            </div>
+            <h2 className="text-sm font-bold text-neutral-900 flex items-center gap-2 tracking-tight">
+              {activeMenu === "dashboard" ? (
+                <span>Vue d'ensemble de la journée</span>
+              ) : (
+                <>
+                  <span className="text-neutral-400">Section</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+                  <span className="text-neutral-900">{getModuleConfig(activeMenu)?.title || "Analyse financière"}</span>
+                </>
+              )}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="hidden md:flex items-center gap-2 bg-neutral-50 border border-neutral-200 px-3.5 py-2 rounded-xl text-xs font-mono font-bold text-neutral-800">
+              <span className="text-neutral-400">PATRIMOINE :</span>
+              <span>
+                {dashboardStats.netWorth.toLocaleString("fr-FR")} MAD
               </span>
             </div>
-          </div>
 
-        </div>
-      </header>
-
-      {/* Main Workspace Navigation Container */}
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 flex-1 flex flex-col gap-6">
-        
-        {/* Navigation Tabs */}
-        <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-1">
-          {[
-            { id: "dashboard", label: "Tableau de Bord & Routines", icon: LayoutDashboard },
-            { id: "content", label: "Publications & Formations", icon: BookOpen },
-            { id: "finance", label: "Finances & Bourse (Excel)", icon: FileSpreadsheet },
-            { id: "ai", label: "Gemini Assistant & Tokens", icon: Sparkles }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                id={`tab-btn-${tab.id}`}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-t-xl text-xs sm:text-sm font-semibold transition-all border-b-2 ${
-                  isActive 
-                    ? "bg-slate-800/80 border-emerald-500 text-white font-bold"
-                    : "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-850/50"
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? "text-emerald-400" : "text-slate-500"}`} />
-                {tab.label}
-              </button>
-            );
-          })}
-          
-          <div className="ml-auto flex items-center">
             <button
               onClick={resetDailyRoutines}
-              className="text-xs text-slate-400 hover:text-red-400 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-red-500/30 hover:bg-red-500/5 transition-all font-medium"
+              className="text-xs bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-xl font-bold transition-all shadow-2xs"
             >
               Nouveau Jour
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Dynamic Tab Workspace */}
-        <main className="flex-1 animate-fade-in duration-350">
-          {activeTab === "dashboard" && (
-            <DashboardView
-              dailyHabits={dailyHabits}
-              toggleHabit={toggleHabit}
-              videoFocus={videoFocus}
-              updateVideoFocus={updateVideoFocus}
-              streakCount={streakCount}
-            />
+        {/* WORKSPACE CONTENT SCROLL */}
+        <main className="flex-1 p-8 overflow-y-auto space-y-8 max-w-7xl w-full mx-auto">
+          
+          {/* TAB 1: TABLEAU DE BORD (MAIN HOME CONTROLLER) */}
+          {activeMenu === "dashboard" && (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              
+              {/* Minimalist Intro Header */}
+              <div className="space-y-1">
+                <h1 className="text-2xl font-black text-neutral-900 tracking-tight font-sans">
+                  Bonjour ! Prêt à créer aujourd'hui ?
+                </h1>
+                <p className="text-xs text-neutral-500 max-w-2xl">
+                  Suivi de vos 3 chaînes de contenu (<span className="font-semibold">The Moroccan Analyst</span>, <span className="font-semibold">The Moroccan CFO</span>, <span className="font-semibold">The Moroccan Economist</span>) et de votre santé financière.
+                </p>
+              </div>
+
+              {/* General Statistics Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Net Worth */}
+                <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Patrimoine Est.</span>
+                    <h4 className="text-xl font-bold font-mono text-neutral-900">
+                      {dashboardStats.netWorth.toLocaleString("fr-FR")} MAD
+                    </h4>
+                    <span className="text-[10px] text-neutral-400 font-medium">BVC + Soldes bancaires</span>
+                  </div>
+                  <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                    <Coins className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Habits Completion */}
+                <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Discipline du jour</span>
+                    <h4 className="text-xl font-bold font-mono text-neutral-900">
+                      {dashboardStats.habitsRate.toFixed(0)}%
+                    </h4>
+                    <span className="text-[10px] text-neutral-400 font-medium">
+                      {dashboardStats.habitsCompleted} / {dailyHabits.length} habitudes validées
+                    </span>
+                  </div>
+                  <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                    <Flame className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Savings goals */}
+                <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Objectifs Épargne</span>
+                    <h4 className="text-xl font-bold font-mono text-neutral-900">
+                      {dashboardStats.activeEpargnes} En cours
+                    </h4>
+                    <span className="text-[10px] text-neutral-400 font-medium">Projets immobiliers & tech</span>
+                  </div>
+                  <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                    <PiggyBank className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Active SaaS Subscriptions */}
+                <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">SaaS & Abonnements</span>
+                    <h4 className="text-xl font-bold font-mono text-neutral-900">
+                      {dashboardStats.activeSubscribers} Actifs
+                    </h4>
+                    <span className="text-[10px] text-neutral-400 font-medium">Logiciels pro & serveurs</span>
+                  </div>
+                  <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                    <Bell className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+
+              {/* QUICK HABITS & WEEKLY GOALS DUAL LISTS */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* 1. Daily Habits discipline tracker */}
+                <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Flame className="w-4.5 h-4.5 text-neutral-900 animate-pulse" />
+                      <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Discipline Quotidienne</h3>
+                    </div>
+                    <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-800 px-2.5 py-1 rounded-full font-mono font-bold">
+                      {dailyHabits.filter(h => h.completed).length} / {dailyHabits.length} terminées
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-neutral-400">
+                    Cochez vos disciplines quotidiennes d'hygiène de vie, de sport et d'apprentissage pour renforcer votre série.
+                  </p>
+
+                  <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                    {dailyHabits.map(habit => (
+                      <button
+                        key={habit.id}
+                        onClick={() => toggleHabit(habit.id)}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer ${
+                          habit.completed
+                            ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
+                            : "bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="shrink-0">
+                            {habit.completed ? (
+                              <CheckCircle className="w-4.5 h-4.5 text-neutral-900 fill-neutral-900 text-white" />
+                            ) : (
+                              <Square className="w-4.5 h-4.5 text-neutral-300" />
+                            )}
+                          </div>
+                          <div>
+                            <span className={`text-xs font-semibold block ${habit.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
+                              {habit.name}
+                            </span>
+                            {habit.description && (
+                              <span className="text-[9px] text-neutral-400 block mt-0.5">{habit.description}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border font-mono shrink-0 ml-2 ${
+                          habit.category === "professional"
+                            ? "bg-neutral-100 border-neutral-200 text-neutral-700"
+                            : "bg-neutral-100 border-neutral-200 text-neutral-700"
+                        }`}>
+                          {habit.category === "professional" ? "Pro" : "Perso"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Weekly goals tracker */}
+                <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Award className="w-4.5 h-4.5 text-neutral-900" />
+                      <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Objectifs de la Semaine</h3>
+                    </div>
+                    <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-800 px-2.5 py-1 rounded-full font-mono font-bold">
+                      {weeklyObjectives.filter(o => o.completed).length} / {weeklyObjectives.length} terminés
+                    </span>
+                  </div>
+
+                  {/* Add weekly objective Form */}
+                  <form onSubmit={handleAddObjectiveSubmit} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newObjectiveText}
+                      onChange={(e) => setNewObjectiveText(e.target.value)}
+                      placeholder="Ex: Écrire 3 articles LinkedIn, Préparer l'intro..."
+                      className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white transition-all font-medium"
+                    />
+                    <button
+                      type="submit"
+                      className="bg-neutral-950 hover:bg-neutral-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center justify-center shadow-xs"
+                    >
+                      <Plus className="w-4.5 h-4.5" />
+                    </button>
+                  </form>
+
+                  <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                    {weeklyObjectives.length === 0 ? (
+                      <div className="text-xs text-neutral-400 italic py-8 text-center bg-neutral-50/50 rounded-xl border border-dashed border-neutral-200">
+                        Aucun objectif hebdomadaire pour l'instant. Saisissez-en un ci-dessus !
+                      </div>
+                    ) : (
+                      weeklyObjectives.map((obj) => (
+                        <div
+                          key={obj.id}
+                          className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                            obj.completed
+                              ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
+                              : "bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-50"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleWeeklyObjective(obj.id)}
+                            className="flex-1 flex items-center gap-2.5 text-left cursor-pointer"
+                          >
+                            <div className="shrink-0">
+                              {obj.completed ? (
+                                <CheckCircle className="w-4 h-4 text-neutral-900 fill-neutral-900 text-white" />
+                              ) : (
+                                <Square className="w-4 h-4 text-neutral-300" />
+                              )}
+                            </div>
+                            <span className={`text-xs font-semibold leading-snug ${obj.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
+                              {obj.text}
+                            </span>
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => deleteWeeklyObjective(obj.id)}
+                            className="text-neutral-400 hover:text-red-500 p-1 rounded-lg hover:bg-neutral-100 transition-colors shrink-0 ml-2 cursor-pointer"
+                            title="Supprimer l'objectif"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* GRID LAUNCHPAD: DECK OF OPENING PAGES ("Des pages qui s'ouvre") */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest font-mono">
+                  Console de Lancement : Modules Applicatifs
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {categories.map(cat => {
+                    const CatIcon = cat.icon;
+                    return (
+                      <div 
+                        key={cat.id} 
+                        className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs"
+                      >
+                        <div className="flex items-center gap-2 pb-2.5 border-b border-neutral-100">
+                          <div className="p-1.5 bg-neutral-100 rounded-lg text-neutral-800">
+                            <CatIcon className="w-4 h-4" />
+                          </div>
+                          <span className="text-xs font-extrabold uppercase tracking-widest text-neutral-900">
+                            {cat.label}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          {cat.items.map(sub => {
+                            const SubIcon = sub.icon;
+                            return (
+                              <button
+                                key={sub.id}
+                                onClick={() => handleMenuClick(sub.id)}
+                                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-neutral-50 transition-all text-left border border-transparent hover:border-neutral-200 cursor-pointer group"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <SubIcon className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-900 shrink-0" />
+                                  <div className="min-w-0">
+                                    <span className="text-xs font-bold text-neutral-800 block leading-none">
+                                      {sub.label}
+                                    </span>
+                                    <span className="text-[10px] text-neutral-400 block truncate mt-1">
+                                      {sub.desc}
+                                    </span>
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-900 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* INTEGRATED EXECUTIVE REPORT SUMMARY */}
+              <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight flex items-center gap-2">
+                    <BarChart3 className="w-4.5 h-4.5 text-neutral-800" />
+                    <span>Rapport Financier Synthétique</span>
+                  </h3>
+                  <button
+                    onClick={() => handleMenuClick("charts")}
+                    className="text-xs text-neutral-900 hover:text-neutral-700 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Ouvrir l'Analyse Avancée</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                
+                <FinanceCharts
+                  transactions={transactions}
+                  budgets={budgets}
+                  stocks={stocks}
+                  epargnes={epargnes}
+                  abonnements={abonnements}
+                />
+              </div>
+
+            </div>
           )}
 
-          {activeTab === "content" && (
-            <WeeklyContent
-              articles={articles}
-              addArticle={addArticle}
-              toggleArticlePlatform={toggleArticlePlatform}
-              deleteArticle={deleteArticle}
-              courses={courses}
-              addCourseItem={addCourseItem}
-              toggleCourseStatus={toggleCourseStatus}
-              deleteCourseItem={deleteCourseItem}
-            />
-          )}
+          {/* TAB 2: ANIMATED OVERLAY SUBPAGES ("Des pages qui s'ouvre") */}
+          <AnimatePresence mode="wait">
+            {activeMenu !== "dashboard" && (
+              <motion.div
+                key={activeMenu}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="bg-transparent space-y-6"
+              >
+                
+                {/* Back button and navigation breadcrumb */}
+                <div className="flex items-center justify-between bg-white border border-neutral-200 p-4 rounded-2xl shadow-3xs">
+                  <button
+                    onClick={() => handleMenuClick("dashboard")}
+                    className="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Tableau de Bord</span>
+                  </button>
 
-          {activeTab === "finance" && (
-            <FinanceTracker
-              purchases={purchases}
-              addPurchase={addPurchase}
-              deletePurchase={deletePurchase}
-              stocks={stocks}
-              addStock={addStock}
-              updateStockPrice={updateStockPrice}
-              deleteStock={deleteStock}
-            />
-          )}
+                  <div className="text-xs font-bold text-neutral-400 font-mono flex items-center gap-1">
+                    <span>ESPACE CRÉATEUR</span>
+                    <ChevronRight className="w-3 h-3 text-neutral-300" />
+                    <span className="text-neutral-900">
+                      {activeMenu === "charts" 
+                        ? "GRAPHIQUES & METRICS" 
+                        : activeMenu === "sport" 
+                          ? "FOCUS SPORT" 
+                          : getModuleConfig(activeMenu)?.title.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
 
-          {activeTab === "ai" && (
-            <AiAssistant
-              aiTasks={aiTasks}
-              tokenStatus={tokenStatus}
-              addAiTask={addAiTask}
-              resetTokens={resetTokens}
-            />
-          )}
+                {/* Conditional mounting of submodule views */}
+                {activeMenu === "charts" ? (
+                  <div className="space-y-6">
+                    <div className="bg-white border border-neutral-200 p-6 rounded-2xl shadow-2xs">
+                      <h3 className="text-base font-bold text-neutral-900 mb-1">Graphiques de performance Financière</h3>
+                      <p className="text-xs text-neutral-400">Analyse complète de vos flux de trésorerie, d'épargne, de vos budgets et positions boursières en BVC.</p>
+                    </div>
+
+                    <FinanceCharts
+                      transactions={transactions}
+                      budgets={budgets}
+                      stocks={stocks}
+                      epargnes={epargnes}
+                      abonnements={abonnements}
+                    />
+                  </div>
+                ) : activeMenu === "sport" ? (
+                  <FocusSport />
+                ) : (
+                  <div>
+                    {(() => {
+                      const config = getModuleConfig(activeMenu);
+                      if (!config) return (
+                        <div className="text-center py-20 bg-white border border-neutral-200 rounded-2xl text-neutral-400 italic">
+                          Module "{activeMenu}" en cours de déploiement dans l'espace créateur.
+                        </div>
+                      );
+
+                      return (
+                        <InteractiveModuleTable
+                          title={config.title}
+                          description={config.description}
+                          columns={config.columns}
+                          data={config.data}
+                          onAdd={config.onAdd}
+                          onEdit={config.onEdit}
+                          onDelete={config.onDelete}
+                          onImport={config.onImport}
+                          currencySymbol="MAD"
+                          placeholderText={`Rechercher dans ${config.title.toLowerCase()}...`}
+                        />
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* Footer Back navigation banner */}
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={() => handleMenuClick("dashboard")}
+                    className="text-xs text-neutral-500 hover:text-neutral-900 font-bold flex items-center gap-1 cursor-pointer bg-white border border-neutral-200 px-5 py-2.5 rounded-xl shadow-3xs hover:shadow-2xs transition-all"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Fermer la page et revenir à l'accueil</span>
+                  </button>
+                </div>
+
+              </motion.div>
+            )}
+          </AnimatePresence>
+
         </main>
-      </div>
 
-      {/* Footer info banner */}
-      <footer className="border-t border-slate-800/80 bg-slate-950/40 py-6 text-center text-xs text-slate-500 mt-12">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 2026 Moroccan Content Creator Planner. Tous droits réservés.</p>
-          <div className="flex gap-4 text-slate-400">
-            <span>The Moroccan Analyst</span>
-            <span>•</span>
-            <span>The Moroccan CFO</span>
-            <span>•</span>
-            <span>The Moroccan Economist</span>
+        {/* Global Footer info banner */}
+        <footer className="border-t border-neutral-200 bg-white py-6 text-center text-xs text-neutral-400 shrink-0 mt-12">
+          <div className="max-w-7xl mx-auto px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>© 2026 Moroccan Content Creator Planner. Tous droits réservés.</p>
+            <div className="flex gap-4 text-neutral-500 font-semibold font-mono text-[9px]">
+              <span>THE MOROCCAN ANALYST</span>
+              <span>•</span>
+              <span>THE MOROCCAN CFO</span>
+              <span>•</span>
+              <span>THE MOROCCAN ECONOMIST</span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+
+      </div>
 
     </div>
   );

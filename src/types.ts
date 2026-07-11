@@ -69,3 +69,172 @@ export interface TokenStatus {
   dailyLimit: number;
   consumed: number;
 }
+
+export interface WeeklyObjective {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+// === NEW MODULES DEFINED FOR ADVANCED PLATFORM ===
+
+// 1. Finance Submodules
+export interface FinanceTransaction {
+  id: string;
+  date: string;
+  description: string;
+  category: string;
+  type: "Revenue" | "Dépense";
+  amount: number; // MAD
+  account: string;
+}
+
+export interface FinanceVirement {
+  id: string;
+  date: string;
+  description: string;
+  sourceAccount: string;
+  targetAccount: string;
+  amount: number; // MAD
+  status: "Planifié" | "Exécuté" | "Annulé";
+}
+
+export interface FinanceBudget {
+  id: string;
+  category: string;
+  limitAmount: number; // MAD
+  spentAmount: number; // MAD
+  period: "Mensuel" | "Annuel";
+}
+
+export interface FinanceSalaire {
+  id: string;
+  date: string;
+  source: string;
+  grossAmount: number; // MAD
+  netAmount: number; // MAD
+  status: "Reçu" | "En attente";
+}
+
+export interface FinanceEpargne {
+  id: string;
+  name: string;
+  targetAmount: number; // MAD
+  currentAmount: number; // MAD
+  deadline: string;
+  status: "En cours" | "Atteint";
+}
+
+// 2. Productivité Submodules
+export interface Action30Jours {
+  id: string;
+  dayNumber: number; // 1-30
+  taskDescription: string;
+  completed: boolean;
+  note: string;
+}
+
+export interface ProfilAmelioration {
+  id: string;
+  focusArea: string; // e.g., "Élocution", "Montage Vidéo", "SEO"
+  status: "À travailler" | "En cours" | "Maîtrisé";
+  targetDate: string;
+  actionPlan: string;
+}
+
+export interface PossibiliteGoal {
+  id: string;
+  title: string;
+  type: "Court Terme" | "Moyen Terme" | "Long Terme";
+  targetYear: string;
+  description: string;
+  completed: boolean;
+}
+
+// 3. Santé Submodules
+export interface SkinTracker {
+  id: string;
+  date: string;
+  morningRoutine: boolean;
+  eveningRoutine: boolean;
+  skinCondition: "Excellente" | "Bonne" | "Sensible" | "Acné/Irritée";
+  productsUsed: string;
+  waterIntakeLiters: number;
+}
+
+export interface MealPlanner {
+  id: string;
+  dayOfWeek: "Lundi" | "Mardi" | "Mercredi" | "Jeudi" | "Vendredi" | "Samedi" | "Dimanche";
+  mealType: "Petit Déjeuner" | "Déjeuner" | "Dîner" | "Collation";
+  description: string;
+  calories: number;
+  prepared: boolean;
+}
+
+// 4. Achats Submodules
+export interface AchatMensuel {
+  id: string;
+  date: string;
+  itemName: string;
+  store: string;
+  category: string;
+  amount: number; // MAD
+  priority: "Élevée" | "Moyenne" | "Faible";
+  status: "Acheté" | "À acheter";
+}
+
+export interface Abonnement {
+  id: string;
+  serviceName: string;
+  costMonthly: number; // MAD
+  billingPeriod: "Mensuel" | "Annuel";
+  nextBillingDate: string;
+  status: "Actif" | "Suspendu";
+}
+
+// 5. Formation Submodules
+export interface Formation {
+  id: string;
+  title: string;
+  instructor: string;
+  platform: string;
+  durationHours: number;
+  progressPercent: number; // 0 - 100
+  status: "Non commencé" | "En cours" | "Terminé";
+}
+
+export interface MediaItem {
+  id: string;
+  title: string;
+  type: "Film" | "Série" | "Livre";
+  authorOrDirector: string;
+  progress: string; // e.g., "Page 120/350", "Saison 2 Ep 4", "100%"
+  rating: number; // 1-5
+  status: "À voir/lire" | "En cours" | "Terminé";
+}
+
+// 6. Comptes Submodules
+export interface Account {
+  id: string;
+  name: string;
+  type: "Bancaire" | "Espèces" | "Crypto";
+  balance: number; // MAD
+  currency: string;
+}
+
+export interface ResourceLink {
+  id: string;
+  title: string;
+  url: string;
+  category: string;
+  rating: number; // 1-5
+}
+
+export interface ChannelInfo {
+  id: string;
+  name: string;
+  platform: "YouTube" | "TikTok" | "LinkedIn" | "Instagram" | "Spotify";
+  subscriberCount: number;
+  niche: string;
+  frequency: string;
+}

@@ -9,7 +9,7 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: #0f172a; /* Slate 900 background by default for a gorgeous financial dark look */
-  color: #f1f5f9;
+  background-color: #f8f9fa; /* Elegant minimalist soft light background */
+  color: #171717; /* Dark charcoal text for pristine readability */
 }
 
