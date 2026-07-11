@@ -49,6 +49,7 @@ import {
 import InteractiveModuleTable, { TableColumn } from "./components/InteractiveModuleTable";
 import FinanceCharts from "./components/FinanceCharts";
 import FocusSport from "./components/FocusSport";
+import AlertsBanner from "./components/AlertsBanner";
 
 // Icons imports
 import { 
@@ -95,6 +96,7 @@ export default function App() {
   // --- RESPONSIVE SIDEBAR & NAVIGATION STATES ---
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string>("dashboard"); // "dashboard", or "submodule_id"
+  const [dashboardTab, setDashboardTab] = useState<"routines" | "charts" | "launchpad">("routines");
   const [expandedCategories, setExpandedCategories] = useState<{ [key: string]: boolean }>({
     finance: true,
     productivity: true,
@@ -822,6 +824,17 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Safe navigation directly from the notifications panel
+  const handleNavigateToModule = (moduleId: string) => {
+    const category = categories.find(cat => cat.items.some(item => item.id === moduleId));
+    if (category) {
+      setExpandedCategories(prev => ({ ...prev, [category.id]: true }));
+    }
+    setActiveMenu(moduleId);
+    setSidebarOpen(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // Dynamic Metrics helper for Category Hubs
   const renderCategoryMetrics = (catId: string) => {
     const totalInflow = transactions
@@ -1064,74 +1077,35 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-neutral-800 flex font-sans antialiased">
+    <div className="min-h-screen bg-[#F8F9FA] text-neutral-800 flex flex-col font-sans antialiased">
       
-      {/* MOBILE HEADER RESPONSIVE TOP-BAR */}
-      <div className="lg:hidden w-full bg-white border-b border-neutral-200 px-5 py-4 flex items-center justify-between fixed top-0 left-0 z-40 shadow-xs">
-        <div 
-          onClick={() => handleMenuClick("dashboard")}
-          className="flex items-center gap-2.5 cursor-pointer"
-        >
-          <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center font-bold text-white font-display">
-            M
-          </div>
-          <div>
-            <span className="text-[9px] font-bold text-neutral-400 block tracking-wider uppercase font-mono leading-none">PRO WORKSPACE</span>
-            <span className="text-sm font-black text-neutral-900 block leading-tight">Moroccan Planner</span>
-          </div>
-        </div>
-
-        <button 
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 bg-neutral-100 rounded-xl border border-neutral-200 text-neutral-800 focus:outline-none"
-        >
-          {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
-
-      {/* LEFT SIDEBAR NAVIGATION (Pure Minimalist Light Theme) */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-50 lg:z-30 w-72 bg-white border-r border-neutral-200/80 p-6 flex flex-col justify-between transition-transform duration-300 ease-out lg:translate-x-0 lg:static
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-      `}>
-        
-        <div className="space-y-6">
-          {/* Brand Header */}
+      {/* UNIFIED STICKY TOP NAVIGATION BAR */}
+      <header className="sticky top-0 z-50 w-full bg-white border-b border-neutral-200/80 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          
+          {/* Logo & Brand (Left) */}
           <div 
             onClick={() => handleMenuClick("dashboard")}
-            className="hidden lg:flex items-center gap-3 pb-5 border-b border-neutral-100 cursor-pointer"
+            className="flex items-center gap-2.5 cursor-pointer shrink-0 select-none"
           >
-            <div className="w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center font-black text-white text-base shadow-xs font-display">
+            <div className="w-9 h-9 bg-neutral-900 rounded-xl flex items-center justify-center font-black text-white text-sm shadow-xs font-display">
               MC
             </div>
             <div>
-              <span className="text-[10px] font-bold text-neutral-400 tracking-wider font-mono uppercase flex items-center gap-1.5 leading-none">
-                <span className="w-1.5 h-1.5 bg-neutral-900 rounded-full"></span>
-                CREATOR WORKSPACE
-              </span>
-              <h1 className="text-sm font-black font-display text-neutral-900 tracking-tight mt-1.5">Moroccan Planner</h1>
+              <span className="text-[9px] font-bold text-neutral-400 block tracking-wider uppercase font-mono leading-none">CREATOR WORKSPACE</span>
+              <span className="text-xs font-black text-neutral-900 block leading-tight mt-0.5">Moroccan Planner</span>
             </div>
           </div>
 
-          {/* Serie Discipline box */}
-          <div className="bg-neutral-50 border border-neutral-200 p-4 rounded-xl flex items-center gap-3.5 shadow-2xs">
-            <div className="w-9 h-9 bg-neutral-900 rounded-lg flex items-center justify-center text-white shrink-0">
-              <Flame className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block">SÉRIE DISCIPLINE</span>
-              <span className="text-xs font-bold text-neutral-900 block">{streakCount} Jours Consécutifs</span>
-            </div>
-          </div>
-
-          {/* Navigation links scroll area */}
-          <nav className="space-y-3 max-h-[58vh] overflow-y-auto pr-1">
+          {/* Horizontal Navigation Menus (Center - Desktop only) */}
+          <nav className="hidden lg:flex items-center gap-1.5 h-full">
             
+            {/* Dashboard Link */}
             <button
               onClick={() => handleMenuClick("dashboard")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-extrabold tracking-wide transition-all cursor-pointer select-none ${
                 activeMenu === "dashboard"
-                  ? "bg-neutral-900 text-white font-extrabold shadow-md"
+                  ? "bg-neutral-900 text-white shadow-xs"
                   : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
               }`}
             >
@@ -1139,123 +1113,193 @@ export default function App() {
               <span>TABLEAU DE BORD</span>
             </button>
 
-            {/* Collapsible Sectors / Pages */}
+            {/* Categories Hover Dropdowns */}
             {categories.map(cat => {
-              const isExpanded = !!expandedCategories[cat.id];
               const CatIcon = cat.icon;
               const isCatActive = activeCategoryObj?.id === cat.id;
-
               return (
-                <div key={cat.id} className="space-y-1">
+                <div key={cat.id} className="relative group h-full flex items-center">
                   <button
                     onClick={() => handleCategoryClick(cat.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider text-left transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer select-none ${
                       isCatActive
-                        ? "bg-neutral-900 text-white shadow-xs font-extrabold"
+                        ? "bg-neutral-100 text-neutral-950 font-extrabold"
                         : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <CatIcon className={`w-4 h-4 shrink-0 ${isCatActive ? "text-amber-400" : "text-neutral-400"}`} />
-                      <span>{cat.label}</span>
-                    </div>
-                    {isExpanded ? <ChevronDown className="w-3.5 h-3.5 opacity-80" /> : <ChevronRight className="w-3.5 h-3.5 opacity-80" />}
+                    <CatIcon className={`w-3.5 h-3.5 shrink-0 ${isCatActive ? "text-neutral-900" : "text-neutral-400"}`} />
+                    <span className="uppercase">{cat.label}</span>
+                    <ChevronDown className="w-3 h-3 text-neutral-400 opacity-60 group-hover:rotate-180 transition-transform duration-200" />
                   </button>
 
-                  {isExpanded && (
-                    <div className="space-y-1 pl-3 border-l border-neutral-200 ml-5 mt-1">
-                      {cat.items.map(sub => {
-                        const SubIcon = sub.icon;
-                        const isSubActive = activeMenu === sub.id;
-
+                  {/* Floating Sub-items Menu Card */}
+                  <div className="absolute top-12 left-0 mt-1 hidden group-hover:block bg-white border border-neutral-200/80 rounded-2xl shadow-lg p-2 min-w-[240px] z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="text-[9px] font-black text-neutral-400 tracking-wider uppercase px-3 py-2 border-b border-neutral-50 mb-1">
+                      Secteur {cat.label}
+                    </div>
+                    <div className="space-y-0.5">
+                      {cat.items.map(subItem => {
+                        const SubIcon = subItem.icon;
+                        const isSubActive = activeMenu === subItem.id;
                         return (
                           <button
-                            key={sub.id}
-                            onClick={() => handleMenuClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
+                            key={subItem.id}
+                            onClick={() => {
+                              setExpandedCategories(prev => ({ ...prev, [cat.id]: true }));
+                              handleMenuClick(subItem.id);
+                            }}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                               isSubActive
-                                ? "bg-neutral-100 text-neutral-900 font-extrabold shadow-2xs"
-                                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/50"
+                                ? "bg-neutral-50 text-neutral-950 font-extrabold"
+                                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/70"
                             }`}
                           >
-                            <SubIcon className={`w-3.5 h-3.5 ${isSubActive ? "text-neutral-900" : "text-neutral-400"}`} />
-                            <span className="truncate">{sub.label}</span>
+                            <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? "text-neutral-950" : "text-neutral-400"}`} />
+                            <span className="truncate">{subItem.label}</span>
                           </button>
                         );
                       })}
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
-
           </nav>
-        </div>
 
-        {/* Sidebar Footer */}
-        <div className="pt-4 border-t border-neutral-150 space-y-2 text-[10px] text-neutral-400">
-          <div className="flex items-center justify-between">
-            <span>ADMINISTRATEUR</span>
-            <span className="font-bold text-neutral-900">ACTIF</span>
-          </div>
-          <p className="leading-tight">
-            Nouveau Jour réinitialise les habitudes quotidiennes.
-          </p>
-        </div>
-
-      </aside>
-
-      {/* OVERLAY FOR MOBILE SIDEBAR */}
-      {sidebarOpen && (
-        <div 
-          onClick={() => setSidebarOpen(false)}
-          className="lg:hidden fixed inset-0 z-40 bg-neutral-950/20 backdrop-blur-xs"
-        />
-      )}
-
-      {/* MAIN CONTENT WORKSPACE */}
-      <div className="flex-1 flex flex-col min-w-0 pt-16 lg:pt-0">
-        
-        {/* TOP BAR HEADER */}
-        <header className="bg-white border-b border-neutral-200/80 px-8 py-5 flex items-center justify-between shadow-2xs shrink-0">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-bold font-mono tracking-wide uppercase">
-              <span>MOROCCAN WEB SUITE</span>
-              <span>•</span>
-              <span className="text-neutral-900 font-bold">Workspace v2.0</span>
-            </div>
-            <h2 className="text-sm font-bold text-neutral-900 flex items-center gap-2 tracking-tight">
-              {activeMenu === "dashboard" ? (
-                <span>Vue d'ensemble de la journée</span>
-              ) : (
-                <>
-                  <span className="text-neutral-400">Section</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
-                  <span className="text-neutral-900">{getModuleConfig(activeMenu)?.title || "Analyse financière"}</span>
-                </>
-              )}
-            </h2>
-          </div>
-
+          {/* Quick Metrics & Actions (Right) */}
           <div className="flex items-center gap-3 shrink-0">
-            <div className="hidden md:flex items-center gap-2 bg-neutral-50 border border-neutral-200 px-3.5 py-2 rounded-xl text-xs font-mono font-bold text-neutral-800">
-              <span className="text-neutral-400">PATRIMOINE :</span>
-              <span>
-                {dashboardStats.netWorth.toLocaleString("fr-FR")} MAD
-              </span>
+            
+            {/* Discipline Streak Count */}
+            <div className="hidden sm:flex items-center gap-2 bg-neutral-50 border border-neutral-200 px-3 py-1.5 rounded-xl text-xs font-bold text-neutral-800">
+              <Flame className="w-4 h-4 text-orange-500 fill-orange-500 shrink-0" />
+              <span className="font-mono">{streakCount} Jours</span>
             </div>
 
+            {/* Total Patrimoine Estimate */}
+            <div className="hidden md:flex items-center gap-2 bg-neutral-50 border border-neutral-200 px-3 py-1.5 rounded-xl text-xs font-bold text-neutral-800">
+              <span className="text-neutral-400 text-[10px] tracking-wider uppercase font-mono">Patrimoine:</span>
+              <span className="font-mono text-neutral-900">{dashboardStats.netWorth.toLocaleString("fr-FR")} MAD</span>
+            </div>
+
+            {/* Daily Reset Routine Button */}
             <button
               onClick={resetDailyRoutines}
-              className="text-xs bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-xl font-bold transition-all shadow-2xs"
+              className="text-xs bg-neutral-900 hover:bg-neutral-800 text-white px-3.5 py-1.5 rounded-xl font-bold transition-all shadow-2xs cursor-pointer select-none"
             >
               Nouveau Jour
             </button>
-          </div>
-        </header>
 
+            {/* Responsive Mobile Menu Button */}
+            <button 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden p-2 bg-neutral-50 hover:bg-neutral-100 rounded-xl border border-neutral-200 text-neutral-800 focus:outline-none cursor-pointer"
+            >
+              {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
+          </div>
+
+        </div>
+
+        {/* MOBILE DROPDOWN DRAWER OVERLAY */}
+        {sidebarOpen && (
+          <div className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-45 bg-white border-t border-neutral-200 overflow-y-auto animate-in slide-in-from-top duration-300">
+            <div className="p-6 space-y-6">
+              
+              {/* Quick Mobile Indicators */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-neutral-50 border border-neutral-200/80 p-3.5 rounded-xl flex items-center gap-2.5">
+                  <Flame className="w-4 h-4 text-orange-500 fill-orange-500 shrink-0 animate-pulse" />
+                  <div>
+                    <span className="text-[8px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">DISCIPLINE</span>
+                    <span className="text-xs font-black text-neutral-900 block leading-none">{streakCount} Jours</span>
+                  </div>
+                </div>
+                <div className="bg-neutral-50 border border-neutral-200/80 p-3.5 rounded-xl flex items-center gap-2.5">
+                  <Coins className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <div>
+                    <span className="text-[8px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">PATRIMOINE</span>
+                    <span className="text-xs font-black text-neutral-900 block leading-none truncate">{dashboardStats.netWorth.toLocaleString("fr-FR")} MAD</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation Actions */}
+              <div className="space-y-4">
+                <button
+                  onClick={() => handleMenuClick("dashboard")}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-extrabold tracking-wide transition-all cursor-pointer ${
+                    activeMenu === "dashboard"
+                      ? "bg-neutral-900 text-white font-extrabold shadow-md"
+                      : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
+                  }`}
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>TABLEAU DE BORD</span>
+                </button>
+
+                {/* Collapsible Sectors */}
+                <div className="space-y-2">
+                  {categories.map(cat => {
+                    const isExpanded = !!expandedCategories[cat.id];
+                    const CatIcon = cat.icon;
+                    const isCatActive = activeCategoryObj?.id === cat.id;
+
+                    return (
+                      <div key={cat.id} className="space-y-1">
+                        <button
+                          onClick={() => handleCategoryClick(cat.id)}
+                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-left transition-all cursor-pointer ${
+                            isCatActive
+                              ? "bg-neutral-900 text-white shadow-xs"
+                              : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <CatIcon className="w-4 h-4" />
+                            <span>{cat.label}</span>
+                          </div>
+                          {isExpanded ? <ChevronDown className="w-3.5 h-3.5 opacity-80" /> : <ChevronRight className="w-3.5 h-3.5 opacity-80" />}
+                        </button>
+
+                        {isExpanded && (
+                          <div className="space-y-1 pl-3 border-l border-neutral-200 ml-5 mt-1">
+                            {cat.items.map(sub => {
+                              const SubIcon = sub.icon;
+                              const isSubActive = activeMenu === sub.id;
+
+                              return (
+                                <button
+                                  key={sub.id}
+                                  onClick={() => handleMenuClick(sub.id)}
+                                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
+                                    isSubActive
+                                      ? "bg-neutral-100 text-neutral-900 font-extrabold"
+                                      : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/50"
+                                  }`}
+                                >
+                                  <SubIcon className="w-3.5 h-3.5 text-neutral-400" />
+                                  <span className="truncate">{sub.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* MAIN CONTENT WORKSPACE */}
+      <div className="flex-1 flex flex-col min-w-0">
+        
         {/* WORKSPACE CONTENT SCROLL */}
         <main className="flex-1 p-8 overflow-y-auto space-y-8 max-w-7xl w-full mx-auto">
+
           
           {/* TAB 1: TABLEAU DE BORD (MAIN HOME CONTROLLER) */}
           {activeMenu === "dashboard" && (
@@ -1270,6 +1314,14 @@ export default function App() {
                   Suivi de vos 3 chaînes de contenu (<span className="font-semibold">The Moroccan Analyst</span>, <span className="font-semibold">The Moroccan CFO</span>, <span className="font-semibold">The Moroccan Economist</span>) et de votre santé financière.
                 </p>
               </div>
+
+              {/* Notifications & Visual Alerts Center */}
+              <AlertsBanner
+                abonnements={abonnements}
+                profilAmeliorations={profilAmeliorations}
+                epargnes={epargnes}
+                onNavigateToModule={handleNavigateToModule}
+              />
 
               {/* General Statistics Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1332,221 +1384,289 @@ export default function App() {
                 </div>
               </div>
 
-              {/* QUICK HABITS & WEEKLY GOALS DUAL LISTS */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* 1. Daily Habits discipline tracker */}
-                <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Flame className="w-4.5 h-4.5 text-neutral-900 animate-pulse" />
-                      <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Discipline Quotidienne</h3>
-                    </div>
-                    <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-800 px-2.5 py-1 rounded-full font-mono font-bold">
-                      {dailyHabits.filter(h => h.completed).length} / {dailyHabits.length} terminées
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-neutral-400">
-                    Cochez vos disciplines quotidiennes d'hygiène de vie, de sport et d'apprentissage pour renforcer votre série.
-                  </p>
-
-                  <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-                    {dailyHabits.map(habit => (
-                      <button
-                        key={habit.id}
-                        onClick={() => toggleHabit(habit.id)}
-                        className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer ${
-                          habit.completed
-                            ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
-                            : "bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="shrink-0">
-                            {habit.completed ? (
-                              <CheckCircle className="w-4.5 h-4.5 text-neutral-900 fill-neutral-900 text-white" />
-                            ) : (
-                              <Square className="w-4.5 h-4.5 text-neutral-300" />
-                            )}
-                          </div>
-                          <div>
-                            <span className={`text-xs font-semibold block ${habit.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
-                              {habit.name}
-                            </span>
-                            {habit.description && (
-                              <span className="text-[9px] text-neutral-400 block mt-0.5">{habit.description}</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border font-mono shrink-0 ml-2 ${
-                          habit.category === "professional"
-                            ? "bg-neutral-100 border-neutral-200 text-neutral-700"
-                            : "bg-neutral-100 border-neutral-200 text-neutral-700"
-                        }`}>
-                          {habit.category === "professional" ? "Pro" : "Perso"}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 2. Weekly goals tracker */}
-                <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Award className="w-4.5 h-4.5 text-neutral-900" />
-                      <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Objectifs de la Semaine</h3>
-                    </div>
-                    <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-800 px-2.5 py-1 rounded-full font-mono font-bold">
-                      {weeklyObjectives.filter(o => o.completed).length} / {weeklyObjectives.length} terminés
-                    </span>
-                  </div>
-
-                  {/* Add weekly objective Form */}
-                  <form onSubmit={handleAddObjectiveSubmit} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newObjectiveText}
-                      onChange={(e) => setNewObjectiveText(e.target.value)}
-                      placeholder="Ex: Écrire 3 articles LinkedIn, Préparer l'intro..."
-                      className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white transition-all font-medium"
-                    />
-                    <button
-                      type="submit"
-                      className="bg-neutral-950 hover:bg-neutral-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center justify-center shadow-xs"
-                    >
-                      <Plus className="w-4.5 h-4.5" />
-                    </button>
-                  </form>
-
-                  <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-                    {weeklyObjectives.length === 0 ? (
-                      <div className="text-xs text-neutral-400 italic py-8 text-center bg-neutral-50/50 rounded-xl border border-dashed border-neutral-200">
-                        Aucun objectif hebdomadaire pour l'instant. Saisissez-en un ci-dessus !
-                      </div>
-                    ) : (
-                      weeklyObjectives.map((obj) => (
-                        <div
-                          key={obj.id}
-                          className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                            obj.completed
-                              ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
-                              : "bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-50"
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => toggleWeeklyObjective(obj.id)}
-                            className="flex-1 flex items-center gap-2.5 text-left cursor-pointer"
-                          >
-                            <div className="shrink-0">
-                              {obj.completed ? (
-                                <CheckCircle className="w-4 h-4 text-neutral-900 fill-neutral-900 text-white" />
-                              ) : (
-                                <Square className="w-4 h-4 text-neutral-300" />
-                              )}
-                            </div>
-                            <span className={`text-xs font-semibold leading-snug ${obj.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
-                              {obj.text}
-                            </span>
-                          </button>
-                          
-                          <button
-                            type="button"
-                            onClick={() => deleteWeeklyObjective(obj.id)}
-                            className="text-neutral-400 hover:text-red-500 p-1 rounded-lg hover:bg-neutral-100 transition-colors shrink-0 ml-2 cursor-pointer"
-                            title="Supprimer l'objectif"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-              </div>
-
-              {/* GRID LAUNCHPAD: DECK OF OPENING PAGES ("Des pages qui s'ouvre") */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest font-mono">
-                  Console de Lancement : Modules Applicatifs
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {categories.map(cat => {
-                    const CatIcon = cat.icon;
-                    return (
-                      <div 
-                        key={cat.id} 
-                        className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs"
-                      >
-                        <div className="flex items-center gap-2 pb-2.5 border-b border-neutral-100">
-                          <div className="p-1.5 bg-neutral-100 rounded-lg text-neutral-800">
-                            <CatIcon className="w-4 h-4" />
-                          </div>
-                          <span className="text-xs font-extrabold uppercase tracking-widest text-neutral-900">
-                            {cat.label}
-                          </span>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          {cat.items.map(sub => {
-                            const SubIcon = sub.icon;
-                            return (
-                              <button
-                                key={sub.id}
-                                onClick={() => handleMenuClick(sub.id)}
-                                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-neutral-50 transition-all text-left border border-transparent hover:border-neutral-200 cursor-pointer group"
-                              >
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <SubIcon className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-900 shrink-0" />
-                                  <div className="min-w-0">
-                                    <span className="text-xs font-bold text-neutral-800 block leading-none">
-                                      {sub.label}
-                                    </span>
-                                    <span className="text-[10px] text-neutral-400 block truncate mt-1">
-                                      {sub.desc}
-                                    </span>
-                                  </div>
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-900 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* INTEGRATED EXECUTIVE REPORT SUMMARY */}
-              <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight flex items-center gap-2">
-                    <BarChart3 className="w-4.5 h-4.5 text-neutral-800" />
-                    <span>Rapport Financier Synthétique</span>
-                  </h3>
+              {/* INTERACTIVE DASHBOARD SECTION TABS */}
+              <div className="border-b border-neutral-200/80 pt-2">
+                <div className="flex items-center gap-1 overflow-x-auto pb-px scrollbar-none">
                   <button
-                    onClick={() => handleMenuClick("charts")}
-                    className="text-xs text-neutral-900 hover:text-neutral-700 font-bold flex items-center gap-1 cursor-pointer"
+                    onClick={() => setDashboardTab("routines")}
+                    className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
+                      dashboardTab === "routines"
+                        ? "border-neutral-900 text-neutral-900 font-extrabold"
+                        : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
+                    }`}
                   >
-                    <span>Ouvrir l'Analyse Avancée</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    <Flame className="w-4 h-4 text-orange-500 fill-orange-500 shrink-0" />
+                    <span>🎯 DISCIPLINES & OBJECTIFS</span>
+                  </button>
+
+                  <button
+                    onClick={() => setDashboardTab("charts")}
+                    className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
+                      dashboardTab === "charts"
+                        ? "border-neutral-900 text-neutral-900 font-extrabold"
+                        : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4 text-neutral-400" />
+                    <span>📊 RAPPORT FINANCIER SYNTHÉTIQUE</span>
+                  </button>
+
+                  <button
+                    onClick={() => setDashboardTab("launchpad")}
+                    className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
+                      dashboardTab === "launchpad"
+                        ? "border-neutral-900 text-neutral-900 font-extrabold"
+                        : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
+                    }`}
+                  >
+                    <Layers className="w-4 h-4 text-neutral-400" />
+                    <span>🔌 CONSOLE DE LANCEMENT (MODULES)</span>
                   </button>
                 </div>
-                
-                <FinanceCharts
-                  transactions={transactions}
-                  budgets={budgets}
-                  stocks={stocks}
-                  epargnes={epargnes}
-                  abonnements={abonnements}
-                />
               </div>
+
+              {/* TAB CONTENT RENDERING */}
+              <AnimatePresence mode="wait">
+                {dashboardTab === "routines" && (
+                  <motion.div
+                    key="routines"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+                  >
+                    {/* 1. Daily Habits discipline tracker */}
+                    <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Flame className="w-4.5 h-4.5 text-neutral-900 animate-pulse" />
+                          <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Discipline Quotidienne</h3>
+                        </div>
+                        <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-800 px-2.5 py-1 rounded-full font-mono font-bold">
+                          {dailyHabits.filter(h => h.completed).length} / {dailyHabits.length} terminées
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-neutral-400">
+                        Cochez vos disciplines quotidiennes d'hygiène de vie, de sport et d'apprentissage pour renforcer votre série.
+                      </p>
+
+                      <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                        {dailyHabits.map(habit => (
+                          <button
+                            key={habit.id}
+                            onClick={() => toggleHabit(habit.id)}
+                            className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer ${
+                              habit.completed
+                                ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
+                                : "bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="shrink-0">
+                                {habit.completed ? (
+                                  <CheckCircle className="w-4.5 h-4.5 text-neutral-900 fill-neutral-900 text-white" />
+                                ) : (
+                                  <Square className="w-4.5 h-4.5 text-neutral-300" />
+                                )}
+                              </div>
+                              <div>
+                                <span className={`text-xs font-semibold block ${habit.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
+                                  {habit.name}
+                                </span>
+                                {habit.description && (
+                                  <span className="text-[9px] text-neutral-400 block mt-0.5">{habit.description}</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border font-mono shrink-0 ml-2 ${
+                              habit.category === "professional"
+                                ? "bg-neutral-100 border-neutral-200 text-neutral-700"
+                                : "bg-neutral-100 border-neutral-200 text-neutral-700"
+                            }`}>
+                              {habit.category === "professional" ? "Pro" : "Perso"}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 2. Weekly goals tracker */}
+                    <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Award className="w-4.5 h-4.5 text-neutral-900" />
+                          <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Objectifs de la Semaine</h3>
+                        </div>
+                        <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-800 px-2.5 py-1 rounded-full font-mono font-bold">
+                          {weeklyObjectives.filter(o => o.completed).length} / {weeklyObjectives.length} terminés
+                        </span>
+                      </div>
+
+                      {/* Add weekly objective Form */}
+                      <form onSubmit={handleAddObjectiveSubmit} className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newObjectiveText}
+                          onChange={(e) => setNewObjectiveText(e.target.value)}
+                          placeholder="Ex: Écrire 3 articles LinkedIn, Préparer l'intro..."
+                          className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white transition-all font-medium"
+                        />
+                        <button
+                          type="submit"
+                          className="bg-neutral-950 hover:bg-neutral-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center justify-center shadow-xs"
+                        >
+                          <Plus className="w-4.5 h-4.5" />
+                        </button>
+                      </form>
+
+                      <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                        {weeklyObjectives.length === 0 ? (
+                          <div className="text-xs text-neutral-400 italic py-8 text-center bg-neutral-50/50 rounded-xl border border-dashed border-neutral-200">
+                            Aucun objectif hebdomadaire pour l'instant. Saisissez-en un ci-dessus !
+                          </div>
+                        ) : (
+                          weeklyObjectives.map((obj) => (
+                            <div
+                              key={obj.id}
+                              className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                                obj.completed
+                                  ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
+                                  : "bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-50"
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => toggleWeeklyObjective(obj.id)}
+                                className="flex-1 flex items-center gap-2.5 text-left cursor-pointer"
+                              >
+                                <div className="shrink-0">
+                                  {obj.completed ? (
+                                    <CheckCircle className="w-4 h-4 text-neutral-900 fill-neutral-900 text-white" />
+                                  ) : (
+                                    <Square className="w-4 h-4 text-neutral-300" />
+                                  )}
+                                </div>
+                                <span className={`text-xs font-semibold leading-snug ${obj.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
+                                  {obj.text}
+                                </span>
+                              </button>
+                              
+                              <button
+                                type="button"
+                                onClick={() => deleteWeeklyObjective(obj.id)}
+                                className="text-neutral-400 hover:text-red-500 p-1 rounded-lg hover:bg-neutral-100 transition-colors shrink-0 ml-2 cursor-pointer"
+                                title="Supprimer l'objectif"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {dashboardTab === "launchpad" && (
+                  <motion.div
+                    key="launchpad"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest font-mono">
+                        Console de Lancement : Modules Applicatifs
+                      </h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {categories.map(cat => {
+                        const CatIcon = cat.icon;
+                        return (
+                          <div 
+                            key={cat.id} 
+                            className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs"
+                          >
+                            <div className="flex items-center gap-2 pb-2.5 border-b border-neutral-100">
+                              <div className="p-1.5 bg-neutral-100 rounded-lg text-neutral-800">
+                                <CatIcon className="w-4 h-4" />
+                              </div>
+                              <span className="text-xs font-extrabold uppercase tracking-widest text-neutral-900">
+                                {cat.label}
+                              </span>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              {cat.items.map(sub => {
+                                const SubIcon = sub.icon;
+                                return (
+                                  <button
+                                    key={sub.id}
+                                    onClick={() => handleMenuClick(sub.id)}
+                                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-neutral-50 transition-all text-left border border-transparent hover:border-neutral-200 cursor-pointer group"
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <SubIcon className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-900 shrink-0" />
+                                      <div className="min-w-0">
+                                        <span className="text-xs font-bold text-neutral-800 block leading-none">
+                                          {sub.label}
+                                        </span>
+                                        <span className="text-[10px] text-neutral-400 block truncate mt-1">
+                                          {sub.desc}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-900 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+
+                {dashboardTab === "charts" && (
+                  <motion.div
+                    key="charts"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight flex items-center gap-2">
+                        <BarChart3 className="w-4.5 h-4.5 text-neutral-800" />
+                        <span>Rapport Financier Synthétique</span>
+                      </h3>
+                      <button
+                        onClick={() => handleMenuClick("charts")}
+                        className="text-xs text-neutral-900 hover:text-neutral-700 font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Ouvrir l'Analyse Avancée</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    
+                    <FinanceCharts
+                      transactions={transactions}
+                      budgets={budgets}
+                      stocks={stocks}
+                      epargnes={epargnes}
+                      abonnements={abonnements}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
             </div>
           )}
