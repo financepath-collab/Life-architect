@@ -797,11 +797,270 @@ export default function App() {
     };
   }, [accounts, stocks, dailyHabits, epargnes, abonnements]);
 
+  const activeCategoryObj = React.useMemo(() => {
+    return categories.find(cat => cat.items.some(item => item.id === activeMenu));
+  }, [activeMenu, categories]);
+
+  // Handle clicking a category row
+  const handleCategoryClick = (catId: string) => {
+    // Expand category
+    setExpandedCategories(prev => ({
+      ...prev,
+      [catId]: true
+    }));
+    // Navigate to the first sub-item of that category
+    const cat = categories.find(c => c.id === catId);
+    if (cat && cat.items.length > 0) {
+      handleMenuClick(cat.items[0].id);
+    }
+  };
+
   // Handle clicking a menu item
   const handleMenuClick = (itemId: string) => {
     setActiveMenu(itemId);
     setSidebarOpen(false); // Close responsive drawer on mobile
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Dynamic Metrics helper for Category Hubs
+  const renderCategoryMetrics = (catId: string) => {
+    const totalInflow = transactions
+      .filter(t => t.type === "Revenue")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalOutflow = transactions
+      .filter(t => t.type === "Dépense")
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const stockPortfolioValue = stocks.reduce((acc, s) => acc + s.currentPrice * s.quantity, 0);
+
+    const totalMonthlyAbonnements = abonnements
+      .filter(a => a.status === "Actif")
+      .reduce((sum, a) => sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
+
+    const habitsCompleted = dailyHabits.filter(h => h.completed).length;
+
+    const totalBankBalance = accounts.reduce((sum, acc) => {
+      let rate = 1;
+      if (acc.currency === "USD") rate = 10.1;
+      else if (acc.currency === "EUR") rate = 10.9;
+      return sum + acc.balance * rate;
+    }, 0);
+
+    const savedSportExercises = localStorage.getItem("mp_sport_exercises");
+    const sportExercisesCount = savedSportExercises ? JSON.parse(savedSportExercises).length : 6;
+
+    switch (catId) {
+      case "finance":
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Entrées Totales</span>
+                <span className="text-base font-extrabold font-mono text-emerald-600 block">+{totalInflow.toLocaleString("fr-FR")} MAD</span>
+              </div>
+              <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600"><TrendingUp className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Sorties Totales</span>
+                <span className="text-base font-extrabold font-mono text-rose-600 block">-{totalOutflow.toLocaleString("fr-FR")} MAD</span>
+              </div>
+              <div className="p-2 bg-rose-50 rounded-lg text-rose-600"><TrendingDown className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Trésorerie Nette</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{(totalInflow - totalOutflow).toLocaleString("fr-FR")} MAD</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Coins className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Portefeuille Actions</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{stockPortfolioValue.toLocaleString("fr-FR")} MAD</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Wallet className="w-4 h-4" /></div>
+            </div>
+          </div>
+        );
+
+      case "productivity":
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Série de Discipline</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{streakCount} Jours</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Flame className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Routines Validées</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{habitsCompleted} / {dailyHabits.length}</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><CheckCircle className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Sprints de Combat (30J)</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{actions30Jours.length} Actifs</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Calendar className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Grands Goals de Vie</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{possibilitesGoals.length} Buts</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Award className="w-4 h-4" /></div>
+            </div>
+          </div>
+        );
+
+      case "health":
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Entraînements de Sport</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{sportExercisesCount} Exercices</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Dumbbell className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Repas Planifiés</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{mealPlanners.length} Menus</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Layers className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Suivis de Peau (Skin)</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{skinTrackers.length} Enregistrés</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Sparkles className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Hydratation Cible</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block font-semibold text-neutral-700">2.5 Litres / jour</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Heart className="w-4 h-4" /></div>
+            </div>
+          </div>
+        );
+
+      case "purchases":
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Achats Mensuels</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{achatsMensuels.length} Commandes</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><ShoppingCart className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">SaaS Actifs</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{abonnements.filter(a => a.status === "Actif").length} Licences</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Bell className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Frais Récurrents</span>
+                <span className="text-base font-extrabold font-mono text-rose-600 block">-{totalMonthlyAbonnements.toLocaleString("fr-FR")} MAD / m</span>
+              </div>
+              <div className="p-2 bg-rose-50 rounded-lg text-rose-600"><TrendingDown className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Frais Annuels</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{(totalMonthlyAbonnements * 12).toLocaleString("fr-FR")} MAD / an</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Coins className="w-4 h-4" /></div>
+            </div>
+          </div>
+        );
+
+      case "formation":
+        const averageProgress = formations.length > 0 
+          ? Math.round(formations.reduce((sum, f) => sum + f.progressPercent, 0) / formations.length) 
+          : 0;
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Formations Enregistrées</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{formations.length} Cours</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><GraduationCap className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-sans">Progression Moyenne</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{averageProgress}% Complete</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><TrendingUp className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Médiathèque</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{mediaItems.length} Titres</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Film className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-sans">Livres Terminés</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{mediaItems.filter(m => m.type === "Livre" && m.status === "Terminé").length} Ouvrages</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><BookOpen className="w-4 h-4" /></div>
+            </div>
+          </div>
+        );
+
+      case "accounts":
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Comptes Bancaires</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{accounts.length} Entités</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Landmark className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-sans">Soldes Bancaires MAD</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{totalBankBalance.toLocaleString()} MAD</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Coins className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Chaînes Youtube/Insta</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{channels.length} Plateformes</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Tv className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Liens Favoris</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{links.length} Raccourcis</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Link2 className="w-4 h-4" /></div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
@@ -866,40 +1125,45 @@ export default function App() {
           </div>
 
           {/* Navigation links scroll area */}
-          <nav className="space-y-4 max-h-[58vh] overflow-y-auto pr-1">
+          <nav className="space-y-3 max-h-[58vh] overflow-y-auto pr-1">
             
             <button
               onClick={() => handleMenuClick("dashboard")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer ${
                 activeMenu === "dashboard"
-                  ? "bg-neutral-100 text-neutral-900 font-extrabold"
-                  : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
+                  ? "bg-neutral-900 text-white font-extrabold shadow-md"
+                  : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
               }`}
             >
-              <LayoutDashboard className="w-4 h-4 shrink-0" />
+              <LayoutDashboard className={`w-4 h-4 shrink-0 ${activeMenu === "dashboard" ? "text-amber-400" : "text-neutral-400"}`} />
               <span>TABLEAU DE BORD</span>
             </button>
 
-            {/* Collapsible Sectors */}
+            {/* Collapsible Sectors / Pages */}
             {categories.map(cat => {
               const isExpanded = !!expandedCategories[cat.id];
               const CatIcon = cat.icon;
+              const isCatActive = activeCategoryObj?.id === cat.id;
 
               return (
                 <div key={cat.id} className="space-y-1">
                   <button
-                    onClick={() => toggleCategoryExpand(cat.id)}
-                    className="w-full flex items-center justify-between text-neutral-400 hover:text-neutral-900 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-left select-none transition-colors"
+                    onClick={() => handleCategoryClick(cat.id)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider text-left transition-all cursor-pointer ${
+                      isCatActive
+                        ? "bg-neutral-900 text-white shadow-xs font-extrabold"
+                        : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
+                    }`}
                   >
-                    <div className="flex items-center gap-1.5">
-                      <CatIcon className="w-3.5 h-3.5" />
+                    <div className="flex items-center gap-2">
+                      <CatIcon className={`w-4 h-4 shrink-0 ${isCatActive ? "text-amber-400" : "text-neutral-400"}`} />
                       <span>{cat.label}</span>
                     </div>
-                    {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                    {isExpanded ? <ChevronDown className="w-3.5 h-3.5 opacity-80" /> : <ChevronRight className="w-3.5 h-3.5 opacity-80" />}
                   </button>
 
                   {isExpanded && (
-                    <div className="space-y-0.5 pl-2 border-l border-neutral-200 ml-2.5">
+                    <div className="space-y-1 pl-3 border-l border-neutral-200 ml-5 mt-1">
                       {cat.items.map(sub => {
                         const SubIcon = sub.icon;
                         const isSubActive = activeMenu === sub.id;
@@ -908,10 +1172,10 @@ export default function App() {
                           <button
                             key={sub.id}
                             onClick={() => handleMenuClick(sub.id)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors text-left ${
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
                               isSubActive
-                                ? "bg-neutral-100 text-neutral-900 font-semibold"
-                                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
+                                ? "bg-neutral-100 text-neutral-900 font-extrabold shadow-2xs"
+                                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/50"
                             }`}
                           >
                             <SubIcon className={`w-3.5 h-3.5 ${isSubActive ? "text-neutral-900" : "text-neutral-400"}`} />
@@ -1289,7 +1553,7 @@ export default function App() {
 
           {/* TAB 2: ANIMATED OVERLAY SUBPAGES ("Des pages qui s'ouvre") */}
           <AnimatePresence mode="wait">
-            {activeMenu !== "dashboard" && (
+            {activeMenu !== "dashboard" && activeCategoryObj && (
               <motion.div
                 key={activeMenu}
                 initial={{ opacity: 0, y: 30 }}
@@ -1300,21 +1564,23 @@ export default function App() {
               >
                 
                 {/* Back button and navigation breadcrumb */}
-                <div className="flex items-center justify-between bg-white border border-neutral-200 p-4 rounded-2xl shadow-3xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-neutral-200 p-4 rounded-2xl gap-3 shadow-3xs">
                   <button
                     onClick={() => handleMenuClick("dashboard")}
-                    className="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                    className="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer w-fit"
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    <span>Tableau de Bord</span>
+                    <span>Retour au Tableau de Bord</span>
                   </button>
 
-                  <div className="text-xs font-bold text-neutral-400 font-mono flex items-center gap-1">
+                  <div className="text-xs font-bold text-neutral-400 font-mono flex items-center gap-1.5 flex-wrap">
                     <span>ESPACE CRÉATEUR</span>
-                    <ChevronRight className="w-3 h-3 text-neutral-300" />
-                    <span className="text-neutral-900">
+                    <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+                    <span className="text-neutral-500 uppercase">{activeCategoryObj.label}</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+                    <span className="text-neutral-950">
                       {activeMenu === "charts" 
-                        ? "GRAPHIQUES & METRICS" 
+                        ? "GRAPHIQUES & ANALYSE" 
                         : activeMenu === "sport" 
                           ? "FOCUS SPORT" 
                           : getModuleConfig(activeMenu)?.title.toUpperCase()}
@@ -1322,51 +1588,95 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Conditional mounting of submodule views */}
-                {activeMenu === "charts" ? (
-                  <div className="space-y-6">
-                    <div className="bg-white border border-neutral-200 p-6 rounded-2xl shadow-2xs">
-                      <h3 className="text-base font-bold text-neutral-900 mb-1">Graphiques de performance Financière</h3>
-                      <p className="text-xs text-neutral-400">Analyse complète de vos flux de trésorerie, d'épargne, de vos budgets et positions boursières en BVC.</p>
-                    </div>
-
-                    <FinanceCharts
-                      transactions={transactions}
-                      budgets={budgets}
-                      stocks={stocks}
-                      epargnes={epargnes}
-                      abonnements={abonnements}
-                    />
+                {/* Category Header and Description */}
+                <div className="bg-white border border-neutral-200/85 rounded-3xl p-6 shadow-2xs space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-neutral-900 text-white text-[10px] font-bold font-mono px-2.5 py-1 rounded-full uppercase tracking-wider">
+                      Espace {activeCategoryObj.label}
+                    </span>
                   </div>
-                ) : activeMenu === "sport" ? (
-                  <FocusSport />
-                ) : (
-                  <div>
-                    {(() => {
-                      const config = getModuleConfig(activeMenu);
-                      if (!config) return (
-                        <div className="text-center py-20 bg-white border border-neutral-200 rounded-2xl text-neutral-400 italic">
-                          Module "{activeMenu}" en cours de déploiement dans l'espace créateur.
-                        </div>
-                      );
+                  <h1 className="text-xl font-black text-neutral-900 tracking-tight font-sans uppercase">
+                    {activeCategoryObj.label}
+                  </h1>
+                  <p className="text-xs text-neutral-500 max-w-2xl leading-relaxed">
+                    Naviguez à travers les différents modules du secteur {activeCategoryObj.label.toLowerCase()} pour piloter vos activités de création de contenu et d'organisation personnelle.
+                  </p>
+                </div>
 
+                {/* Dynamic Category Metrics Panel */}
+                {renderCategoryMetrics(activeCategoryObj.id)}
+
+                {/* Horizontal scrollable sub-tabs */}
+                <div className="border-b border-neutral-200/85">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-px scrollbar-thin scrollbar-thumb-neutral-200">
+                    {activeCategoryObj.items.map(subItem => {
+                      const SubIcon = subItem.icon;
+                      const isTabActive = activeMenu === subItem.id;
                       return (
-                        <InteractiveModuleTable
-                          title={config.title}
-                          description={config.description}
-                          columns={config.columns}
-                          data={config.data}
-                          onAdd={config.onAdd}
-                          onEdit={config.onEdit}
-                          onDelete={config.onDelete}
-                          onImport={config.onImport}
-                          currencySymbol="MAD"
-                          placeholderText={`Rechercher dans ${config.title.toLowerCase()}...`}
-                        />
+                        <button
+                          key={subItem.id}
+                          onClick={() => handleMenuClick(subItem.id)}
+                          className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer ${
+                            isTabActive
+                              ? "border-neutral-900 text-neutral-900 font-extrabold"
+                              : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
+                          }`}
+                        >
+                          <SubIcon className={`w-4 h-4 ${isTabActive ? "text-neutral-900" : "text-neutral-400"}`} />
+                          <span>{subItem.label}</span>
+                        </button>
                       );
-                    })()}
+                    })}
                   </div>
-                )}
+                </div>
+
+                {/* Interactive Content Card */}
+                <div className="bg-white border border-neutral-200 rounded-3xl p-6 shadow-xs min-h-[420px]">
+                  {activeMenu === "charts" ? (
+                    <div className="space-y-6">
+                      <div className="pb-4 border-b border-neutral-100">
+                        <h3 className="text-base font-bold text-neutral-900 mb-1">Graphiques de performance Financière</h3>
+                        <p className="text-xs text-neutral-400">Analyse complète de vos flux de trésorerie, d'épargne, de vos budgets et positions boursières en BVC.</p>
+                      </div>
+
+                      <FinanceCharts
+                        transactions={transactions}
+                        budgets={budgets}
+                        stocks={stocks}
+                        epargnes={epargnes}
+                        abonnements={abonnements}
+                      />
+                    </div>
+                  ) : activeMenu === "sport" ? (
+                    <FocusSport />
+                  ) : (
+                    <div>
+                      {(() => {
+                        const config = getModuleConfig(activeMenu);
+                        if (!config) return (
+                          <div className="text-center py-20 text-neutral-400 italic">
+                            Module "{activeMenu}" en cours de déploiement dans l'espace créateur.
+                          </div>
+                        );
+
+                        return (
+                          <InteractiveModuleTable
+                            title={config.title}
+                            description={config.description}
+                            columns={config.columns}
+                            data={config.data}
+                            onAdd={config.onAdd}
+                            onEdit={config.onEdit}
+                            onDelete={config.onDelete}
+                            onImport={config.onImport}
+                            currencySymbol="MAD"
+                            placeholderText={`Rechercher dans ${config.title.toLowerCase()}...`}
+                          />
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
 
                 {/* Footer Back navigation banner */}
                 <div className="flex justify-center pt-4">
