@@ -92,7 +92,9 @@ import {
   ArrowLeft,
   Dumbbell,
   Eye,
-  EyeOff
+  EyeOff,
+  Lock,
+  AlertCircle
 } from "lucide-react";
 
 export default function App() {
@@ -101,6 +103,13 @@ export default function App() {
   const [activeMenu, setActiveMenu] = useState<string>("dashboard"); // "dashboard", or "submodule_id"
   const [dashboardTab, setDashboardTab] = useState<"routines" | "charts" | "launchpad">("routines");
   const [focusMode, setFocusMode] = useState<boolean>(false);
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+    return sessionStorage.getItem("la_is_unlocked") === "true";
+  });
+  const [usernameInput, setUsernameInput] = useState<string>("");
+  const [passwordInput, setPasswordInput] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [loginError, setLoginError] = useState<string>("");
   const [expandedCategories, setExpandedCategories] = useState<{ [key: string]: boolean }>({
     finance: true,
     productivity: true,
@@ -1080,6 +1089,211 @@ export default function App() {
     }
   };
 
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanUser = usernameInput.trim().toLowerCase();
+    const cleanPass = passwordInput.trim();
+
+    if (!cleanUser || !cleanPass) {
+      setLoginError("Veuillez remplir tous les champs requis.");
+      return;
+    }
+
+    // Accepting both "admin" and the user's actual workspace email "financepath@hotmail.com"
+    if (
+      (cleanUser === "admin" || cleanUser === "financepath@hotmail.com") && 
+      cleanPass === "architect"
+    ) {
+      setIsUnlocked(true);
+      sessionStorage.setItem("la_is_unlocked", "true");
+      setLoginError("");
+    } else {
+      setLoginError("Identifiant ou mot de passe incorrect. Veuillez vérifier les accès suggérés.");
+    }
+  };
+
+  if (!isUnlocked) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4 relative overflow-hidden font-sans select-none selection:bg-amber-500 selection:text-neutral-900">
+        {/* Ambient background glow designs */}
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-amber-500/10 blur-[120px] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none opacity-40" />
+
+        <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10 py-8">
+          
+          {/* Left Column: Brand, Intro, and Slogan */}
+          <div className="lg:col-span-7 space-y-8 text-left animate-in fade-in slide-in-from-left-4 duration-500">
+            {/* Logo Badge */}
+            <div className="inline-flex items-center gap-2.5 bg-neutral-900 border border-neutral-800 px-3.5 py-1.5 rounded-full">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+              <span className="text-[10px] font-black tracking-widest text-neutral-300 uppercase font-mono">SYSTEM GATEWAY ACTIVE</span>
+            </div>
+
+            {/* Title & Slogan */}
+            <div className="space-y-4">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-none font-display">
+                Life Architect
+              </h1>
+              <p className="text-lg sm:text-xl font-bold text-amber-400/95 tracking-wide leading-relaxed max-w-xl font-sans italic border-l-2 border-amber-400/50 pl-4">
+                "L'Art de structurer votre quotidien pour concevoir votre destin."
+              </p>
+              <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed max-w-lg">
+                Prenez le contrôle total de votre existence grâce à une console d'ingénierie personnelle d'élite. Pilotez vos budgets, vos chaînes de contenu professionnelles, votre condition de vie et votre discipline quotidienne au même endroit.
+              </p>
+            </div>
+
+            {/* Decorative Bento Columns of Pillars */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+              <div className="bg-neutral-900/40 border border-neutral-800/60 p-4 rounded-2xl space-y-2 hover:border-neutral-700/50 transition-all">
+                <div className="w-8 h-8 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-center">
+                  <Coins className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">I. Finance</h3>
+                <p className="text-[10.5px] text-neutral-400 leading-relaxed font-sans">
+                  Patrimoine, budgets précis, investissements et alertes de prélèvements SaaS.
+                </p>
+              </div>
+
+              <div className="bg-neutral-900/40 border border-neutral-800/60 p-4 rounded-2xl space-y-2 hover:border-neutral-700/50 transition-all">
+                <div className="w-8 h-8 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg flex items-center justify-center">
+                  <Film className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">II. Contenu</h3>
+                <p className="text-[10.5px] text-neutral-400 leading-relaxed font-sans">
+                  Gestion éditoriale et calendrier de vos 3 chaînes de contenu clés.
+                </p>
+              </div>
+
+              <div className="bg-neutral-900/40 border border-neutral-800/60 p-4 rounded-2xl space-y-2 hover:border-neutral-700/50 transition-all">
+                <div className="w-8 h-8 bg-neutral-800/50 border border-neutral-700/50 text-neutral-300 rounded-lg flex items-center justify-center">
+                  <Award className="w-4 h-4" />
+                </div>
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">III. Discipline</h3>
+                <p className="text-[10.5px] text-neutral-400 leading-relaxed font-sans">
+                  Suivi quotidien d'habitudes, objectifs hebdomadaires et mode concentration.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Secure Credentials Card */}
+          <div className="lg:col-span-5 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="bg-neutral-900/80 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6">
+              
+              {/* Header inside the card */}
+              <div className="space-y-1 text-center lg:text-left">
+                <h2 className="text-lg font-black tracking-wider text-white uppercase font-mono flex items-center gap-2 justify-center lg:justify-start">
+                  <Lock className="w-4 h-4 text-amber-400" />
+                  Accès Sécurisé
+                </h2>
+                <p className="text-xs text-neutral-400">
+                  Déverrouillez le tableau de bord pour accéder à vos architectures de vie.
+                </p>
+              </div>
+
+              {/* Suggestions Credentials Hint */}
+              <div className="bg-amber-500/10 border border-amber-500/25 p-3 rounded-xl space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 font-mono">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>IDENTIFIANTS SUGGÉRÉS :</span>
+                </div>
+                <div className="text-[10.5px] text-amber-300/90 font-mono leading-relaxed space-y-0.5">
+                  <div>Identifiant : <span className="font-bold text-white select-all">financepath@hotmail.com</span> <span className="text-neutral-500">ou</span> <span className="font-bold text-white select-all">admin</span></div>
+                  <div>Mot de passe : <span className="font-bold text-white select-all">architect</span></div>
+                </div>
+              </div>
+
+              {/* Login Form */}
+              <form onSubmit={handleLogin} className="space-y-4">
+                
+                {/* Username Input */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block font-mono">
+                    Nom d'utilisateur / Email
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={usernameInput}
+                      onChange={(e) => {
+                        setUsernameInput(e.target.value);
+                        setLoginError("");
+                      }}
+                      placeholder="admin ou email..."
+                      className="w-full bg-neutral-950 border border-neutral-800 focus:border-amber-500/80 rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium text-white placeholder-neutral-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/30 font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Password Input */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block font-mono">
+                    Mot de passe
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={passwordInput}
+                      onChange={(e) => {
+                        setPasswordInput(e.target.value);
+                        setLoginError("");
+                      }}
+                      placeholder="Saisir le mot de passe..."
+                      className="w-full bg-neutral-950 border border-neutral-800 focus:border-amber-500/80 rounded-xl py-2.5 pl-10 pr-10 text-xs font-medium text-white placeholder-neutral-600 outline-none transition-all focus:ring-1 focus:ring-amber-500/30 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-300 transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error Banner */}
+                {loginError && (
+                  <div className="bg-rose-500/10 border border-rose-500/25 p-3 rounded-xl flex items-start gap-2 text-[11px] text-rose-300 font-medium leading-relaxed animate-in fade-in duration-250">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                    <span>{loginError}</span>
+                  </div>
+                )}
+
+                {/* Submit button */}
+                <button
+                  type="submit"
+                  className="w-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-black text-xs uppercase tracking-widest py-3 rounded-xl transition-all duration-200 shadow-md shadow-amber-500/10 flex items-center justify-center gap-2 cursor-pointer select-none"
+                >
+                  <span>Déverrouiller le Système</span>
+                  <Sparkles className="w-4 h-4" />
+                </button>
+
+              </form>
+
+              {/* Small security footer */}
+              <div className="text-center">
+                <span className="text-[9px] text-neutral-600 font-mono tracking-wider uppercase">
+                  Protégé par clé d'architecture v2.4.2
+                </span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-neutral-800 flex flex-col font-sans antialiased">
       
@@ -1092,12 +1306,12 @@ export default function App() {
             onClick={() => handleMenuClick("dashboard")}
             className="flex items-center gap-2 cursor-pointer shrink-0 select-none"
           >
-            <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center font-black text-white text-xs shadow-xs font-display shrink-0">
-              MC
+            <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center font-black text-white text-xs shadow-xs font-display shrink-0 tracking-wider">
+              LA
             </div>
             <div className="hidden xl:block">
-              <span className="text-[8px] font-bold text-neutral-400 block tracking-wider uppercase font-mono leading-none">CREATOR WORKSPACE</span>
-              <span className="text-xs font-black text-neutral-900 block leading-tight mt-0.5">Moroccan Planner</span>
+              <span className="text-[8px] font-bold text-neutral-400 block tracking-wider uppercase font-mono leading-none">SYSTEM ARCHITECT</span>
+              <span className="text-xs font-black text-neutral-900 block leading-tight mt-0.5">Life Architect</span>
             </div>
           </div>
 
@@ -1203,6 +1417,18 @@ export default function App() {
             >
               <RefreshCw className="w-3 h-3 shrink-0" />
               <span>Nouveau Jour</span>
+            </button>
+
+            {/* Logout Button */}
+            <button
+              onClick={() => {
+                setIsUnlocked(false);
+                sessionStorage.removeItem("la_is_unlocked");
+              }}
+              className="p-1.5 bg-neutral-100 hover:bg-rose-50 text-neutral-500 hover:text-rose-600 rounded-lg border border-neutral-200 hover:border-rose-200 transition-all cursor-pointer shrink-0"
+              title="Se déconnecter de la session"
+            >
+              <Lock className="w-3.5 h-3.5" />
             </button>
 
             {/* Responsive Mobile Menu Button */}

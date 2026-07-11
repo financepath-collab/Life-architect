@@ -1,6 +1,6 @@
 {
-  "name": "Moroccan Content Creator Planner",
-  "description": "An interactive premium suite to manage multi-channel content, personal finance, budget tracking, stocks, productivity, skin/health tracker, and daily habits with Excel export/import support.",
+  "name": "Life Architect",
+  "description": "Structurez votre quotidien, concevez votre destin. Une plateforme premium tout-en-un pour orchestrer vos finances, vos chaînes de contenu, votre discipline et vos objectifs de vie.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
