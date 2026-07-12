@@ -110,7 +110,8 @@ import {
   Hourglass,
   Sun,
   Moon,
-  Globe
+  Globe,
+  FolderKanban
 } from "lucide-react";
 
 function Logo({ className = "w-8 h-8 text-indigo-500" }: { className?: string }) {
@@ -145,6 +146,7 @@ export default function App() {
     productivity: true,
     health: false,
     purchases: false,
+    projets: true,
     formation: false,
     accounts: false
   });
@@ -474,12 +476,19 @@ export default function App() {
       ]
     },
     {
-      id: "formation",
-      label: "Formation & Culture",
-      icon: BookOpen,
+      id: "projets",
+      label: "Projets & Académie",
+      icon: FolderKanban,
       items: [
         { id: "formations", label: "Carrière & Formations", icon: GraduationCap, desc: "Suivi complet de vos formations, compétences ciblées et opportunités de recrutement." },
-        { id: "macircle", label: "Académie \"The MA Circle\"", icon: Globe, desc: "Monétisation de vos canaux YouTube, formations produites et ventes de produits digitaux." },
+        { id: "macircle", label: "Académie \"The MA Circle\"", icon: Globe, desc: "Monétisation de vos canaux YouTube, formations produites et ventes de produits digitaux." }
+      ]
+    },
+    {
+      id: "formation",
+      label: "Lectures & Écrans",
+      icon: BookOpen,
+      items: [
         { id: "books", label: "Lectures & Livres", icon: BookOpen, desc: "Suivi détaillé de vos lectures en cours, terminées et wishlist." },
         { id: "screenmedia", label: "Séries, Animes & Films", icon: Film, desc: "File de visionnage et progression d'épisodes de vos écrans." }
       ]
