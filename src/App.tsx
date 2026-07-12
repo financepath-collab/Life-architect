@@ -107,7 +107,8 @@ import {
   Gift,
   Hourglass,
   Sun,
-  Moon
+  Moon,
+  Globe
 } from "lucide-react";
 
 function Logo({ className = "w-8 h-8 text-indigo-500" }: { className?: string }) {
@@ -476,6 +477,7 @@ export default function App() {
       icon: BookOpen,
       items: [
         { id: "formations", label: "Carrière & Formations", icon: GraduationCap, desc: "Suivi complet de vos formations, compétences ciblées et opportunités de recrutement." },
+        { id: "macircle", label: "Académie \"The MA Circle\"", icon: Globe, desc: "Monétisation de vos canaux YouTube, formations produites et ventes de produits digitaux." },
         { id: "books", label: "Lectures & Livres", icon: BookOpen, desc: "Suivi détaillé de vos lectures en cours, terminées et wishlist." },
         { id: "screenmedia", label: "Séries, Animes & Films", icon: Film, desc: "File de visionnage et progression d'épisodes de vos écrans." }
       ]
@@ -2137,7 +2139,9 @@ export default function App() {
                   ) : activeMenu === "screenmedia" ? (
                     <ScreenMediaSection screenMedia={screenMedia} setScreenMedia={setScreenMedia} />
                   ) : activeMenu === "formations" ? (
-                    <FormationsSection formations={formations} setFormations={setFormations} />
+                    <FormationsSection formations={formations} setFormations={setFormations} activeTab="carriere_pro" hideTabs={true} />
+                  ) : activeMenu === "macircle" ? (
+                    <FormationsSection formations={formations} setFormations={setFormations} activeTab="ma_circle" hideTabs={true} />
                   ) : (
                     <div>
                       {(() => {

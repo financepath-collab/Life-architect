@@ -127,10 +127,27 @@ export interface CreatorWebsite {
 interface FormationsSectionProps {
   formations: Formation[]; 
   setFormations: React.Dispatch<React.SetStateAction<Formation[]>>;
+  activeTab?: "carriere_pro" | "ma_circle";
+  hideTabs?: boolean;
 }
 
-export default function FormationsSection({ formations, setFormations }: FormationsSectionProps) {
-  const [activeTab, setActiveTab] = useState<"ma_circle" | "carriere_pro">("carriere_pro");
+export default function FormationsSection({ 
+  formations, 
+  setFormations,
+  activeTab: activeTabProp,
+  hideTabs = false
+}: FormationsSectionProps) {
+  const [localActiveTab, setLocalActiveTab] = useState<"ma_circle" | "carriere_pro">("carriere_pro");
+
+  useEffect(() => {
+    if (activeTabProp) {
+      setLocalActiveTab(activeTabProp);
+    }
+  }, [activeTabProp]);
+
+  const activeTab = activeTabProp || localActiveTab;
+  const setActiveTab = activeTabProp ? () => {} : setLocalActiveTab;
+
   const [carriereSubTab, setCarriereSubTab] = useState<"learning" | "skills" | "recruitment">("learning");
   const [maCircleSubTab, setMaCircleSubTab] = useState<"ecosystem" | "courses" | "products">("ecosystem");
 
@@ -438,31 +455,33 @@ export default function FormationsSection({ formations, setFormations }: Formati
     <div className="space-y-6">
       
       {/* 1. SECTOR MAIN TABS */}
-      <div className="flex border-b border-neutral-200/80 -mx-6 px-6">
-        <button
-          onClick={() => setActiveTab("carriere_pro")}
-          className={`flex items-center gap-2.5 px-6 py-3.5 text-xs font-black uppercase tracking-widest transition-all border-b-2 -mb-px cursor-pointer select-none ${
-            activeTab === "carriere_pro"
-              ? "border-indigo-600 text-indigo-600"
-              : "border-transparent text-neutral-400 hover:text-neutral-900"
-          }`}
-        >
-          <GraduationCap className="w-4 h-4" />
-          <span>💼 CARRIÈRE PROFESSIONNELLE & AUTO-FORMATION</span>
-        </button>
+      {!hideTabs && (
+        <div className="flex border-b border-neutral-200/80 -mx-6 px-6">
+          <button
+            onClick={() => setActiveTab("carriere_pro")}
+            className={`flex items-center gap-2.5 px-6 py-3.5 text-xs font-black uppercase tracking-widest transition-all border-b-2 -mb-px cursor-pointer select-none ${
+              activeTab === "carriere_pro"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-neutral-400 hover:text-neutral-900"
+            }`}
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>💼 CARRIÈRE PROFESSIONNELLE & AUTO-FORMATION</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("ma_circle")}
-          className={`flex items-center gap-2.5 px-6 py-3.5 text-xs font-black uppercase tracking-widest transition-all border-b-2 -mb-px cursor-pointer select-none ${
-            activeTab === "ma_circle"
-              ? "border-indigo-600 text-indigo-600"
-              : "border-transparent text-neutral-400 hover:text-neutral-900"
-          }`}
-        >
-          <Globe className="w-4 h-4" />
-          <span>🎯 ACADÉMIE "THE MA CIRCLE"</span>
-        </button>
-      </div>
+          <button
+            onClick={() => setActiveTab("ma_circle")}
+            className={`flex items-center gap-2.5 px-6 py-3.5 text-xs font-black uppercase tracking-widest transition-all border-b-2 -mb-px cursor-pointer select-none ${
+              activeTab === "ma_circle"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-neutral-400 hover:text-neutral-900"
+            }`}
+          >
+            <Globe className="w-4 h-4" />
+            <span>🎯 ACADÉMIE "THE MA CIRCLE"</span>
+          </button>
+        </div>
+      )}
 
       {/* ==================================================== */}
       {/* --- TAB: CARRIÈRE PROFESSIONNELLE & AUTO-FORMATION --- */}
