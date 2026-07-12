@@ -46,30 +46,30 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
         <div className="space-y-1.5">
           <div className="flex justify-between items-center text-xs gap-4">
             <span className="text-neutral-500 font-semibold flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              <span className="w-2.5 h-2.5 rounded-full bg-neutral-700" />
               Revenus :
             </span>
-            <span className="font-bold font-mono text-emerald-600">+{rev.toLocaleString("fr-FR")} MAD</span>
+            <span className="font-bold font-mono text-neutral-800">+{rev.toLocaleString("fr-FR")} MAD</span>
           </div>
           <div className="flex justify-between items-center text-xs gap-4">
             <span className="text-neutral-500 font-semibold flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+              <span className="w-2.5 h-2.5 rounded-full bg-neutral-400" />
               Dépenses :
             </span>
-            <span className="font-bold font-mono text-rose-600">-{dep.toLocaleString("fr-FR")} MAD</span>
+            <span className="font-bold font-mono text-neutral-500">-{dep.toLocaleString("fr-FR")} MAD</span>
           </div>
           <div className="border-t border-dashed border-neutral-200/60 pt-1.5 mt-1.5 flex justify-between items-center text-xs gap-4">
             <span className="text-neutral-800 font-black flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-neutral-900" />
               Épargne Nette :
             </span>
-            <span className={`font-bold font-mono ${net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+            <span className="font-bold font-mono text-neutral-900">
               {net >= 0 ? "+" : ""}{net.toLocaleString("fr-FR")} MAD
             </span>
           </div>
           <div className="flex justify-between items-center text-[10px] gap-4">
             <span className="text-neutral-400 font-semibold">Taux d'Épargne :</span>
-            <span className={`font-bold font-mono px-1.5 py-0.5 rounded-md ${rate >= 30 ? "bg-emerald-50 text-emerald-700" : rate >= 10 ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"}`}>
+            <span className="font-bold font-mono px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-700">
               {rate}%
             </span>
           </div>
@@ -214,12 +214,12 @@ export default function FinanceCharts({
         <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Total Entrées</span>
-            <h4 className="text-xl font-bold font-mono text-emerald-600">
+            <h4 className="text-xl font-bold font-mono text-neutral-900">
               +{totalInflow.toLocaleString("fr-FR")} MAD
             </h4>
             <span className="text-[10px] text-neutral-400 font-medium">Revenus et virements reçus</span>
           </div>
-          <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600 border border-emerald-100">
+          <div className="p-3 bg-neutral-100 rounded-xl text-neutral-700 border border-neutral-200">
             <TrendingUp className="w-5 h-5" />
           </div>
         </div>
@@ -228,12 +228,12 @@ export default function FinanceCharts({
         <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Total Dépenses</span>
-            <h4 className="text-xl font-bold font-mono text-rose-600">
+            <h4 className="text-xl font-bold font-mono text-neutral-700">
               -{totalOutflow.toLocaleString("fr-FR")} MAD
             </h4>
             <span className="text-[10px] text-neutral-400 font-medium">Dépenses réelles comptabilisées</span>
           </div>
-          <div className="p-3 bg-rose-50 rounded-xl text-rose-600 border border-rose-100">
+          <div className="p-3 bg-neutral-100 rounded-xl text-neutral-700 border border-neutral-200">
             <TrendingDown className="w-5 h-5" />
           </div>
         </div>
@@ -242,7 +242,7 @@ export default function FinanceCharts({
         <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex items-center justify-between shadow-xs">
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Trésorerie Nette</span>
-            <h4 className={`text-xl font-bold font-mono ${netSavings >= 0 ? "text-neutral-900" : "text-amber-600"}`}>
+            <h4 className="text-xl font-bold font-mono text-neutral-900">
               {netSavings >= 0 ? "+" : ""}{netSavings.toLocaleString("fr-FR")} MAD
             </h4>
             <span className="text-[10px] text-neutral-400 font-medium">Flux net disponible de la période</span>
@@ -259,7 +259,7 @@ export default function FinanceCharts({
             <h4 className="text-xl font-bold font-mono text-neutral-900">
               {stockPortfolioValue.toLocaleString("fr-FR")} MAD
             </h4>
-            <span className={`text-[10px] font-semibold ${stockProfitLoss >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+            <span className="text-[10px] font-semibold text-neutral-500">
               {stockProfitLoss >= 0 ? "▲" : "▼"} {stockProfitLoss >= 0 ? "+" : ""}{stockProfitLoss.toLocaleString("fr-FR")} MAD
             </span>
           </div>
@@ -283,11 +283,11 @@ export default function FinanceCharts({
           </div>
           <div className="flex flex-wrap items-center gap-4 bg-neutral-50 border border-neutral-200/50 px-3.5 py-1.5 rounded-xl text-[10px] font-bold text-neutral-600 self-start md:self-auto uppercase tracking-wide">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500" />
+              <span className="w-2.5 h-2.5 rounded-xs bg-neutral-700" />
               <span>Entrées</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-xs bg-rose-500" />
+              <span className="w-2.5 h-2.5 rounded-xs bg-neutral-400" />
               <span>Dépenses</span>
             </div>
             <div className="flex items-center gap-1.5 border-l border-neutral-200 pl-3">
@@ -323,14 +323,14 @@ export default function FinanceCharts({
               <Bar 
                 name="Revenus"
                 dataKey="Revenus" 
-                fill="#10b981" 
+                fill="#404040" 
                 radius={[4, 4, 0, 0]} 
                 maxBarSize={32}
               />
               <Bar 
                 name="Dépenses"
                 dataKey="Dépenses" 
-                fill="#f43f5e" 
+                fill="#a3a3a3" 
                 radius={[4, 4, 0, 0]} 
                 maxBarSize={32}
               />
@@ -349,24 +349,24 @@ export default function FinanceCharts({
 
         {/* High-fidelity summary stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-          <div className="bg-emerald-50/40 border border-emerald-100/60 rounded-xl p-4 space-y-1">
-            <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider block">Entrées Moyennes</span>
-            <div className="text-base font-black text-emerald-950 font-mono">
+          <div className="bg-neutral-50 border border-neutral-200/60 rounded-xl p-4 space-y-1">
+            <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block">Entrées Moyennes</span>
+            <div className="text-base font-black text-neutral-900 font-mono">
               {Math.round(
                 monthlyChartData.reduce((acc, curr) => acc + curr.Revenus, 0) / monthlyChartData.length
               ).toLocaleString("fr-FR")} MAD
             </div>
-            <span className="text-[10px] text-emerald-700/80 block">Moyenne mensuelle sur 6 mois</span>
+            <span className="text-[10px] text-neutral-400 block">Moyenne mensuelle sur 6 mois</span>
           </div>
 
-          <div className="bg-rose-50/40 border border-rose-100/60 rounded-xl p-4 space-y-1">
-            <span className="text-[9px] font-bold text-rose-800 uppercase tracking-wider block">Dépenses Moyennes</span>
-            <div className="text-base font-black text-rose-950 font-mono">
+          <div className="bg-neutral-50 border border-neutral-200/60 rounded-xl p-4 space-y-1">
+            <span className="text-[9px] font-bold text-neutral-500 uppercase tracking-wider block">Dépenses Moyennes</span>
+            <div className="text-base font-black text-neutral-900 font-mono">
               {Math.round(
                 monthlyChartData.reduce((acc, curr) => acc + curr.Dépenses, 0) / monthlyChartData.length
               ).toLocaleString("fr-FR")} MAD
             </div>
-            <span className="text-[10px] text-rose-700/80 block">Moyenne mensuelle sur 6 mois</span>
+            <span className="text-[10px] text-neutral-400 block">Moyenne mensuelle sur 6 mois</span>
           </div>
 
           <div className="bg-neutral-50 border border-neutral-200/80 rounded-xl p-4 space-y-1">
@@ -393,11 +393,11 @@ export default function FinanceCharts({
           </div>
           <div className="flex flex-wrap items-center gap-4 bg-neutral-50 border border-neutral-200/50 px-3.5 py-1.5 rounded-xl text-[10px] font-bold text-neutral-600 self-start md:self-auto uppercase tracking-wide">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500" />
+              <span className="w-2.5 h-2.5 rounded-xs bg-neutral-700" />
               <span>Revenus Totaux</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-xs bg-rose-500" />
+              <span className="w-2.5 h-2.5 rounded-xs bg-neutral-400" />
               <span>Dépenses Totales</span>
             </div>
           </div>
@@ -436,27 +436,27 @@ export default function FinanceCharts({
                         <div className="space-y-1.5 text-xs">
                           <div className="flex justify-between items-center">
                             <span className="text-neutral-500 font-semibold flex items-center gap-1.5">
-                              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500" />
+                              <span className="w-2.5 h-2.5 rounded-xs bg-neutral-700" />
                               Revenus :
                             </span>
                             <span className="font-mono font-bold text-neutral-900">{rev.toLocaleString("fr-FR")} MAD</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-neutral-500 font-semibold flex items-center gap-1.5">
-                              <span className="w-2.5 h-2.5 rounded-xs bg-rose-500" />
+                              <span className="w-2.5 h-2.5 rounded-xs bg-neutral-400" />
                               Dépenses :
                             </span>
                             <span className="font-mono font-bold text-neutral-900">{dep.toLocaleString("fr-FR")} MAD</span>
                           </div>
                           <div className="border-t border-dashed border-neutral-100 pt-1.5 mt-1.5 flex justify-between items-center">
                             <span className="text-neutral-600 font-bold">Épargne Nette :</span>
-                            <span className={`font-mono font-black ${net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                            <span className="font-mono font-black text-neutral-900">
                               {net >= 0 ? "+" : ""}{net.toLocaleString("fr-FR")} MAD
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-[10px]">
                             <span className="text-neutral-400 font-medium">Taux d'Épargne :</span>
-                            <span className={`font-mono font-bold ${net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                            <span className="font-mono font-bold text-neutral-600">
                               {rate}%
                             </span>
                           </div>
@@ -471,14 +471,14 @@ export default function FinanceCharts({
               <Bar 
                 name="Revenus"
                 dataKey="Revenus" 
-                fill="#10b981" 
+                fill="#404040" 
                 radius={[4, 4, 0, 0]} 
                 maxBarSize={28}
               />
               <Bar 
                 name="Dépenses"
                 dataKey="Dépenses" 
-                fill="#f43f5e" 
+                fill="#a3a3a3" 
                 radius={[4, 4, 0, 0]} 
                 maxBarSize={28}
               />
@@ -493,7 +493,7 @@ export default function FinanceCharts({
             return (
               <div key={idx} className="bg-neutral-50 border border-neutral-200/60 rounded-xl p-3 space-y-1 text-center shadow-3xs">
                 <span className="text-[10px] font-bold text-neutral-500 block uppercase tracking-wider">{m.name}</span>
-                <div className={`text-xs font-black font-mono ${net >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                <div className="text-xs font-black font-mono text-neutral-800">
                   {net >= 0 ? "+" : ""}{net.toLocaleString("fr-FR")} MAD
                 </div>
                 <span className="text-[8px] text-neutral-400 block">Épargne Nette</span>

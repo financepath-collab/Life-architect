@@ -1017,13 +1017,13 @@ export default function FormationsSection({ formations, setFormations }: Formati
                               <span className="text-xs font-black text-neutral-900">{comp.name}</span>
                               <a 
                                 href={comp.website} target="_blank" rel="noopener noreferrer" 
-                                className="text-indigo-600 hover:text-indigo-500"
+                                className="text-neutral-800 hover:text-neutral-600"
                               >
                                 <ExternalLink className="w-3 h-3 inline-block" />
                               </a>
                             </div>
                             {comp.contact && (
-                              <span className="text-[9.5px] text-indigo-500 font-bold block font-mono">Contact: {comp.contact}</span>
+                              <span className="text-[9.5px] text-neutral-600 font-bold block font-mono">Contact: {comp.contact}</span>
                             )}
                           </div>
                           
@@ -1530,7 +1530,7 @@ export default function FormationsSection({ formations, setFormations }: Formati
                   <input type="number" required placeholder="Élèves" value={cStudents} onChange={e => setCStudents(Number(e.target.value))} className="bg-neutral-50 border p-2 rounded-xl" />
                   <input type="number" required placeholder="Revenu Est." value={cRev} onChange={e => setCRev(Number(e.target.value))} className="bg-neutral-50 border p-2 rounded-xl" />
                 </div>
-                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Publier</button>
+                <button type="submit" className="w-full bg-neutral-900 hover:bg-neutral-800 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Publier</button>
               </form>
             </motion.div>
           </div>
@@ -1558,7 +1558,7 @@ export default function FormationsSection({ formations, setFormations }: Formati
                   <input type="number" required placeholder="Prix" value={pPrice} onChange={e => setPPrice(Number(e.target.value))} className="bg-neutral-50 border p-2 rounded-xl" />
                   <input type="number" required placeholder="Ventes" value={pSales} onChange={e => setPSales(Number(e.target.value))} className="bg-neutral-50 border p-2 rounded-xl" />
                 </div>
-                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Créer</button>
+                <button type="submit" className="w-full bg-neutral-900 hover:bg-neutral-800 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Créer</button>
               </form>
             </motion.div>
           </div>
@@ -1657,7 +1657,7 @@ export default function FormationsSection({ formations, setFormations }: Formati
                   <option value="Pause">Pause</option>
                   <option value="En projet">En projet</option>
                 </select>
-                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Ajouter la chaîne</button>
+                <button type="submit" className="w-full bg-neutral-900 hover:bg-neutral-800 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Ajouter la chaîne</button>
               </form>
             </motion.div>
           </div>

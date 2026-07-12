@@ -996,16 +996,16 @@ export default function App() {
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
               <div className="space-y-0.5">
                 <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Entrées Totales</span>
-                <span className="text-base font-extrabold font-mono text-emerald-600 block">+{totalInflow.toLocaleString("fr-FR")} MAD</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">+{totalInflow.toLocaleString("fr-FR")} MAD</span>
               </div>
-              <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600"><TrendingUp className="w-4 h-4" /></div>
+              <div className="p-2 bg-neutral-100 rounded-lg text-neutral-700 border border-neutral-200"><TrendingUp className="w-4 h-4" /></div>
             </div>
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
               <div className="space-y-0.5">
                 <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Sorties Totales</span>
-                <span className="text-base font-extrabold font-mono text-rose-600 block">-{totalOutflow.toLocaleString("fr-FR")} MAD</span>
+                <span className="text-base font-extrabold font-mono text-neutral-800 block">-{totalOutflow.toLocaleString("fr-FR")} MAD</span>
               </div>
-              <div className="p-2 bg-rose-50 rounded-lg text-rose-600"><TrendingDown className="w-4 h-4" /></div>
+              <div className="p-2 bg-neutral-100 rounded-lg text-neutral-700 border border-neutral-200"><TrendingDown className="w-4 h-4" /></div>
             </div>
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
               <div className="space-y-0.5">
@@ -1112,9 +1112,9 @@ export default function App() {
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
               <div className="space-y-0.5">
                 <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Frais Récurrents</span>
-                <span className="text-base font-extrabold font-mono text-rose-600 block">-{totalMonthlyAbonnements.toLocaleString("fr-FR")} MAD / m</span>
+                <span className="text-base font-extrabold font-mono text-neutral-800 block">-{totalMonthlyAbonnements.toLocaleString("fr-FR")} MAD / m</span>
               </div>
-              <div className="p-2 bg-rose-50 rounded-lg text-rose-600"><TrendingDown className="w-4 h-4" /></div>
+              <div className="p-2 bg-neutral-100 rounded-lg text-neutral-700 border border-neutral-200"><TrendingDown className="w-4 h-4" /></div>
             </div>
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
               <div className="space-y-0.5">
@@ -1227,118 +1227,76 @@ export default function App() {
 
   if (!isUnlocked) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-4 relative overflow-hidden font-sans select-none selection:bg-indigo-600 selection:text-white">
-        {/* Ambient background glow designs */}
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293710_1px,transparent_1px),linear-gradient(to_bottom,#1f293710_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none opacity-40" />
-
-        <div className="max-w-md w-full relative z-10 py-8 animate-in fade-in duration-500">
-          <div className="bg-neutral-900/80 border border-neutral-800 rounded-3xl p-8 shadow-2xl backdrop-blur-xl space-y-6">
-            
-            {/* Logo and Slogan */}
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="w-12 h-12 bg-neutral-850 border border-neutral-700/85 rounded-xl flex items-center justify-center shadow-lg">
-                  <Logo className="w-6 h-6 text-indigo-400" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <h1 className="text-2xl font-black tracking-tight text-white uppercase font-sans">
-                  Life Architect
-                </h1>
-                <p className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest font-mono">
-                  Slogan : "L'Art de concevoir votre destin"
-                </p>
-              </div>
-              <p className="text-xs text-neutral-400 leading-relaxed max-w-xs mx-auto">
-                Accédez à votre console d'ingénierie personnelle et pilotez vos finances, disciplines et projets créatifs.
-              </p>
+      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-6 relative font-sans select-none selection:bg-neutral-800 selection:text-white">
+        <div className="max-w-xs w-full space-y-8 animate-in fade-in duration-500">
+          
+          {/* Logo and Slogan */}
+          <div className="flex flex-col items-center text-center space-y-5">
+            <div className="w-14 h-14 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center shadow-xs">
+              <Logo className="w-7 h-7 text-white" />
             </div>
-
-            {/* Login Form */}
-            <form onSubmit={handleLogin} className="space-y-4">
-              
-              {/* Username Input */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block font-mono">
-                  Nom d'utilisateur / Email
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    value={usernameInput}
-                    onChange={(e) => {
-                      setUsernameInput(e.target.value);
-                      setLoginError("");
-                    }}
-                    placeholder="Saisir l'identifiant..."
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-indigo-500/80 rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium text-white placeholder-neutral-600 outline-none transition-all focus:ring-1 focus:ring-indigo-500/30 font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Password Input */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block font-mono">
-                  Mot de passe
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
-                    <Lock className="w-4 h-4" />
-                  </div>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={passwordInput}
-                    onChange={(e) => {
-                      setPasswordInput(e.target.value);
-                      setLoginError("");
-                    }}
-                    placeholder="Saisir le mot de passe..."
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-indigo-500/80 rounded-xl py-2.5 pl-10 pr-10 text-xs font-medium text-white placeholder-neutral-600 outline-none transition-all focus:ring-1 focus:ring-indigo-500/30 font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-300 transition-colors cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Error Banner */}
-              {loginError && (
-                <div className="bg-rose-500/10 border border-rose-500/25 p-3 rounded-xl flex items-start gap-2 text-[11px] text-rose-300 font-medium leading-relaxed animate-in fade-in duration-250">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                  <span>{loginError}</span>
-                </div>
-              )}
-
-              {/* Submit button */}
-              <button
-                type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-widest py-3 rounded-xl transition-all duration-200 shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2 cursor-pointer select-none"
-              >
-                <span>Se connecter</span>
-                <Sparkles className="w-4 h-4" />
-              </button>
-
-            </form>
-
-            {/* Small security footer */}
-            <div className="text-center pt-2 border-t border-neutral-800/40">
-              <span className="text-[9px] text-neutral-600 font-mono tracking-wider uppercase">
-                Life Architect Secure Gateway v2.4.2
-              </span>
-            </div>
-
+            <p className="text-xs font-black text-neutral-300 tracking-wider uppercase font-mono">
+              L'Art de concevoir votre destin
+            </p>
           </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="space-y-3.5">
+            
+            {/* Email Field */}
+            <div>
+              <input
+                type="text"
+                required
+                value={usernameInput}
+                onChange={(e) => {
+                  setUsernameInput(e.target.value);
+                  setLoginError("");
+                }}
+                placeholder="Email"
+                className="w-full bg-neutral-900 border border-neutral-800 focus:border-neutral-700 rounded-xl py-3 px-4 text-xs font-medium text-white placeholder-neutral-500 outline-hidden transition-all"
+              />
+            </div>
+
+            {/* Password Field */}
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  setLoginError("");
+                }}
+                placeholder="Mot de passe"
+                className="w-full bg-neutral-900 border border-neutral-800 focus:border-neutral-700 rounded-xl py-3 pl-4 pr-10 text-xs font-medium text-white placeholder-neutral-500 outline-hidden transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-neutral-500 hover:text-neutral-400 transition-colors cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {/* Error Banner */}
+            {loginError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-center text-xs text-rose-400 font-medium leading-relaxed animate-in fade-in duration-200">
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            {/* Submit button */}
+            <button
+              type="submit"
+              className="w-full bg-white hover:bg-neutral-100 text-neutral-950 font-bold text-xs uppercase tracking-wider py-3 rounded-xl transition-all cursor-pointer select-none"
+            >
+              Se connecter
+            </button>
+
+          </form>
+
         </div>
       </div>
     );
@@ -1357,7 +1315,7 @@ export default function App() {
             className="flex items-center gap-2.5 cursor-pointer shrink-0 select-none"
           >
             <div className="w-9 h-9 bg-neutral-900 rounded-xl flex items-center justify-center shadow-sm shrink-0 border border-neutral-800">
-              <Logo className="w-5 h-5 text-indigo-400" />
+              <Logo className="w-5 h-5 text-white" />
             </div>
             <div className="hidden xl:block">
               <span className="text-[8px] font-bold text-neutral-400 block tracking-widest uppercase font-mono leading-none">SYSTEM INTEGRATION</span>
@@ -1377,7 +1335,7 @@ export default function App() {
                   : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
               }`}
             >
-              <LayoutDashboard className={`w-3.5 h-3.5 shrink-0 ${activeMenu === "dashboard" ? "text-indigo-400" : "text-neutral-400"}`} />
+              <LayoutDashboard className={`w-3.5 h-3.5 shrink-0 ${activeMenu === "dashboard" ? "text-white" : "text-neutral-400"}`} />
               <span>Tableau de Bord</span>
             </button>
 
@@ -1439,10 +1397,10 @@ export default function App() {
             
             {/* Discipline Streak Count */}
             <div 
-              className="hidden sm:flex items-center gap-1 bg-orange-50/70 border border-orange-200/60 px-2 py-1 rounded-lg text-[10px] xl:text-[11px] font-bold text-orange-950 shadow-3xs"
+              className="hidden sm:flex items-center gap-1 bg-neutral-100 border border-neutral-200 px-2 py-1 rounded-lg text-[10px] xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
               title="Votre série de discipline quotidienne"
             >
-              <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 shrink-0" />
+              <Flame className="w-3.5 h-3.5 text-neutral-800 fill-neutral-400 shrink-0" />
               <span className="font-mono whitespace-nowrap">{streakCount}j</span>
             </div>
 
@@ -1475,7 +1433,7 @@ export default function App() {
                 setIsUnlocked(false);
                 sessionStorage.removeItem("la_is_unlocked");
               }}
-              className="p-1.5 bg-neutral-100 hover:bg-rose-50 text-neutral-500 hover:text-rose-600 rounded-lg border border-neutral-200 hover:border-rose-200 transition-all cursor-pointer shrink-0"
+              className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0"
               title="Se déconnecter de la session"
             >
               <Lock className="w-3.5 h-3.5" />
@@ -1500,14 +1458,14 @@ export default function App() {
               {/* Quick Mobile Indicators */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-neutral-50 border border-neutral-200/80 p-3.5 rounded-xl flex items-center gap-2.5">
-                  <Flame className="w-4 h-4 text-orange-500 fill-orange-500 shrink-0 animate-pulse" />
+                  <Flame className="w-4 h-4 text-neutral-800 fill-neutral-400 shrink-0" />
                   <div>
                     <span className="text-[8px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">DISCIPLINE</span>
                     <span className="text-xs font-black text-neutral-900 block leading-none">{streakCount} Jours</span>
                   </div>
                 </div>
                 <div className="bg-neutral-50 border border-neutral-200/80 p-3.5 rounded-xl flex items-center gap-2.5">
-                  <Coins className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <Coins className="w-4 h-4 text-neutral-800 shrink-0" />
                   <div>
                     <span className="text-[8px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">PATRIMOINE</span>
                     <span className="text-xs font-black text-neutral-900 block leading-none truncate">{dashboardStats.netWorth.toLocaleString("fr-FR")} MAD</span>
@@ -1606,7 +1564,7 @@ export default function App() {
                   <p className="text-xs text-neutral-500 max-w-2xl">
                     {focusMode ? (
                       <span className="inline-flex items-center gap-1.5 font-semibold text-neutral-800 bg-neutral-100 py-1 px-2.5 rounded-lg border border-neutral-200/50">
-                        <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 animate-pulse shrink-0" />
+                        <Flame className="w-3.5 h-3.5 text-neutral-800 fill-neutral-400 animate-pulse shrink-0" />
                         Mode Concentration activé. Vos statistiques financières sont masquées pour vous focaliser sur vos disciplines et objectifs.
                       </span>
                     ) : (
@@ -1727,7 +1685,7 @@ export default function App() {
                   {/* Habits Completion (Discipline) - Expanded and stylized */}
                   <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 flex items-center justify-between shadow-md text-white">
                     <div className="space-y-2">
-                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest block">Discipline du Jour</span>
+                      <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest block">Discipline du Jour</span>
                       <h4 className="text-3xl font-black font-mono">
                         {dashboardStats.habitsRate.toFixed(0)}%
                       </h4>
@@ -1735,8 +1693,8 @@ export default function App() {
                         {dashboardStats.habitsCompleted} de vos {dailyHabits.length} habitudes quotidiennes validées. Continuez ainsi !
                       </p>
                     </div>
-                    <div className="p-4 bg-neutral-800 rounded-2xl text-amber-400 border border-neutral-700 shrink-0">
-                      <Flame className="w-8 h-8 animate-pulse fill-amber-400" />
+                    <div className="p-4 bg-neutral-800 rounded-2xl text-neutral-300 border border-neutral-700 shrink-0">
+                      <Flame className="w-8 h-8 animate-pulse fill-neutral-300" />
                     </div>
                   </div>
 
@@ -1770,7 +1728,7 @@ export default function App() {
                           : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
                       }`}
                     >
-                      <Flame className="w-4 h-4 text-orange-500 fill-orange-500 shrink-0" />
+                      <Flame className="w-4 h-4 text-neutral-800 fill-neutral-400 shrink-0" />
                       <span>🎯 DISCIPLINES & OBJECTIFS</span>
                     </button>
 
