@@ -37,7 +37,8 @@ import {
   ExternalLink,
   RefreshCw,
   Heart,
-  Pencil
+  Pencil,
+  Youtube
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -79,6 +80,8 @@ export interface RecruitmentSite {
   url: string;
   notes: string;
   keywords?: string[];
+  visited?: boolean;
+  discoveredOpportunities?: string;
 }
 
 export interface TargetCompany {
@@ -102,6 +105,25 @@ export interface JobOpportunity {
   notes: string;
 }
 
+export interface CreatorChannel {
+  id: string;
+  name: string;
+  url: string;
+  subscribers: number;
+  videosCount: number;
+  niche: string;
+  status: string;
+}
+
+export interface CreatorWebsite {
+  id: string;
+  name: string;
+  url: string;
+  monthlyVisitors: number;
+  status: string;
+  notes: string;
+}
+
 interface FormationsSectionProps {
   formations: Formation[]; 
   setFormations: React.Dispatch<React.SetStateAction<Formation[]>>;
@@ -110,7 +132,7 @@ interface FormationsSectionProps {
 export default function FormationsSection({ formations, setFormations }: FormationsSectionProps) {
   const [activeTab, setActiveTab] = useState<"ma_circle" | "carriere_pro">("carriere_pro");
   const [carriereSubTab, setCarriereSubTab] = useState<"learning" | "skills" | "recruitment">("learning");
-  const [maCircleSubTab, setMaCircleSubTab] = useState<"courses" | "products">("courses");
+  const [maCircleSubTab, setMaCircleSubTab] = useState<"ecosystem" | "courses" | "products">("ecosystem");
 
   // --- PERSISTENT DATA FOR THE MA CIRCLE ---
   const [publishedCourses, setPublishedCourses] = useState<PublishedCourse[]>(() => {
@@ -132,6 +154,29 @@ export default function FormationsSection({ formations, setFormations }: Formati
       { id: "prod_2", title: "Template Notion Ultimate Creator de Contenu Multi-Chaînes", niche: "Analyst", platform: "THE MA CIRCLE", price: 150, salesCount: 95, revenue: 14250, status: "Actif" },
       { id: "prod_3", title: "Ebook d'Élite : Le Guide du Rentier BVC", niche: "Analyst", platform: "Gumroad", price: 200, salesCount: 0, revenue: 0, status: "En projet" }
     ];
+  });
+
+  const [creatorChannels, setCreatorChannels] = useState<CreatorChannel[]>(() => {
+    const saved = localStorage.getItem("mp_creator_channels");
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: "chan_1", name: "The Moroccan CFO", url: "https://www.youtube.com", subscribers: 12500, videosCount: 48, niche: "CFO / Finance d'Entreprise Marocaine", status: "Actif" },
+      { id: "chan_2", name: "The Moroccan Analyst", url: "https://www.youtube.com", subscribers: 8400, videosCount: 32, niche: "Analyse Boursière (BVC) & Bourse", status: "Actif" },
+      { id: "chan_3", name: "The Moroccan Economist", url: "https://www.youtube.com", subscribers: 4200, videosCount: 15, niche: "Macroéconomie & Conjoncture", status: "En croissance" }
+    ];
+  });
+
+  const [creatorWebsite, setCreatorWebsite] = useState<CreatorWebsite>(() => {
+    const saved = localStorage.getItem("mp_creator_website");
+    if (saved) return JSON.parse(saved);
+    return {
+      id: "web_1",
+      name: "THE MA CIRCLE",
+      url: "https://macircle.ma",
+      monthlyVisitors: 3500,
+      status: "Actif",
+      notes: "Plateforme d'hébergement premium pour formations, templates de modélisation financière et modèles professionnels."
+    };
   });
 
   // --- PERSISTENT DATA FOR CARRIÈRE PROFESSIONNELLE ---
@@ -179,6 +224,8 @@ export default function FormationsSection({ formations, setFormations }: Formati
   // --- LOCALSTORAGE SYNC ---
   useEffect(() => { localStorage.setItem("mp_published_courses_v2", JSON.stringify(publishedCourses)); }, [publishedCourses]);
   useEffect(() => { localStorage.setItem("mp_digital_products_v2", JSON.stringify(digitalProducts)); }, [digitalProducts]);
+  useEffect(() => { localStorage.setItem("mp_creator_channels", JSON.stringify(creatorChannels)); }, [creatorChannels]);
+  useEffect(() => { localStorage.setItem("mp_creator_website", JSON.stringify(creatorWebsite)); }, [creatorWebsite]);
   useEffect(() => { localStorage.setItem("mp_career_skills", JSON.stringify(skills)); }, [skills]);
   useEffect(() => { localStorage.setItem("mp_recruitment_sites", JSON.stringify(recruitmentSites)); }, [recruitmentSites]);
   useEffect(() => { localStorage.setItem("mp_target_companies", JSON.stringify(targetCompanies)); }, [targetCompanies]);
@@ -187,11 +234,20 @@ export default function FormationsSection({ formations, setFormations }: Formati
   // --- MODAL / FORM STATES ---
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [showChannelForm, setShowChannelForm] = useState(false);
   const [showLearnForm, setShowLearnForm] = useState(false);
   const [showSkillForm, setShowSkillForm] = useState(false);
   const [showSiteForm, setShowSiteForm] = useState(false);
   const [showCompanyForm, setShowCompanyForm] = useState(false);
   const [showOppForm, setShowOppForm] = useState(false);
+
+  // --- FORM VALUES FOR CHANNELS ---
+  const [chanName, setChanName] = useState("");
+  const [chanUrl, setChanUrl] = useState("");
+  const [chanSubs, setChanSubs] = useState(1000);
+  const [chanVids, setChanVids] = useState(10);
+  const [chanNiche, setChanNiche] = useState("");
+  const [chanStatus, setChanStatus] = useState("Actif");
 
   // --- FORM VALUES ---
   const [cTitle, setCTitle] = useState("");
@@ -271,6 +327,22 @@ export default function FormationsSection({ formations, setFormations }: Formati
     setPTitle(""); setShowProductForm(false);
   };
 
+  const handleAddCreatorChannel = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chanName.trim()) return;
+    setCreatorChannels(prev => [{
+      id: "chan_" + Date.now(),
+      name: chanName.trim(),
+      url: chanUrl.trim() || "https://www.youtube.com",
+      subscribers: Number(chanSubs) || 0,
+      videosCount: Number(chanVids) || 0,
+      niche: chanNiche.trim() || "Finance",
+      status: chanStatus
+    }, ...prev]);
+    setChanName(""); setChanUrl(""); setChanSubs(1000); setChanVids(10); setChanNiche(""); setChanStatus("Actif");
+    setShowChannelForm(false);
+  };
+
   const handleAddLearningCourse = (e: React.FormEvent) => {
     e.preventDefault();
     if (!lTitle.trim()) return;
@@ -302,7 +374,9 @@ export default function FormationsSection({ formations, setFormations }: Formati
       name: siteName.trim(), 
       url: siteUrl.trim() || "#", 
       notes: siteNotes.trim(),
-      keywords: kwArray
+      keywords: kwArray,
+      visited: false,
+      discoveredOpportunities: ""
     }, ...prev]);
     setSiteName(""); setSiteUrl(""); setSiteNotes(""); setSiteKeywords(""); setShowSiteForm(false);
   };
@@ -756,94 +830,163 @@ export default function FormationsSection({ formations, setFormations }: Formati
                 {/* Recruitment websites */}
                 <div className="bg-white border border-neutral-200 rounded-3xl p-5 space-y-4 shadow-3xs">
                   <div className="flex justify-between items-center border-b border-neutral-100 pb-2.5">
-                    <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wide flex items-center gap-1.5">
-                      <Link2 className="w-4 h-4 text-indigo-500" />
-                      <span>Portails & Sites de Recrutement</span>
-                    </h4>
-                    <button
-                      onClick={() => setShowSiteForm(true)}
-                      className="text-indigo-600 hover:text-indigo-500 text-[10.5px] font-black flex items-center gap-1 cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Ajouter</span>
-                    </button>
+                    <div>
+                      <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wide flex items-center gap-1.5">
+                        <Link2 className="w-4 h-4 text-indigo-500" />
+                        <span>Portails & Sites de Recrutement</span>
+                      </h4>
+                      <p className="text-[10px] text-neutral-400 font-bold mt-0.5 font-mono">
+                        Visites régulières : {recruitmentSites.filter(s => s.visited).length}/{recruitmentSites.length} visités
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {recruitmentSites.some(s => s.visited) && (
+                        <button
+                          onClick={() => setRecruitmentSites(prev => prev.map(s => ({ ...s, visited: false })))}
+                          className="text-neutral-400 hover:text-indigo-600 text-[10px] font-bold font-sans transition-colors cursor-pointer"
+                        >
+                          Tout décocher
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowSiteForm(true)}
+                        className="text-indigo-600 hover:text-indigo-500 text-[10.5px] font-black flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Ajouter</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3.5 max-h-[550px] overflow-y-auto pr-1">
                     {recruitmentSites.map(site => (
-                      <div key={site.id} className="bg-neutral-50 hover:bg-neutral-100/60 p-4 rounded-xl border border-neutral-200/40 flex justify-between gap-3 items-start transition-all">
-                        <div className="space-y-2 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-black text-neutral-900">{site.name}</span>
-                            <a 
-                              href={site.url} target="_blank" rel="noopener noreferrer" 
-                              className="text-indigo-600 hover:text-indigo-500 p-0.5"
-                            >
-                              <ExternalLink className="w-3 h-3 inline-block" />
-                            </a>
-                          </div>
-                          <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">{site.notes}</p>
-                          
-                          {/* Keywords & Specific Skills */}
-                          <div className="space-y-1.5 pt-1">
-                            <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block">Mots-clés & Compétences cibles:</span>
-                            <div className="flex flex-wrap gap-1">
-                              {site.keywords && site.keywords.length > 0 ? (
-                                site.keywords.map((kw, idx) => (
-                                  <span key={idx} className="group relative text-[9px] bg-indigo-50 hover:bg-red-50 text-indigo-700 hover:text-red-700 border border-indigo-100/60 hover:border-red-200 px-2 py-0.5 rounded-full font-bold font-mono transition-all flex items-center gap-1">
-                                    <span>#{kw}</span>
-                                    <button 
-                                      onClick={() => {
-                                        setRecruitmentSites(prev => prev.map(s => {
-                                          if (s.id !== site.id) return s;
-                                          return { ...s, keywords: (s.keywords || []).filter(k => k !== kw) };
-                                        }));
-                                      }}
-                                      className="text-[8px] opacity-60 hover:opacity-100 cursor-pointer"
-                                      title="Supprimer"
-                                    >
-                                      ×
-                                    </button>
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="text-[10px] text-neutral-400 italic">Aucun mot-clé associé.</span>
-                              )}
-                            </div>
-                            
-                            {/* Inline Form to add keyword */}
-                            <form 
-                              onSubmit={(e) => {
-                                e.preventDefault();
-                                const input = e.currentTarget.elements.namedItem("newKw") as HTMLInputElement;
-                                const val = input?.value?.trim();
-                                if (val) {
-                                  setRecruitmentSites(prev => prev.map(s => {
-                                    if (s.id !== site.id) return s;
-                                    const currentKws = s.keywords || [];
-                                    if (currentKws.includes(val)) return s;
-                                    return { ...s, keywords: [...currentKws, val] };
-                                  }));
-                                  input.value = "";
-                                }
+                      <div 
+                        key={site.id} 
+                        className={`p-4 rounded-xl border flex flex-col gap-3 transition-all ${
+                          site.visited 
+                            ? "bg-neutral-50/40 border-neutral-200/40 opacity-75" 
+                            : "bg-neutral-50 hover:bg-neutral-100/60 border-neutral-200/40"
+                        }`}
+                      >
+                        <div className="flex justify-between gap-3 items-start">
+                          <div className="flex items-start gap-2.5 flex-1">
+                            <input 
+                              type="checkbox"
+                              checked={!!site.visited}
+                              onChange={() => {
+                                setRecruitmentSites(prev => prev.map(s => {
+                                  if (s.id !== site.id) return s;
+                                  return { ...s, visited: !s.visited };
+                                }));
                               }}
-                              className="flex items-center gap-1.5 pt-1 max-w-[200px]"
-                            >
-                              <input 
-                                type="text"
-                                name="newKw"
-                                placeholder="+ Ajouter mot-clé"
-                                className="bg-white border border-neutral-200/80 rounded-lg px-2 py-0.5 text-[10px] font-mono w-full focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                              />
-                            </form>
+                              className="mt-0.5 w-4 h-4 rounded-md border-neutral-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                              id={`site-check-${site.id}`}
+                            />
+                            <div className="space-y-1 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <label 
+                                  htmlFor={`site-check-${site.id}`}
+                                  className={`text-xs font-black cursor-pointer select-none transition-all ${
+                                    site.visited ? "line-through text-neutral-400" : "text-neutral-900"
+                                  }`}
+                                >
+                                  {site.name}
+                                </label>
+                                <a 
+                                  href={site.url} target="_blank" rel="noopener noreferrer" 
+                                  className="text-indigo-600 hover:text-indigo-500 p-0.5 transition-colors"
+                                  title={`Visiter ${site.name}`}
+                                >
+                                  <ExternalLink className="w-3 h-3 inline-block" />
+                                </a>
+                              </div>
+                              <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">{site.notes}</p>
+                            </div>
                           </div>
+
+                          <button 
+                            onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
+                            className="text-neutral-400 hover:text-red-500 p-1 rounded-lg shrink-0 cursor-pointer transition-colors"
+                            title="Supprimer ce site"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                        <button 
-                          onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
-                          className="text-neutral-400 hover:text-red-500 p-1.5 rounded-lg shrink-0 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+
+                        {/* Keywords & Specific Skills */}
+                        <div className="space-y-1.5 pt-1 pl-6.5 border-t border-neutral-200/40">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block">Mots-clés & Compétences cibles:</span>
+                          <div className="flex flex-wrap gap-1">
+                            {site.keywords && site.keywords.length > 0 ? (
+                              site.keywords.map((kw, idx) => (
+                                <span key={idx} className="group relative text-[9px] bg-indigo-50 hover:bg-red-50 text-indigo-700 hover:text-red-700 border border-indigo-100/60 hover:border-red-200 px-2 py-0.5 rounded-full font-bold font-mono transition-all flex items-center gap-1">
+                                  <span>#{kw}</span>
+                                  <button 
+                                    onClick={() => {
+                                      setRecruitmentSites(prev => prev.map(s => {
+                                        if (s.id !== site.id) return s;
+                                        return { ...s, keywords: (s.keywords || []).filter(k => k !== kw) };
+                                      }));
+                                    }}
+                                    className="text-[8px] opacity-60 hover:opacity-100 cursor-pointer"
+                                    title="Supprimer"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[10px] text-neutral-400 italic">Aucun mot-clé associé.</span>
+                            )}
+                          </div>
+                          
+                          {/* Inline Form to add keyword */}
+                          <form 
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const input = e.currentTarget.elements.namedItem("newKw") as HTMLInputElement;
+                              const val = input?.value?.trim();
+                              if (val) {
+                                setRecruitmentSites(prev => prev.map(s => {
+                                  if (s.id !== site.id) return s;
+                                  const currentKws = s.keywords || [];
+                                  if (currentKws.includes(val)) return s;
+                                  return { ...s, keywords: [...currentKws, val] };
+                                }));
+                                input.value = "";
+                              }
+                            }}
+                            className="flex items-center gap-1.5 pt-0.5 max-w-[200px]"
+                          >
+                            <input 
+                              type="text"
+                              name="newKw"
+                              placeholder="+ Ajouter mot-clé"
+                              className="bg-white border border-neutral-200/80 rounded-lg px-2 py-0.5 text-[10px] font-mono w-full focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                            />
+                          </form>
+                        </div>
+
+                        {/* Interactive Text Field for Discovered Opportunities */}
+                        <div className="pt-2.5 pl-6.5 border-t border-neutral-200/40 space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block">
+                            Opportunités découvertes & candidatures :
+                          </label>
+                          <textarea
+                            value={site.discoveredOpportunities || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setRecruitmentSites(prev => prev.map(s => {
+                                if (s.id !== site.id) return s;
+                                return { ...s, discoveredOpportunities: val };
+                              }));
+                            }}
+                            placeholder="Ex: Vu offre de CFO chez XYZ Corp, contacté le recruteur... / Postulé via Easy Apply..."
+                            className="w-full bg-white border border-neutral-200/85 rounded-xl p-2.5 text-[10.5px] leading-relaxed text-neutral-600 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-neutral-400 font-medium font-sans"
+                            rows={2}
+                          />
+                        </div>
+
                       </div>
                     ))}
                   </div>
@@ -979,12 +1122,21 @@ export default function FormationsSection({ formations, setFormations }: Formati
           {/* Sub-navigation inside MA CIRCLE */}
           <div className="flex gap-2 bg-neutral-100 p-1.5 rounded-2xl w-fit">
             <button
+              onClick={() => setMaCircleSubTab("ecosystem")}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide transition-all cursor-pointer select-none ${
+                maCircleSubTab === "ecosystem" ? "bg-white text-neutral-950 shadow-xs" : "text-neutral-500 hover:text-neutral-950"
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5 text-indigo-500" />
+              <span>Médias & Écosystème ({creatorChannels.length + 1})</span>
+            </button>
+            <button
               onClick={() => setMaCircleSubTab("courses")}
               className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide transition-all cursor-pointer select-none ${
                 maCircleSubTab === "courses" ? "bg-white text-neutral-950 shadow-xs" : "text-neutral-500 hover:text-neutral-950"
               }`}
             >
-              <Video className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
+              <Video className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5 text-emerald-500" />
               <span>Mes Formations Produites ({publishedCourses.length})</span>
             </button>
             <button
@@ -993,10 +1145,213 @@ export default function FormationsSection({ formations, setFormations }: Formati
                 maCircleSubTab === "products" ? "bg-white text-neutral-950 shadow-xs" : "text-neutral-500 hover:text-neutral-950"
               }`}
             >
-              <ShoppingBag className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
+              <ShoppingBag className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5 text-amber-500" />
               <span>Produits Digitaux ({digitalProducts.length})</span>
             </button>
           </div>
+
+          {/* SUBTAB: ECOSYSTEM */}
+          {maCircleSubTab === "ecosystem" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              
+              {/* Top info card with add channel button */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-50 border border-neutral-200/60 p-4 rounded-2xl">
+                <div>
+                  <h3 className="text-xs font-black text-neutral-900 uppercase tracking-tight">Canaux Médias & Plateforme Web</h3>
+                  <p className="text-[11px] text-neutral-400 font-medium">Gérez la présence en ligne de vos chaînes YouTube et les performances de votre site web académique.</p>
+                </div>
+                <button
+                  onClick={() => setShowChannelForm(true)}
+                  className="bg-neutral-950 hover:bg-neutral-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Ajouter une chaîne</span>
+                </button>
+              </div>
+
+              {/* Grid with 2 parts: Left is Website Performance & Details, Right is YouTube Channels */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* 1. WEBSITE CARD (THE MA CIRCLE) */}
+                <div className="bg-white border border-neutral-200/90 rounded-3xl p-5 space-y-4 shadow-3xs lg:col-span-1">
+                  <div className="flex justify-between items-center border-b border-neutral-100 pb-2.5">
+                    <span className="text-xs font-black text-neutral-900 uppercase tracking-wide flex items-center gap-1.5">
+                      <Globe className="w-4 h-4 text-indigo-500" />
+                      <span>Site Web Académique</span>
+                    </span>
+                    <span className="text-[9px] bg-indigo-50 text-indigo-700 border border-indigo-100/60 px-2 py-0.5 rounded-full font-bold font-mono">
+                      {creatorWebsite.status}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-neutral-50/50 p-4 rounded-2xl border border-neutral-100 space-y-3">
+                      <div>
+                        <h4 className="text-sm font-black text-neutral-900">{creatorWebsite.name}</h4>
+                        <a 
+                          href={creatorWebsite.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-xs text-indigo-600 hover:text-indigo-500 font-mono font-medium hover:underline flex items-center gap-1 mt-0.5"
+                        >
+                          <span>{creatorWebsite.url}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+
+                      <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">
+                        {creatorWebsite.notes}
+                      </p>
+                    </div>
+
+                    {/* Visitors & Traffic stat with quick increase/decrease controls */}
+                    <div className="bg-neutral-50/50 p-4 rounded-2xl border border-neutral-100 space-y-2">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider font-mono">Trafic Mensuel Estimé</span>
+                        <span className="text-lg font-mono font-black text-neutral-900">{creatorWebsite.monthlyVisitors.toLocaleString()} Visiteurs</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setCreatorWebsite(prev => ({ ...prev, monthlyVisitors: Math.max(0, prev.monthlyVisitors - 250) }))}
+                          className="bg-white hover:bg-neutral-100 text-neutral-700 text-[10px] font-bold border rounded-lg px-2.5 py-1 flex-1 transition-all cursor-pointer"
+                        >
+                          -250
+                        </button>
+                        <button 
+                          onClick={() => setCreatorWebsite(prev => ({ ...prev, monthlyVisitors: prev.monthlyVisitors + 250 }))}
+                          className="bg-white hover:bg-neutral-100 text-neutral-700 text-[10px] font-bold border rounded-lg px-2.5 py-1 flex-1 transition-all cursor-pointer"
+                        >
+                          +250
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Inline edit notes for website */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider font-mono">Modifier les objectifs du site :</label>
+                      <textarea
+                        value={creatorWebsite.notes}
+                        onChange={(e) => setCreatorWebsite(prev => ({ ...prev, notes: e.target.value }))}
+                        className="w-full bg-neutral-50/50 border p-2 rounded-xl text-[11px] h-20 leading-relaxed text-neutral-600 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-indigo-500 transition-all"
+                        placeholder="Quels sont les objectifs ou les intégrations en cours ?"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. YOUTUBE CHANNELS SECTION */}
+                <div className="bg-white border border-neutral-200/90 rounded-3xl p-5 space-y-4 shadow-3xs lg:col-span-2">
+                  <div className="flex justify-between items-center border-b border-neutral-100 pb-2.5">
+                    <span className="text-xs font-black text-neutral-900 uppercase tracking-wide flex items-center gap-1.5">
+                      <Youtube className="w-4 h-4 text-red-600" />
+                      <span>Canaux YouTube Actifs</span>
+                    </span>
+                    <span className="text-[9px] bg-red-50 text-red-600 border border-red-100/60 px-2.5 py-0.5 rounded-full font-bold font-mono">
+                      {creatorChannels.length} Chaînes
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {creatorChannels.map(channel => (
+                      <div key={channel.id} className="bg-neutral-50 border border-neutral-200/40 hover:border-neutral-200 rounded-2xl p-4.5 space-y-3.5 transition-all">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-[8px] bg-indigo-50 text-indigo-700 font-black px-2 py-0.5 rounded-full font-mono uppercase">
+                              {channel.niche}
+                            </span>
+                            <h4 className="text-xs font-black text-neutral-900 mt-1 flex items-center gap-1.5">
+                              <span>{channel.name}</span>
+                              <a 
+                                href={channel.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-red-500 hover:text-red-600"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </h4>
+                          </div>
+                          
+                          <button 
+                            onClick={() => setCreatorChannels(prev => prev.filter(c => c.id !== channel.id))}
+                            className="text-neutral-400 hover:text-red-500 p-1 rounded-lg hover:bg-neutral-200/30 transition-all cursor-pointer"
+                            title="Supprimer la chaîne"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Interactive Stats Panel inside Channel card */}
+                        <div className="grid grid-cols-2 gap-3.5 bg-white p-3 rounded-xl border border-neutral-200/40">
+                          
+                          {/* Subscribers with inline increase/decrease */}
+                          <div className="space-y-1 text-center border-r border-neutral-100 pr-1">
+                            <span className="text-[8px] text-neutral-400 font-bold block uppercase font-mono tracking-wider">Abonnés</span>
+                            <span className="text-[13px] font-mono font-black text-neutral-800">
+                              {channel.subscribers.toLocaleString()}
+                            </span>
+                            <div className="flex justify-center gap-1 mt-0.5">
+                              <button 
+                                onClick={() => setCreatorChannels(prev => prev.map(c => c.id === channel.id ? { ...c, subscribers: Math.max(0, c.subscribers - 100) } : c))}
+                                className="bg-neutral-50 hover:bg-neutral-100 text-[8px] font-bold px-1.5 py-0.5 rounded border"
+                              >
+                                -100
+                              </button>
+                              <button 
+                                onClick={() => setCreatorChannels(prev => prev.map(c => c.id === channel.id ? { ...c, subscribers: c.subscribers + 100 } : c))}
+                                className="bg-neutral-50 hover:bg-neutral-100 text-[8px] font-bold px-1.5 py-0.5 rounded border"
+                              >
+                                +100
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Videos count with inline increase/decrease */}
+                          <div className="space-y-1 text-center pl-1">
+                            <span className="text-[8px] text-neutral-400 font-bold block uppercase font-mono tracking-wider">Vidéos</span>
+                            <span className="text-[13px] font-mono font-black text-neutral-800">
+                              {channel.videosCount}
+                            </span>
+                            <div className="flex justify-center gap-1 mt-0.5">
+                              <button 
+                                onClick={() => setCreatorChannels(prev => prev.map(c => c.id === channel.id ? { ...c, videosCount: Math.max(0, c.videosCount - 1) } : c))}
+                                className="bg-neutral-50 hover:bg-neutral-100 text-[8px] font-bold px-1.5 py-0.5 rounded border"
+                              >
+                                -1
+                              </button>
+                              <button 
+                                onClick={() => setCreatorChannels(prev => prev.map(c => c.id === channel.id ? { ...c, videosCount: c.videosCount + 1 } : c))}
+                                className="bg-neutral-50 hover:bg-neutral-100 text-[8px] font-bold px-1.5 py-0.5 rounded border"
+                              >
+                                +1
+                              </button>
+                            </div>
+                          </div>
+
+                        </div>
+
+                        {/* Status badge edit */}
+                        <div className="flex justify-between items-center pt-0.5">
+                          <span className="text-[9px] text-neutral-400 font-bold font-mono uppercase">Statut :</span>
+                          <select 
+                            value={channel.status}
+                            onChange={(e) => setCreatorChannels(prev => prev.map(c => c.id === channel.id ? { ...c, status: e.target.value } : c))}
+                            className="bg-white border border-neutral-200 text-[10px] rounded-md px-1.5 py-0.5 font-bold font-mono focus:outline-hidden"
+                          >
+                            <option value="Actif">Actif</option>
+                            <option value="En croissance">En croissance</option>
+                            <option value="Pause">Pause</option>
+                            <option value="En projet">En projet</option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
 
           {/* SUBTAB: COURSES PRODUCED */}
           {maCircleSubTab === "courses" && (
@@ -1275,6 +1630,34 @@ export default function FormationsSection({ formations, setFormations }: Formati
                 <input type="text" placeholder="Mots-clés / compétences cibles (ex: CFO, Finance, Audit - séparés par des virgules)" value={siteKeywords} onChange={e => setSiteKeywords(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs" />
                 <textarea placeholder="Notes, mots de passe de recherche ou alertes planifiées..." value={siteNotes} onChange={e => setSiteNotes(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs h-16" />
                 <button type="submit" className="w-full bg-neutral-900 hover:bg-neutral-800 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Enregistrer le site</button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* ADD CREATOR CHANNEL */}
+        {showChannelForm && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="bg-white rounded-3xl border max-w-md w-full p-6 space-y-4">
+              <div className="flex justify-between items-center border-b pb-2">
+                <h4 className="text-sm font-black uppercase font-sans">Ajouter une chaîne YouTube</h4>
+                <button onClick={() => setShowChannelForm(false)} className="cursor-pointer"><X className="w-4 h-4" /></button>
+              </div>
+              <form onSubmit={handleAddCreatorChannel} className="space-y-3">
+                <input type="text" required placeholder="Nom de la chaîne (ex: The Moroccan CFO)" value={chanName} onChange={e => setChanName(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs" />
+                <input type="url" placeholder="URL YouTube (https://youtube.com/...)" value={chanUrl} onChange={e => setChanUrl(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs font-mono" />
+                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <input type="number" placeholder="Nombre d'abonnés" value={chanSubs} onChange={e => setChanSubs(Number(e.target.value))} className="bg-neutral-50 border p-2 rounded-xl" />
+                  <input type="number" placeholder="Nombre de vidéos" value={chanVids} onChange={e => setChanVids(Number(e.target.value))} className="bg-neutral-50 border p-2 rounded-xl" />
+                </div>
+                <input type="text" placeholder="Thématique / Niche (ex: Finance, Immobilier...)" value={chanNiche} onChange={e => setChanNiche(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs" />
+                <select value={chanStatus} onChange={e => setChanStatus(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs font-bold">
+                  <option value="Actif">Actif</option>
+                  <option value="En croissance">En croissance</option>
+                  <option value="Pause">Pause</option>
+                  <option value="En projet">En projet</option>
+                </select>
+                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Ajouter la chaîne</button>
               </form>
             </motion.div>
           </div>
