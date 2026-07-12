@@ -78,6 +78,7 @@ export interface RecruitmentSite {
   name: string;
   url: string;
   notes: string;
+  keywords?: string[];
 }
 
 export interface TargetCompany {
@@ -149,9 +150,9 @@ export default function FormationsSection({ formations, setFormations }: Formati
     const saved = localStorage.getItem("mp_recruitment_sites");
     if (saved) return JSON.parse(saved);
     return [
-      { id: "site_1", name: "LinkedIn", url: "https://www.linkedin.com", notes: "Réseautage pro actif et contact direct avec les CFO et HR managers." },
-      { id: "site_2", name: "ReKrute", url: "https://www.rekrute.com", notes: "Idéal pour les cadres et postes financiers intermédiaires/seniors au Maroc." },
-      { id: "site_3", name: "Anapec", url: "https://www.anapec.org", notes: "Suivi des contrats aidés, d'insertion ou d'offres institutionnelles marocaines." }
+      { id: "site_1", name: "LinkedIn", url: "https://www.linkedin.com", notes: "Réseautage pro actif et contact direct avec les CFO et HR managers.", keywords: ["Financial Modeling", "Corporate Finance", "Networking", "AI Audit"] },
+      { id: "site_2", name: "ReKrute", url: "https://www.rekrute.com", notes: "Idéal pour les cadres et postes financiers intermédiaires/seniors au Maroc.", keywords: ["Contrôle de gestion", "Finance d'entreprise", "Maroc", "CFO"] },
+      { id: "site_3", name: "Anapec", url: "https://www.anapec.org", notes: "Suivi des contrats aidés, d'insertion ou d'offres institutionnelles marocaines.", keywords: ["Audit", "Trésorerie", "Jeune diplômé"] }
     ];
   });
 
@@ -223,6 +224,7 @@ export default function FormationsSection({ formations, setFormations }: Formati
   const [siteName, setSiteName] = useState("");
   const [siteUrl, setSiteUrl] = useState("");
   const [siteNotes, setSiteNotes] = useState("");
+  const [siteKeywords, setSiteKeywords] = useState("");
 
   const [compName, setCompName] = useState("");
   const [compWebsite, setCompWebsite] = useState("");
@@ -294,10 +296,15 @@ export default function FormationsSection({ formations, setFormations }: Formati
   const handleAddSite = (e: React.FormEvent) => {
     e.preventDefault();
     if (!siteName.trim()) return;
+    const kwArray = siteKeywords ? siteKeywords.split(",").map(k => k.trim()).filter(k => k.length > 0) : [];
     setRecruitmentSites(prev => [{
-      id: "site_" + Date.now(), name: siteName.trim(), url: siteUrl.trim() || "#", notes: siteNotes.trim()
+      id: "site_" + Date.now(), 
+      name: siteName.trim(), 
+      url: siteUrl.trim() || "#", 
+      notes: siteNotes.trim(),
+      keywords: kwArray
     }, ...prev]);
-    setSiteName(""); setSiteUrl(""); setSiteNotes(""); setShowSiteForm(false);
+    setSiteName(""); setSiteUrl(""); setSiteNotes(""); setSiteKeywords(""); setShowSiteForm(false);
   };
 
   const handleAddCompany = (e: React.FormEvent) => {
@@ -765,7 +772,7 @@ export default function FormationsSection({ formations, setFormations }: Formati
                   <div className="space-y-3">
                     {recruitmentSites.map(site => (
                       <div key={site.id} className="bg-neutral-50 hover:bg-neutral-100/60 p-4 rounded-xl border border-neutral-200/40 flex justify-between gap-3 items-start transition-all">
-                        <div className="space-y-1">
+                        <div className="space-y-2 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-black text-neutral-900">{site.name}</span>
                             <a 
@@ -776,6 +783,60 @@ export default function FormationsSection({ formations, setFormations }: Formati
                             </a>
                           </div>
                           <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">{site.notes}</p>
+                          
+                          {/* Keywords & Specific Skills */}
+                          <div className="space-y-1.5 pt-1">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block">Mots-clés & Compétences cibles:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {site.keywords && site.keywords.length > 0 ? (
+                                site.keywords.map((kw, idx) => (
+                                  <span key={idx} className="group relative text-[9px] bg-indigo-50 hover:bg-red-50 text-indigo-700 hover:text-red-700 border border-indigo-100/60 hover:border-red-200 px-2 py-0.5 rounded-full font-bold font-mono transition-all flex items-center gap-1">
+                                    <span>#{kw}</span>
+                                    <button 
+                                      onClick={() => {
+                                        setRecruitmentSites(prev => prev.map(s => {
+                                          if (s.id !== site.id) return s;
+                                          return { ...s, keywords: (s.keywords || []).filter(k => k !== kw) };
+                                        }));
+                                      }}
+                                      className="text-[8px] opacity-60 hover:opacity-100 cursor-pointer"
+                                      title="Supprimer"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-[10px] text-neutral-400 italic">Aucun mot-clé associé.</span>
+                              )}
+                            </div>
+                            
+                            {/* Inline Form to add keyword */}
+                            <form 
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                const input = e.currentTarget.elements.namedItem("newKw") as HTMLInputElement;
+                                const val = input?.value?.trim();
+                                if (val) {
+                                  setRecruitmentSites(prev => prev.map(s => {
+                                    if (s.id !== site.id) return s;
+                                    const currentKws = s.keywords || [];
+                                    if (currentKws.includes(val)) return s;
+                                    return { ...s, keywords: [...currentKws, val] };
+                                  }));
+                                  input.value = "";
+                                }
+                              }}
+                              className="flex items-center gap-1.5 pt-1 max-w-[200px]"
+                            >
+                              <input 
+                                type="text"
+                                name="newKw"
+                                placeholder="+ Ajouter mot-clé"
+                                className="bg-white border border-neutral-200/80 rounded-lg px-2 py-0.5 text-[10px] font-mono w-full focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                              />
+                            </form>
+                          </div>
                         </div>
                         <button 
                           onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
@@ -1211,6 +1272,7 @@ export default function FormationsSection({ formations, setFormations }: Formati
               <form onSubmit={handleAddSite} className="space-y-3 text-xs">
                 <input type="text" required placeholder="Nom du site (ex: ReKrute, LinkedIn)" value={siteName} onChange={e => setSiteName(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs" />
                 <input type="url" placeholder="URL (ex: https://...)" value={siteUrl} onChange={e => setSiteUrl(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs font-mono" />
+                <input type="text" placeholder="Mots-clés / compétences cibles (ex: CFO, Finance, Audit - séparés par des virgules)" value={siteKeywords} onChange={e => setSiteKeywords(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs" />
                 <textarea placeholder="Notes, mots de passe de recherche ou alertes planifiées..." value={siteNotes} onChange={e => setSiteNotes(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs h-16" />
                 <button type="submit" className="w-full bg-neutral-900 hover:bg-neutral-800 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Enregistrer le site</button>
               </form>
