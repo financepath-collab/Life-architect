@@ -23,8 +23,10 @@ import {
   ResourceLink, 
   ChannelInfo,
   WishListItem,
-  AchatCouteuxItem
+  AchatCouteuxItem,
+  MonthlyGoal
 } from "./types";
+
 
 import { 
   INITIAL_HABITS, 
@@ -49,7 +51,8 @@ import {
   INITIAL_RESOURCELINKS, 
   INITIAL_CHANNELS,
   INITIAL_WISHLIST,
-  INITIAL_ACHATS_COUTEUX
+  INITIAL_ACHATS_COUTEUX,
+  INITIAL_MONTHLY_GOALS
 } from "./initialData";
 
 import InteractiveModuleTable, { TableColumn } from "./components/InteractiveModuleTable";
@@ -62,6 +65,8 @@ import FormationsSection from "./components/FormationsSection";
 import AlertsBanner from "./components/AlertsBanner";
 import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
 import MonthlyPerformanceCard from "./components/MonthlyPerformanceCard";
+import MonthlyGoalsSection from "./components/MonthlyGoalsSection";
+
 
 // Icons imports
 import { 
@@ -111,7 +116,8 @@ import {
   Sun,
   Moon,
   Globe,
-  FolderKanban
+  FolderKanban,
+  Target
 } from "lucide-react";
 
 function Logo({ className = "w-8 h-8 text-indigo-500" }: { className?: string }) {
@@ -267,6 +273,12 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_ACHATS_COUTEUX;
   });
 
+  const [monthlyGoals, setMonthlyGoals] = useState<MonthlyGoal[]>(() => {
+    const saved = localStorage.getItem("mp_monthly_goals_v2");
+    return saved ? JSON.parse(saved) : INITIAL_MONTHLY_GOALS;
+  });
+
+
   // Stats / Streaks
   const [streakCount, setStreakCount] = useState<number>(() => {
     const saved = localStorage.getItem("mp_streak_count_v2");
@@ -381,6 +393,11 @@ export default function App() {
     localStorage.setItem("mp_streak_count_v2", streakCount.toString());
   }, [streakCount]);
 
+  useEffect(() => {
+    localStorage.setItem("mp_monthly_goals_v2", JSON.stringify(monthlyGoals));
+  }, [monthlyGoals]);
+
+
 
   // --- UTILITY ACTION HANDLERS ---
 
@@ -451,7 +468,8 @@ export default function App() {
         { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines créatives." },
         { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour projets créateurs." },
         { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." },
-        { id: "goals", label: "Possibilités & Goals", icon: Award, desc: "Planification de vos buts de vie majeurs." }
+        { id: "goals", label: "Possibilités & Goals", icon: Award, desc: "Planification de vos buts de vie majeurs." },
+        { id: "monthly_goals", label: "Objectifs Mensuels", icon: Target, desc: "Cibles de revenus et de progression pour chaque chaîne de contenu." }
       ]
     },
     {
@@ -481,7 +499,8 @@ export default function App() {
       icon: FolderKanban,
       items: [
         { id: "formations", label: "Carrière & Formations", icon: GraduationCap, desc: "Suivi complet de vos formations, compétences ciblées et opportunités de recrutement." },
-        { id: "macircle", label: "Académie \"The MA Circle\"", icon: Globe, desc: "Monétisation de vos canaux YouTube, formations produites et ventes de produits digitaux." }
+        { id: "macircle", label: "Académie \"The MA Circle\"", icon: Globe, desc: "Monétisation de vos canaux YouTube, formations produites et ventes de produits digitaux." },
+        { id: "channels", label: "Chaînes & Médias", icon: Tv, desc: "Abonnés et fréquence de publication de vos chaînes." }
       ]
     },
     {
@@ -499,8 +518,7 @@ export default function App() {
       icon: Landmark,
       items: [
         { id: "comptes", label: "Comptes Bancaires", icon: Landmark, desc: "Gestion des comptes pro, perso et liquidités." },
-        { id: "links", label: "Liens Favoris", icon: Link2, desc: "Signets rapides vers vos ressources de marché bourse." },
-        { id: "channels", label: "Chaînes & Médias", icon: Tv, desc: "Abonnés et fréquence de publication de vos chaînes." }
+        { id: "links", label: "Liens Favoris", icon: Link2, desc: "Signets rapides vers vos ressources de marché bourse." }
       ]
     }
   ];
@@ -1353,37 +1371,65 @@ export default function App() {
           </div>
 
           {/* Horizontal Navigation Menus (Center - Desktop only) */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 h-full overflow-visible">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 h-full overflow-visible">
             
             {/* Dashboard Link */}
             <button
               onClick={() => handleMenuClick("dashboard")}
-              className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-lg text-[10px] xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
+              className={`flex items-center gap-1 xl:gap-1.5 px-1.5 xl:px-2.5 py-1.5 rounded-lg text-[10px] xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
                 activeMenu === "dashboard"
                   ? "bg-neutral-900 text-white shadow-xs"
                   : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
               }`}
             >
               <LayoutDashboard className={`w-3.5 h-3.5 shrink-0 ${activeMenu === "dashboard" ? "text-white" : "text-neutral-400"}`} />
-              <span>Tableau de Bord</span>
+              <span className="hidden xl:inline">Tableau de Bord</span>
+              <span className="xl:hidden">Accueil</span>
             </button>
 
             {/* Categories Hover Dropdowns */}
             {categories.map(cat => {
               const CatIcon = cat.icon;
               const isCatActive = activeCategoryObj?.id === cat.id;
+              
+              // Responsive label to prevent overflow on medium screens
+              const displayLabel = 
+                cat.label === "Projets & Académie" ? (
+                  <>
+                    <span className="hidden xl:inline">Projets & Académie</span>
+                    <span className="xl:hidden">Projets</span>
+                  </>
+                ) : cat.label === "Lectures & Écrans" ? (
+                  <>
+                    <span className="hidden xl:inline">Lectures & Écrans</span>
+                    <span className="xl:hidden">Médias</span>
+                  </>
+                ) : cat.label === "Comptes & Liens" ? (
+                  <>
+                    <span className="hidden xl:inline">Comptes & Liens</span>
+                    <span className="xl:hidden">Comptes</span>
+                  </>
+                ) : cat.label === "Santé & Soins" ? (
+                  <>
+                    <span className="hidden xl:inline">Santé & Soins</span>
+                    <span className="xl:hidden">Santé</span>
+                  </>
+                ) : (
+                  cat.label
+                );
+
               return (
                 <div key={cat.id} className="relative group h-full flex items-center">
                   <button
                     onClick={() => handleCategoryClick(cat.id)}
-                    className={`flex items-center gap-0.5 xl:gap-1 px-1.5 xl:px-2 py-1.5 rounded-lg text-[10px] xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
+                    className={`flex items-center gap-0.5 xl:gap-1 px-1 xl:px-2 py-1.5 rounded-lg text-[10px] xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
                       isCatActive
                         ? "bg-neutral-100 text-neutral-950 font-black"
                         : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
                     }`}
                   >
                     <CatIcon className={`w-3.5 h-3.5 shrink-0 mr-0.5 ${isCatActive ? "text-neutral-900" : "text-neutral-400"}`} />
-                    <span>{cat.label}</span>
+                    <span>{displayLabel}</span>
                     <ChevronDown className="w-3 h-3 text-neutral-400 opacity-60 group-hover:rotate-180 transition-transform duration-200 shrink-0 ml-0.5" />
                   </button>
 
@@ -1422,11 +1468,11 @@ export default function App() {
           </nav>
 
           {/* Quick Metrics & Actions (Right) */}
-          <div className="flex items-center gap-1.5 xl:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1 xl:gap-2.5 shrink-0">
             
             {/* Discipline Streak Count */}
             <div 
-              className="hidden sm:flex items-center gap-1 bg-neutral-100 border border-neutral-200 px-2 py-1 rounded-lg text-[10px] xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
+              className="hidden xl:flex items-center gap-1 bg-neutral-100 border border-neutral-200 px-2 py-1 rounded-lg text-[10px] xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
               title="Votre série de discipline quotidienne"
             >
               <Flame className="w-3.5 h-3.5 text-neutral-800 fill-neutral-400 shrink-0" />
@@ -1435,7 +1481,7 @@ export default function App() {
 
             {/* Total Patrimoine Estimate */}
             <div 
-              className="hidden md:flex items-center gap-1 bg-neutral-50 border border-neutral-200/80 px-2 py-1 rounded-lg text-[10px] xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
+              className="hidden xl:flex items-center gap-1 bg-neutral-50 border border-neutral-200/80 px-2 py-1 rounded-lg text-[10px] xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
               title={focusMode ? "Patrimoine masqué en mode Concentration" : "Estimation totale du Patrimoine (Comptes + Actions)"}
             >
               <Coins className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
@@ -1449,11 +1495,11 @@ export default function App() {
             {/* Daily Reset Routine Button */}
             <button
               onClick={resetDailyRoutines}
-              className="text-[10px] xl:text-[11px] bg-neutral-900 hover:bg-neutral-800 text-white px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1"
+              className="text-[10px] xl:text-[11px] bg-neutral-900 hover:bg-neutral-800 text-white px-2 xl:px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1"
               title="Réinitialiser les routines quotidiennes pour un nouveau jour"
             >
-              <RefreshCw className="w-3 h-3 shrink-0" />
-              <span>Nouveau Jour</span>
+              <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xl:inline">Nouveau Jour</span>
             </button>
 
             {/* Theme Toggle Button */}
@@ -2162,6 +2208,13 @@ export default function App() {
                     <FormationsSection formations={formations} setFormations={setFormations} activeTab="carriere_pro" hideTabs={true} />
                   ) : activeMenu === "macircle" ? (
                     <FormationsSection formations={formations} setFormations={setFormations} activeTab="ma_circle" hideTabs={true} />
+                  ) : activeMenu === "monthly_goals" ? (
+                    <MonthlyGoalsSection 
+                      goals={monthlyGoals} 
+                      setGoals={setMonthlyGoals} 
+                      availableChannels={channels.map(c => c.name)}
+                    />
+
                   ) : (
                     <div>
                       {(() => {

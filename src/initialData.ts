@@ -22,8 +22,10 @@ import {
   WishListItem,
   AchatCouteuxItem,
   BookItem,
-  ScreenMediaItem
+  ScreenMediaItem,
+  MonthlyGoal
 } from "./types";
+
 
 export const INITIAL_HABITS: DailyHabit[] = [
   { id: "h1", name: "Lire pendant 10 minutes", description: "S'évader et stimuler l'imagination", completed: false, category: "professional" },
@@ -193,4 +195,38 @@ export const INITIAL_ACHATS_COUTEUX: AchatCouteuxItem[] = [
   { id: "acc2", itemName: "Objectif Cinéma Arri Alexa Mini", targetDate: "2026-12-15", estimatedPrice: 42000, status: "Planifié", store: "CineGears Casablanca", priority: "Secondaire" },
   { id: "acc3", itemName: "Mac Studio M2 Ultra (128 Go RAM)", targetDate: "2026-09-01", estimatedPrice: 55000, status: "Économise", store: "iStyle Maroc", priority: "Prioritaire" }
 ];
+
+export const INITIAL_MONTHLY_GOALS: MonthlyGoal[] = [
+  {
+    id: "mg1",
+    month: "2026-07",
+    channelName: "The Moroccan Analyst",
+    targetRevenue: 12000,
+    currentRevenue: 8500,
+    targetFollowers: 500,
+    currentFollowers: 320,
+    note: "Optimiser l'intégration sponsorisée de la prochaine vidéo"
+  },
+  {
+    id: "mg2",
+    month: "2026-07",
+    channelName: "The Moroccan CFO",
+    targetRevenue: 20000,
+    currentRevenue: 15500,
+    targetFollowers: 2500,
+    currentFollowers: 1800,
+    note: "Augmenter la fréquence sur TikTok à 4 publications par semaine"
+  },
+  {
+    id: "mg3",
+    month: "2026-07",
+    channelName: "The Moroccan Economist",
+    targetRevenue: 8000,
+    currentRevenue: 4000,
+    targetFollowers: 800,
+    currentFollowers: 620,
+    note: "Série d'articles macro sur l'industrie automobile au Maroc"
+  }
+];
+
 

@@ -283,3 +283,14 @@ export interface ScreenMediaItem {
   platform: string;
 }
 
+export interface MonthlyGoal {
+  id: string;
+  month: string; // e.g. "2026-07"
+  channelName: string; // e.g. "The Moroccan Analyst"
+  targetRevenue: number; // MAD
+  currentRevenue: number; // MAD
+  targetFollowers: number; // target count
+  currentFollowers: number; // current count
+  note?: string;
+}
+
