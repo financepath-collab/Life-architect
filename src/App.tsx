@@ -54,12 +54,14 @@ import {
 
 import InteractiveModuleTable, { TableColumn } from "./components/InteractiveModuleTable";
 import FinanceCharts from "./components/FinanceCharts";
+import NetSavingsChart from "./components/NetSavingsChart";
 import FocusSport from "./components/FocusSport";
 import BooksSection from "./components/BooksSection";
 import ScreenMediaSection from "./components/ScreenMediaSection";
 import FormationsSection from "./components/FormationsSection";
 import AlertsBanner from "./components/AlertsBanner";
 import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
+import MonthlyPerformanceCard from "./components/MonthlyPerformanceCard";
 
 // Icons imports
 import { 
@@ -1652,64 +1654,69 @@ export default function App() {
 
               {/* General Statistics Cards */}
               {!focusMode ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Net Worth */}
-                  <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Patrimoine Est.</span>
-                      <h4 className="text-xl font-bold font-mono text-neutral-900">
-                        {dashboardStats.netWorth.toLocaleString("fr-FR")} MAD
-                      </h4>
-                      <span className="text-[10px] text-neutral-400 font-medium">BVC + Soldes bancaires</span>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Net Worth */}
+                    <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Patrimoine Est.</span>
+                        <h4 className="text-xl font-bold font-mono text-neutral-900">
+                          {dashboardStats.netWorth.toLocaleString("fr-FR")} MAD
+                        </h4>
+                        <span className="text-[10px] text-neutral-400 font-medium">BVC + Soldes bancaires</span>
+                      </div>
+                      <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                        <Coins className="w-5 h-5" />
+                      </div>
                     </div>
-                    <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                      <Coins className="w-5 h-5" />
+
+                    {/* Habits Completion */}
+                    <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Discipline du jour</span>
+                        <h4 className="text-xl font-bold font-mono text-neutral-900">
+                          {dashboardStats.habitsRate.toFixed(0)}%
+                        </h4>
+                        <span className="text-[10px] text-neutral-400 font-medium">
+                          {dashboardStats.habitsCompleted} / {dailyHabits.length} habitudes validées
+                        </span>
+                      </div>
+                      <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                        <Flame className="w-5 h-5" />
+                      </div>
+                    </div>
+
+                    {/* Savings goals */}
+                    <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Objectifs Épargne</span>
+                        <h4 className="text-xl font-bold font-mono text-neutral-900">
+                          {dashboardStats.activeEpargnes} En cours
+                        </h4>
+                        <span className="text-[10px] text-neutral-400 font-medium">Projets immobiliers & tech</span>
+                      </div>
+                      <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                        <PiggyBank className="w-5 h-5" />
+                      </div>
+                    </div>
+
+                    {/* Active SaaS Subscriptions */}
+                    <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">SaaS & Abonnements</span>
+                        <h4 className="text-xl font-bold font-mono text-neutral-900">
+                          {dashboardStats.activeSubscribers} Actifs
+                        </h4>
+                        <span className="text-[10px] text-neutral-400 font-medium">Logiciels pro & serveurs</span>
+                      </div>
+                      <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
+                        <Bell className="w-5 h-5" />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Habits Completion */}
-                  <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Discipline du jour</span>
-                      <h4 className="text-xl font-bold font-mono text-neutral-900">
-                        {dashboardStats.habitsRate.toFixed(0)}%
-                      </h4>
-                      <span className="text-[10px] text-neutral-400 font-medium">
-                        {dashboardStats.habitsCompleted} / {dailyHabits.length} habitudes validées
-                      </span>
-                    </div>
-                    <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                      <Flame className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  {/* Savings goals */}
-                  <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Objectifs Épargne</span>
-                      <h4 className="text-xl font-bold font-mono text-neutral-900">
-                        {dashboardStats.activeEpargnes} En cours
-                      </h4>
-                      <span className="text-[10px] text-neutral-400 font-medium">Projets immobiliers & tech</span>
-                    </div>
-                    <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                      <PiggyBank className="w-5 h-5" />
-                    </div>
-                  </div>
-
-                  {/* Active SaaS Subscriptions */}
-                  <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">SaaS & Abonnements</span>
-                      <h4 className="text-xl font-bold font-mono text-neutral-900">
-                        {dashboardStats.activeSubscribers} Actifs
-                      </h4>
-                      <span className="text-[10px] text-neutral-400 font-medium">Logiciels pro & serveurs</span>
-                    </div>
-                    <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                      <Bell className="w-5 h-5" />
-                    </div>
-                  </div>
+                  {/* Interactive Monthly Net Performance Card */}
+                  <MonthlyPerformanceCard transactions={transactions} />
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2029,6 +2036,8 @@ export default function App() {
                       epargnes={epargnes}
                       abonnements={abonnements}
                     />
+                    
+                    <NetSavingsChart transactions={transactions} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -2131,6 +2140,8 @@ export default function App() {
                         epargnes={epargnes}
                         abonnements={abonnements}
                       />
+
+                      <NetSavingsChart transactions={transactions} />
                     </div>
                                     ) : activeMenu === "sport" ? (
                     <FocusSport />
