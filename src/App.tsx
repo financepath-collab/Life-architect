@@ -105,7 +105,9 @@ import {
   Lock,
   AlertCircle,
   Gift,
-  Hourglass
+  Hourglass,
+  Sun,
+  Moon
 } from "lucide-react";
 
 function Logo({ className = "w-8 h-8 text-indigo-500" }: { className?: string }) {
@@ -125,6 +127,9 @@ export default function App() {
   const [activeMenu, setActiveMenu] = useState<string>("dashboard"); // "dashboard", or "submodule_id"
   const [dashboardTab, setDashboardTab] = useState<"routines" | "charts" | "launchpad">("routines");
   const [focusMode, setFocusMode] = useState<boolean>(false);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem("la_theme") === "dark";
+  });
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem("la_is_unlocked") === "true";
   });
@@ -262,6 +267,17 @@ export default function App() {
     const saved = localStorage.getItem("mp_streak_count_v2");
     return saved ? parseInt(saved) : 7;
   });
+
+  // --- THEME SYNC EFFECT ---
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("la_theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("la_theme", "light");
+    }
+  }, [isDarkMode]);
 
   // --- LOCALSTORAGE SYNC EFFECT ---
   useEffect(() => {
@@ -1303,7 +1319,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-neutral-800 flex flex-col font-sans antialiased">
+    <div className="min-h-screen bg-neutral-50 text-neutral-800 flex flex-col font-sans antialiased">
       
       {/* UNIFIED STICKY TOP NAVIGATION BAR */}
       <header className="sticky top-0 z-50 w-full bg-white border-b border-neutral-200/80 shadow-xs">
@@ -1425,6 +1441,19 @@ export default function App() {
             >
               <RefreshCw className="w-3 h-3 shrink-0" />
               <span>Nouveau Jour</span>
+            </button>
+
+            {/* Theme Toggle Button */}
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0"
+              title={isDarkMode ? "Passer au mode clair" : "Passer au mode sombre professionnel"}
+            >
+              {isDarkMode ? (
+                <Sun className="w-3.5 h-3.5 text-amber-500 fill-amber-300" />
+              ) : (
+                <Moon className="w-3.5 h-3.5 text-neutral-600 fill-neutral-200" />
+              )}
             </button>
 
             {/* Logout Button */}
