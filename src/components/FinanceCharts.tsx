@@ -379,6 +379,130 @@ export default function FinanceCharts({
         </div>
       </div>
 
+      {/* NEW SECTION: ÉVOLUTION ÉPARGNE NETTE */}
+      <div className="bg-white border border-neutral-200/90 rounded-2xl p-6 shadow-xs space-y-5 animate-in fade-in duration-300">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-neutral-100 pb-4 border-dashed">
+          <div className="space-y-1">
+            <h3 className="text-sm font-black text-neutral-900 flex items-center gap-2 font-display uppercase tracking-wider">
+              <BarChart3 className="w-4.5 h-4.5 text-neutral-900" />
+              <span>Évolution Épargne Nette</span>
+            </h3>
+            <p className="text-xs text-neutral-400 font-medium">
+              Comparaison de vos revenus mensuels totaux et de vos dépenses mensuelles totales sur les 6 derniers mois.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 bg-neutral-50 border border-neutral-200/50 px-3.5 py-1.5 rounded-xl text-[10px] font-bold text-neutral-600 self-start md:self-auto uppercase tracking-wide">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500" />
+              <span>Revenus Totaux</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-rose-500" />
+              <span>Dépenses Totales</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Recharts Bar Chart Container */}
+        <div className="w-full h-80 pt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={monthlyChartData}
+              margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+              <XAxis 
+                dataKey="name" 
+                tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis 
+                tick={{ fill: '#737373', fontSize: 10, fontWeight: 500 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(val) => `${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
+              />
+              <Tooltip 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const rev = payload.find((p: any) => p.name === "Revenus")?.value || 0;
+                    const dep = payload.find((p: any) => p.name === "Dépenses")?.value || 0;
+                    const net = rev - dep;
+                    const rate = rev > 0 ? Math.round((net / rev) * 100) : 0;
+                    return (
+                      <div className="bg-white border border-neutral-200/90 p-4 rounded-xl shadow-lg space-y-2.5 min-w-[200px] font-sans">
+                        <p className="text-xs font-black text-neutral-900 border-b border-neutral-100 pb-1.5 uppercase tracking-wider">{label}</p>
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex justify-between items-center">
+                            <span className="text-neutral-500 font-semibold flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500" />
+                              Revenus :
+                            </span>
+                            <span className="font-mono font-bold text-neutral-900">{rev.toLocaleString("fr-FR")} MAD</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-neutral-500 font-semibold flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-xs bg-rose-500" />
+                              Dépenses :
+                            </span>
+                            <span className="font-mono font-bold text-neutral-900">{dep.toLocaleString("fr-FR")} MAD</span>
+                          </div>
+                          <div className="border-t border-dashed border-neutral-100 pt-1.5 mt-1.5 flex justify-between items-center">
+                            <span className="text-neutral-600 font-bold">Épargne Nette :</span>
+                            <span className={`font-mono font-black ${net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                              {net >= 0 ? "+" : ""}{net.toLocaleString("fr-FR")} MAD
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-neutral-400 font-medium">Taux d'Épargne :</span>
+                            <span className={`font-mono font-bold ${net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                              {rate}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }} 
+                cursor={{ fill: 'rgba(245, 245, 245, 0.4)' }} 
+              />
+              <Bar 
+                name="Revenus"
+                dataKey="Revenus" 
+                fill="#10b981" 
+                radius={[4, 4, 0, 0]} 
+                maxBarSize={28}
+              />
+              <Bar 
+                name="Dépenses"
+                dataKey="Dépenses" 
+                fill="#f43f5e" 
+                radius={[4, 4, 0, 0]} 
+                maxBarSize={28}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* High-fidelity summary stats detailing the evolution */}
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 pt-1">
+          {monthlyChartData.map((m, idx) => {
+            const net = m.Revenus - m.Dépenses;
+            return (
+              <div key={idx} className="bg-neutral-50 border border-neutral-200/60 rounded-xl p-3 space-y-1 text-center shadow-3xs">
+                <span className="text-[10px] font-bold text-neutral-500 block uppercase tracking-wider">{m.name}</span>
+                <div className={`text-xs font-black font-mono ${net >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                  {net >= 0 ? "+" : ""}{net.toLocaleString("fr-FR")} MAD
+                </div>
+                <span className="text-[8px] text-neutral-400 block">Épargne Nette</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Grid of charts and metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
