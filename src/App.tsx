@@ -57,6 +57,7 @@ import FinanceCharts from "./components/FinanceCharts";
 import FocusSport from "./components/FocusSport";
 import BooksSection from "./components/BooksSection";
 import ScreenMediaSection from "./components/ScreenMediaSection";
+import FormationsSection from "./components/FormationsSection";
 import AlertsBanner from "./components/AlertsBanner";
 import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
 
@@ -458,7 +459,7 @@ export default function App() {
       label: "Formation & Culture",
       icon: BookOpen,
       items: [
-        { id: "formations", label: "Formations Udemy/Pro", icon: GraduationCap, desc: "Progression de vos cours et épisodes Udemy." },
+        { id: "formations", label: "Carrière & Formations", icon: GraduationCap, desc: "Suivi complet de vos formations, compétences ciblées et opportunités de recrutement." },
         { id: "books", label: "Lectures & Livres", icon: BookOpen, desc: "Suivi détaillé de vos lectures en cours, terminées et wishlist." },
         { id: "screenmedia", label: "Séries, Animes & Films", icon: Film, desc: "File de visionnage et progression d'épisodes de vos écrans." }
       ]
@@ -2148,6 +2149,8 @@ export default function App() {
                     <BooksSection books={books} setBooks={setBooks} />
                   ) : activeMenu === "screenmedia" ? (
                     <ScreenMediaSection screenMedia={screenMedia} setScreenMedia={setScreenMedia} />
+                  ) : activeMenu === "formations" ? (
+                    <FormationsSection formations={formations} setFormations={setFormations} />
                   ) : (
                     <div>
                       {(() => {
