@@ -62,6 +62,8 @@ import InteractiveModuleTable, { TableColumn } from "./components/InteractiveMod
 import FinanceCharts from "./components/FinanceCharts";
 import NetSavingsChart from "./components/NetSavingsChart";
 import FocusSport from "./components/FocusSport";
+import SkinTrackerSection from "./components/SkinTrackerSection";
+import PerformanceCorrelations from "./components/PerformanceCorrelations";
 import BooksSection from "./components/BooksSection";
 import ScreenMediaSection from "./components/ScreenMediaSection";
 import FormationsSection from "./components/FormationsSection";
@@ -144,6 +146,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string>("dashboard"); // "dashboard", or "submodule_id"
   const [dashboardTab, setDashboardTab] = useState<"routines" | "charts" | "launchpad">("routines");
+  const [activeChartsSubTab, setActiveChartsSubTab] = useState<"finance" | "correlations">("finance");
   const [focusMode, setFocusMode] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem("la_theme") === "dark";
@@ -238,6 +241,33 @@ export default function App() {
       { id: "ex_6", name: "Étirements & Retour au Calme", desc: "Respiration profonde, étirement des quadriceps, du dos et des épaules.", duration: "5 min", completed: false },
     ];
   });
+
+  const [sportHistory, setSportHistory] = useState<string[]>(() => {
+    const saved = localStorage.getItem("mp_sport_history");
+    if (saved) return JSON.parse(saved);
+    // Seed with beautiful past completions in current/recent weeks
+    return ["2026-07-01", "2026-07-03", "2026-07-05", "2026-07-08", "2026-07-10"];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("mp_sport_history", JSON.stringify(sportHistory));
+  }, [sportHistory]);
+
+  const toggleSportDay = (dateStr: string) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    setSportHistory(prev => {
+      const isCompleted = prev.includes(dateStr);
+      const newHistory = isCompleted ? prev.filter(d => d !== dateStr) : [...prev, dateStr];
+      
+      // If we are toggling today's date, also update today's exercises
+      if (dateStr === todayStr) {
+        const nextState = !isCompleted;
+        setSportExercises(exs => exs.map(e => ({ ...e, completed: nextState })));
+      }
+      
+      return newHistory;
+    });
+  };
 
   const [mealPlanners, setMealPlanners] = useState<MealPlanner[]>(() => {
     const saved = localStorage.getItem("mp_meal_v2");
@@ -439,6 +469,22 @@ export default function App() {
       const targetHabit = prev.find(h => h.id === "h3" || h.name.toLowerCase().includes("sport"));
       if (targetHabit && targetHabit.completed !== isAnyExerciseDone) {
         return prev.map(h => (h.id === targetHabit.id) ? { ...h, completed: isAnyExerciseDone } : h);
+      }
+      return prev;
+    });
+  }, [sportExercises]);
+
+  // Synchronisation : Sport Exercises -> Sport History pour aujourd'hui
+  useEffect(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isTodayActive = sportExercises.some(ex => ex.completed);
+    
+    setSportHistory(prev => {
+      const exists = prev.includes(todayStr);
+      if (isTodayActive && !exists) {
+        return [...prev, todayStr];
+      } else if (!isTodayActive && exists) {
+        return prev.filter(d => d !== todayStr);
       }
       return prev;
     });
@@ -2509,23 +2555,65 @@ export default function App() {
                 <div className="bg-white border border-neutral-200 rounded-3xl p-6 shadow-xs min-h-[420px]">
                   {activeMenu === "charts" ? (
                     <div className="space-y-6">
-                      <div className="pb-4 border-b border-neutral-100">
-                        <h3 className="text-base font-bold text-neutral-900 mb-1">Graphiques de performance Financière</h3>
-                        <p className="text-xs text-neutral-400">Analyse complète de vos flux de trésorerie, d'épargne, de vos budgets et positions boursières en BVC.</p>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+                        <div className="space-y-1">
+                          <h3 className="text-base font-extrabold text-neutral-900 tracking-tight">Graphiques & Analyses Croisées</h3>
+                          <p className="text-xs text-neutral-400">Analyse de vos flux financiers croisée avec vos indices d'effort et d'autodiscipline.</p>
+                        </div>
+                        
+                        {/* CHART SUB-TABS SELECTOR */}
+                        <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl self-start">
+                          <button
+                            onClick={() => setActiveChartsSubTab("finance")}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              activeChartsSubTab === "finance"
+                                ? "bg-white text-neutral-950 shadow-3xs"
+                                : "text-neutral-500 hover:text-neutral-900"
+                            }`}
+                          >
+                            Analyses Financières
+                          </button>
+                          <button
+                            onClick={() => setActiveChartsSubTab("correlations")}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              activeChartsSubTab === "correlations"
+                                ? "bg-white text-neutral-950 shadow-3xs"
+                                : "text-neutral-500 hover:text-neutral-900"
+                            }`}
+                          >
+                            Corrélations Bien-être
+                          </button>
+                        </div>
                       </div>
 
-                      <FinanceCharts
-                        transactions={transactions}
-                        budgets={budgets}
-                        stocks={stocks}
-                        epargnes={epargnes}
-                        abonnements={abonnements}
-                      />
-
-                      <NetSavingsChart transactions={transactions} />
+                      {activeChartsSubTab === "finance" ? (
+                        <div className="space-y-6 animate-in fade-in duration-300">
+                          <FinanceCharts
+                            transactions={transactions}
+                            budgets={budgets}
+                            stocks={stocks}
+                            epargnes={epargnes}
+                            abonnements={abonnements}
+                          />
+                          <NetSavingsChart transactions={transactions} />
+                        </div>
+                      ) : (
+                        <PerformanceCorrelations
+                          sportHistory={sportHistory}
+                          weeklyObjectives={weeklyObjectives}
+                          transactions={transactions}
+                        />
+                      )}
                     </div>
                                     ) : activeMenu === "sport" ? (
-                    <FocusSport exercises={sportExercises} setExercises={setSportExercises} />
+                    <FocusSport 
+                      exercises={sportExercises} 
+                      setExercises={setSportExercises} 
+                      sportHistory={sportHistory}
+                      onToggleSportDay={toggleSportDay}
+                    />
+                  ) : activeMenu === "skin" ? (
+                    <SkinTrackerSection skinTrackers={skinTrackers} setSkinTrackers={setSkinTrackers} />
                   ) : activeMenu === "books" ? (
                     <BooksSection books={books} setBooks={setBooks} />
                   ) : activeMenu === "screenmedia" ? (

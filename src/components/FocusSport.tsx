@@ -18,7 +18,8 @@ import {
   Check, 
   Activity, 
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Calendar
 } from "lucide-react";
 
 // Predefined default exercises for a 30-minute balanced session
@@ -42,10 +43,14 @@ const SUGGESTED_PLAYLIST = [
 
 export default function FocusSport({ 
   exercises: propsExercises, 
-  setExercises: propsSetExercises 
+  setExercises: propsSetExercises,
+  sportHistory = [],
+  onToggleSportDay
 }: { 
   exercises?: any[]; 
   setExercises?: React.Dispatch<React.SetStateAction<any[]>>; 
+  sportHistory?: string[];
+  onToggleSportDay?: (date: string) => void;
 } = {}) {
   // --- TIMER STATES (30 mins = 1800s) ---
   const INITIAL_SECONDS = 1800;
@@ -664,6 +669,109 @@ export default function FocusSport({
 
         </div>
 
+      </div>
+
+      {/* SECTION : HISTORIQUE DES ENTRAÎNEMENTS (CALENDRIER) */}
+      <div className="bg-white border border-neutral-200 rounded-3xl p-6 md:p-8 space-y-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-5">
+          <div className="space-y-1">
+            <h3 className="text-base font-black text-neutral-900 tracking-tight flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-amber-500" />
+              Historique Personnel & Calendrier d'Effort
+            </h3>
+            <p className="text-xs text-neutral-400">
+              Visualisez et gérez les jours où vous avez complété vos 30 minutes de sport. Cliquez sur un jour pour l'activer ou le désactiver rétroactivement.
+            </p>
+          </div>
+          
+          {/* STATS RAPIDES */}
+          <div className="flex items-center gap-3 bg-neutral-50 px-4 py-2.5 rounded-2xl border border-neutral-200/60 self-start">
+            <div className="text-center px-3 border-r border-neutral-200">
+              <span className="text-[10px] text-neutral-400 font-bold block uppercase tracking-wider">Jours Actifs</span>
+              <span className="text-base font-black font-mono text-neutral-900">{sportHistory.length}</span>
+            </div>
+            <div className="text-center px-3">
+              <span className="text-[10px] text-neutral-400 font-bold block uppercase tracking-wider">Effort Cumulé</span>
+              <span className="text-base font-black font-mono text-amber-600">{sportHistory.length * 30} min</span>
+            </div>
+          </div>
+        </div>
+
+        {/* CALENDRIER */}
+        <div>
+          {(() => {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const offset = firstDayIndex === 0 ? 6 : firstDayIndex - 1; // Mon is 0
+
+            const calendarCells = [];
+            for (let i = 0; i < offset; i++) calendarCells.push(null);
+            for (let d = 1; d <= daysInMonth; d++) calendarCells.push(d);
+
+            return (
+              <div className="max-w-3xl mx-auto space-y-4">
+                <div className="flex justify-between items-center bg-neutral-900 text-white px-5 py-3.5 rounded-2xl font-bold text-sm tracking-wide shadow-xs">
+                  <span className="uppercase font-mono tracking-widest">{monthNames[month]} {year}</span>
+                  <span className="text-xs font-medium text-neutral-400 bg-neutral-800 px-3 py-1 rounded-full border border-neutral-700/50">Simulé à 30 min/jour</span>
+                </div>
+
+                <div className="grid grid-cols-7 gap-2 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-wider py-1">
+                  <div>Lun</div>
+                  <div>Mar</div>
+                  <div>Mer</div>
+                  <div>Jeu</div>
+                  <div>Ven</div>
+                  <div>Sam</div>
+                  <div>Dim</div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-2">
+                  {calendarCells.map((day, idx) => {
+                    if (day === null) {
+                      return <div key={`empty-${idx}`} className="aspect-square bg-neutral-50/30 rounded-xl border border-transparent" />;
+                    }
+
+                    const mm = String(month + 1).padStart(2, '0');
+                    const dd = String(day).padStart(2, '0');
+                    const dateStr = `${year}-${mm}-${dd}`;
+                    const isCompleted = sportHistory.includes(dateStr);
+                    const isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+
+                    return (
+                      <button
+                        key={`day-${day}`}
+                        type="button"
+                        onClick={() => onToggleSportDay?.(dateStr)}
+                        className={`relative aspect-square flex flex-col items-center justify-between p-2 rounded-2xl border text-xs font-bold transition-all cursor-pointer group ${
+                          isCompleted
+                            ? "bg-amber-50 border-amber-300 text-amber-950 shadow-3xs hover:bg-amber-100"
+                            : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                        } ${isToday ? "ring-2 ring-neutral-900 ring-offset-2" : ""}`}
+                      >
+                        <span className={`text-[10px] self-start leading-none ${isToday ? "bg-neutral-900 text-white rounded-md px-1 py-0.5" : ""}`}>{day}</span>
+                        
+                        {isCompleted ? (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <Dumbbell className="w-4 h-4 text-amber-600 fill-amber-200" />
+                            <span className="text-[8px] font-mono font-medium text-amber-800 leading-none">30m</span>
+                          </div>
+                        ) : (
+                          <div className="w-4 h-4 rounded-full border border-dashed border-neutral-300 flex items-center justify-center group-hover:border-neutral-400">
+                            <span className="text-[7px] text-neutral-300 group-hover:text-neutral-500 font-mono">+</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       </div>
 
     </div>

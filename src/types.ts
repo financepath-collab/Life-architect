@@ -161,6 +161,7 @@ export interface SkinTracker {
   skinCondition: "Excellente" | "Bonne" | "Sensible" | "Acné/Irritée";
   productsUsed: string;
   waterIntakeLiters: number;
+  photoUrl?: string;
 }
 
 export interface MealPlanner {
