@@ -467,6 +467,7 @@ export default function App() {
       label: "Finance",
       icon: Coins,
       items: [
+        { id: "comptes", label: "Comptes Bancaires", icon: Landmark, desc: "Gestion des comptes pro, perso et liquidités." },
         { id: "transactions", label: "Transactions", icon: Briefcase, desc: "Historique complet de vos entrées d'argent et dépenses." },
         { id: "virements", label: "Virements", icon: RefreshCw, desc: "Planification et suivi des virements inter-comptes." },
         { id: "stocks", label: "Portefeuille Bourse", icon: Wallet, desc: "Suivi de vos investissements en BVC." },
@@ -517,8 +518,8 @@ export default function App() {
         { id: "formations", label: "Carrière & Formations", icon: GraduationCap, desc: "Suivi complet de vos formations, compétences ciblées et opportunités de recrutement." },
         { id: "macircle", label: "Académie \"The MA Circle\"", icon: Globe, desc: "Monétisation de vos canaux YouTube, formations produites et ventes de produits digitaux." },
         { id: "channels", label: "Chaînes & Médias", icon: Tv, desc: "Abonnés et fréquence de publication de vos chaînes." },
-        { id: "editorial_calendar", label: "Calendrier Éditorial", icon: Calendar, desc: "Visualisez sous forme de calendrier les dates de publication prévues pour vos 3 chaînes YouTube et autres plateformes." }
-
+        { id: "editorial_calendar", label: "Calendrier Éditorial", icon: Calendar, desc: "Visualisez sous forme de calendrier les dates de publication prévues pour vos 3 chaînes YouTube et autres plateformes." },
+        { id: "links", label: "Liens Favoris", icon: Link2, desc: "Signets rapides vers vos ressources de marché bourse." }
       ]
     },
     {
@@ -528,15 +529,6 @@ export default function App() {
       items: [
         { id: "books", label: "Lectures & Livres", icon: BookOpen, desc: "Suivi détaillé de vos lectures en cours, terminées et wishlist." },
         { id: "screenmedia", label: "Séries, Animes & Films", icon: Film, desc: "File de visionnage et progression d'épisodes de vos écrans." }
-      ]
-    },
-    {
-      id: "accounts",
-      label: "Comptes & Liens",
-      icon: Landmark,
-      items: [
-        { id: "comptes", label: "Comptes Bancaires", icon: Landmark, desc: "Gestion des comptes pro, perso et liquidités." },
-        { id: "links", label: "Liens Favoris", icon: Link2, desc: "Signets rapides vers vos ressources de marché bourse." }
       ]
     }
   ];
@@ -1228,9 +1220,46 @@ export default function App() {
           </div>
         );
 
-      case "accounts":
+      case "projets":
+        const avgProjProgress = formations.length > 0 
+          ? Math.round(formations.reduce((sum, f) => sum + f.progressPercent, 0) / formations.length) 
+          : 0;
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Formations & Progrès</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{formations.length} Cours ({avgProjProgress}%)</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><GraduationCap className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-sans">Chaînes & Médias</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{channels.length} Plateformes</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Tv className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Calendrier Éditorial</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{editorialEvents.length} Vidéos/Posts</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Calendar className="w-4 h-4" /></div>
+            </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Liens Favoris</span>
+                <span className="text-base font-extrabold font-mono text-neutral-900 block">{links.length} Raccourcis</span>
+              </div>
+              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Link2 className="w-4 h-4" /></div>
+            </div>
+          </div>
+        );
+
+      case "accounts":
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl animate-in fade-in duration-300">
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
               <div className="space-y-0.5">
                 <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Comptes Bancaires</span>
@@ -1244,20 +1273,6 @@ export default function App() {
                 <span className="text-base font-extrabold font-mono text-neutral-900 block">{totalBankBalance.toLocaleString()} MAD</span>
               </div>
               <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Coins className="w-4 h-4" /></div>
-            </div>
-            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Chaînes Youtube/Insta</span>
-                <span className="text-base font-extrabold font-mono text-neutral-900 block">{channels.length} Plateformes</span>
-              </div>
-              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Tv className="w-4 h-4" /></div>
-            </div>
-            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Liens Favoris</span>
-                <span className="text-base font-extrabold font-mono text-neutral-900 block">{links.length} Raccourcis</span>
-              </div>
-              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Link2 className="w-4 h-4" /></div>
             </div>
           </div>
         );
@@ -1422,10 +1437,10 @@ export default function App() {
                     <span className="hidden 2xl:inline">Lectures & Écrans</span>
                     <span className="2xl:hidden">Lectures</span>
                   </>
-                ) : cat.label === "Comptes & Liens" ? (
+                ) : cat.label === "Banque" ? (
                   <>
-                    <span className="hidden 2xl:inline">Comptes & Liens</span>
-                    <span className="2xl:hidden">Comptes</span>
+                    <span className="hidden 2xl:inline">Banque</span>
+                    <span className="2xl:hidden">Banque</span>
                   </>
                 ) : cat.label === "Santé & Soins" ? (
                   <>
