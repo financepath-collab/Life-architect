@@ -23,7 +23,8 @@ import {
   AchatCouteuxItem,
   BookItem,
   ScreenMediaItem,
-  MonthlyGoal
+  MonthlyGoal,
+  EditorialEvent
 } from "./types";
 
 
@@ -228,5 +229,59 @@ export const INITIAL_MONTHLY_GOALS: MonthlyGoal[] = [
     note: "Série d'articles macro sur l'industrie automobile au Maroc"
   }
 ];
+
+export const INITIAL_EDITORIAL_EVENTS: EditorialEvent[] = [
+  {
+    id: "ee1",
+    title: "Comment investir en Bourse au Maroc en 2026 ? (Guide Complet)",
+    channelName: "The Moroccan Analyst",
+    platform: "YouTube",
+    scheduledDate: "2026-07-10",
+    status: "Publié",
+    contentType: "Vidéo Longue",
+    notes: "Vidéo de 25 minutes avec chapitres. Bien insérer le lien du sponsor en description."
+  },
+  {
+    id: "ee2",
+    title: "Le Guide Ultime de la Fiche de Paie au Maroc (Calcul & Taxes)",
+    channelName: "The Moroccan CFO",
+    platform: "YouTube",
+    scheduledDate: "2026-07-14",
+    status: "Planifié",
+    contentType: "Vidéo Longue",
+    notes: "Sera publié mardi à 18h. Le montage est finalisé, miniature validée."
+  },
+  {
+    id: "ee3",
+    title: "Analyse du Nouveau Modèle Industriel Marocain",
+    channelName: "The Moroccan Economist",
+    platform: "YouTube",
+    scheduledDate: "2026-07-18",
+    status: "En cours",
+    contentType: "Vidéo Longue",
+    notes: "Rédaction du script en cours. Enregistrer les voix off jeudi."
+  },
+  {
+    id: "ee4",
+    title: "3 Erreurs de Gestion Financière qui tuent les Startups",
+    channelName: "The Moroccan CFO",
+    platform: "TikTok",
+    scheduledDate: "2026-07-12",
+    status: "Publié",
+    contentType: "Short / Reel",
+    notes: "Short d'une minute à fort impact. Bon taux de rétention attendu."
+  },
+  {
+    id: "ee5",
+    title: "Perspectives de la Banque Centrale du Maroc (Inflation & Taux)",
+    channelName: "The Moroccan Analyst",
+    platform: "LinkedIn",
+    scheduledDate: "2026-07-16",
+    status: "Brouillon",
+    contentType: "Post Écrit",
+    notes: "Post d'analyse macro-économique rapide avec infographie."
+  }
+];
+
 
 

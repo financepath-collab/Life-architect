@@ -294,3 +294,14 @@ export interface MonthlyGoal {
   note?: string;
 }
 
+export interface EditorialEvent {
+  id: string;
+  title: string;
+  channelName: string;
+  platform: string; // e.g. "YouTube", "TikTok", "Instagram", etc.
+  scheduledDate: string; // "YYYY-MM-DD"
+  status: "Brouillon" | "En cours" | "Planifié" | "Publié";
+  contentType: "Vidéo Longue" | "Short / Reel" | "Carrousel" | "Post Écrit" | "Podcast" | "Autre";
+  notes?: string;
+}
+

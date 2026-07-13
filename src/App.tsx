@@ -24,8 +24,10 @@ import {
   ChannelInfo,
   WishListItem,
   AchatCouteuxItem,
-  MonthlyGoal
+  MonthlyGoal,
+  EditorialEvent
 } from "./types";
+
 
 
 import { 
@@ -52,7 +54,8 @@ import {
   INITIAL_CHANNELS,
   INITIAL_WISHLIST,
   INITIAL_ACHATS_COUTEUX,
-  INITIAL_MONTHLY_GOALS
+  INITIAL_MONTHLY_GOALS,
+  INITIAL_EDITORIAL_EVENTS
 } from "./initialData";
 
 import InteractiveModuleTable, { TableColumn } from "./components/InteractiveModuleTable";
@@ -66,6 +69,8 @@ import AlertsBanner from "./components/AlertsBanner";
 import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
 import MonthlyPerformanceCard from "./components/MonthlyPerformanceCard";
 import MonthlyGoalsSection from "./components/MonthlyGoalsSection";
+import EditorialCalendarSection from "./components/EditorialCalendarSection";
+
 
 
 // Icons imports
@@ -278,6 +283,12 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_MONTHLY_GOALS;
   });
 
+  const [editorialEvents, setEditorialEvents] = useState<EditorialEvent[]>(() => {
+    const saved = localStorage.getItem("mp_editorial_events_v2");
+    return saved ? JSON.parse(saved) : INITIAL_EDITORIAL_EVENTS;
+  });
+
+
 
   // Stats / Streaks
   const [streakCount, setStreakCount] = useState<number>(() => {
@@ -397,6 +408,11 @@ export default function App() {
     localStorage.setItem("mp_monthly_goals_v2", JSON.stringify(monthlyGoals));
   }, [monthlyGoals]);
 
+  useEffect(() => {
+    localStorage.setItem("mp_editorial_events_v2", JSON.stringify(editorialEvents));
+  }, [editorialEvents]);
+
+
 
 
   // --- UTILITY ACTION HANDLERS ---
@@ -500,7 +516,9 @@ export default function App() {
       items: [
         { id: "formations", label: "Carrière & Formations", icon: GraduationCap, desc: "Suivi complet de vos formations, compétences ciblées et opportunités de recrutement." },
         { id: "macircle", label: "Académie \"The MA Circle\"", icon: Globe, desc: "Monétisation de vos canaux YouTube, formations produites et ventes de produits digitaux." },
-        { id: "channels", label: "Chaînes & Médias", icon: Tv, desc: "Abonnés et fréquence de publication de vos chaînes." }
+        { id: "channels", label: "Chaînes & Médias", icon: Tv, desc: "Abonnés et fréquence de publication de vos chaînes." },
+        { id: "editorial_calendar", label: "Calendrier Éditorial", icon: Calendar, desc: "Visualisez sous forme de calendrier les dates de publication prévues pour vos 3 chaînes YouTube et autres plateformes." }
+
       ]
     },
     {
@@ -1364,27 +1382,27 @@ export default function App() {
             <div className="w-9 h-9 bg-neutral-900 rounded-xl flex items-center justify-center shadow-sm shrink-0 border border-neutral-800">
               <Logo className="w-5 h-5 text-white" />
             </div>
-            <div className="hidden xl:block">
+            <div className="hidden 2xl:block">
               <span className="text-[8px] font-bold text-neutral-400 block tracking-widest uppercase font-mono leading-none">SYSTEM INTEGRATION</span>
               <span className="text-xs font-black text-neutral-900 block leading-tight mt-0.5">Life Architect</span>
             </div>
           </div>
 
           {/* Horizontal Navigation Menus (Center - Desktop only) */}
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 h-full overflow-visible">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 h-full overflow-visible">
             
             {/* Dashboard Link */}
             <button
               onClick={() => handleMenuClick("dashboard")}
-              className={`flex items-center gap-1 xl:gap-1.5 px-1.5 xl:px-2.5 py-1.5 rounded-lg text-[10px] xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
+              className={`flex items-center gap-1 xl:gap-1.5 px-1.5 xl:px-2 py-1.5 rounded-lg text-[9.5px] xl:text-[10px] 2xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
                 activeMenu === "dashboard"
                   ? "bg-neutral-900 text-white shadow-xs"
                   : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
               }`}
             >
               <LayoutDashboard className={`w-3.5 h-3.5 shrink-0 ${activeMenu === "dashboard" ? "text-white" : "text-neutral-400"}`} />
-              <span className="hidden xl:inline">Tableau de Bord</span>
-              <span className="xl:hidden">Accueil</span>
+              <span className="hidden 2xl:inline">Tableau de Bord</span>
+              <span className="2xl:hidden">Dashboard</span>
             </button>
 
             {/* Categories Hover Dropdowns */}
@@ -1396,23 +1414,28 @@ export default function App() {
               const displayLabel = 
                 cat.label === "Projets & Académie" ? (
                   <>
-                    <span className="hidden xl:inline">Projets & Académie</span>
-                    <span className="xl:hidden">Projets</span>
+                    <span className="hidden 2xl:inline">Projets & Académie</span>
+                    <span className="2xl:hidden">Projets</span>
                   </>
                 ) : cat.label === "Lectures & Écrans" ? (
                   <>
-                    <span className="hidden xl:inline">Lectures & Écrans</span>
-                    <span className="xl:hidden">Médias</span>
+                    <span className="hidden 2xl:inline">Lectures & Écrans</span>
+                    <span className="2xl:hidden">Lectures</span>
                   </>
                 ) : cat.label === "Comptes & Liens" ? (
                   <>
-                    <span className="hidden xl:inline">Comptes & Liens</span>
-                    <span className="xl:hidden">Comptes</span>
+                    <span className="hidden 2xl:inline">Comptes & Liens</span>
+                    <span className="2xl:hidden">Comptes</span>
                   </>
                 ) : cat.label === "Santé & Soins" ? (
                   <>
-                    <span className="hidden xl:inline">Santé & Soins</span>
-                    <span className="xl:hidden">Santé</span>
+                    <span className="hidden 2xl:inline">Santé & Soins</span>
+                    <span className="2xl:hidden">Santé</span>
+                  </>
+                ) : cat.label === "Productivité" ? (
+                  <>
+                    <span className="hidden 2xl:inline">Productivité</span>
+                    <span className="2xl:hidden">Prod.</span>
                   </>
                 ) : (
                   cat.label
@@ -1422,7 +1445,7 @@ export default function App() {
                 <div key={cat.id} className="relative group h-full flex items-center">
                   <button
                     onClick={() => handleCategoryClick(cat.id)}
-                    className={`flex items-center gap-0.5 xl:gap-1 px-1 xl:px-2 py-1.5 rounded-lg text-[10px] xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
+                    className={`flex items-center gap-0.5 xl:gap-1 px-1 xl:px-1.5 py-1.5 rounded-lg text-[9.5px] xl:text-[10px] 2xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
                       isCatActive
                         ? "bg-neutral-100 text-neutral-950 font-black"
                         : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
@@ -1472,7 +1495,7 @@ export default function App() {
             
             {/* Discipline Streak Count */}
             <div 
-              className="hidden xl:flex items-center gap-1 bg-neutral-100 border border-neutral-200 px-2 py-1 rounded-lg text-[10px] xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
+              className="hidden xl:flex items-center gap-1 bg-neutral-100 border border-neutral-200 px-2 py-1 rounded-lg text-[9.5px] 2xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
               title="Votre série de discipline quotidienne"
             >
               <Flame className="w-3.5 h-3.5 text-neutral-800 fill-neutral-400 shrink-0" />
@@ -1481,12 +1504,12 @@ export default function App() {
 
             {/* Total Patrimoine Estimate */}
             <div 
-              className="hidden xl:flex items-center gap-1 bg-neutral-50 border border-neutral-200/80 px-2 py-1 rounded-lg text-[10px] xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
+              className="hidden xl:flex items-center gap-1 bg-neutral-50 border border-neutral-200/80 px-2 py-1 rounded-lg text-[9.5px] 2xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
               title={focusMode ? "Patrimoine masqué en mode Concentration" : "Estimation totale du Patrimoine (Comptes + Actions)"}
             >
               <Coins className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
               {focusMode ? (
-                <span className="font-mono text-[10px] tracking-widest text-neutral-400 select-none">•••••• MAD</span>
+                <span className="font-mono text-[9px] tracking-widest text-neutral-400 select-none">•••••• MAD</span>
               ) : (
                 <span className="font-mono whitespace-nowrap">{dashboardStats.netWorth.toLocaleString("fr-FR")} MAD</span>
               )}
@@ -1495,11 +1518,11 @@ export default function App() {
             {/* Daily Reset Routine Button */}
             <button
               onClick={resetDailyRoutines}
-              className="text-[10px] xl:text-[11px] bg-neutral-900 hover:bg-neutral-800 text-white px-2 xl:px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1"
+              className="text-[9.5px] 2xl:text-[11px] bg-neutral-900 hover:bg-neutral-800 text-white px-2 xl:px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1"
               title="Réinitialiser les routines quotidiennes pour un nouveau jour"
             >
               <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden xl:inline">Nouveau Jour</span>
+              <span className="hidden 2xl:inline">Nouveau Jour</span>
             </button>
 
             {/* Theme Toggle Button */}
@@ -2214,6 +2237,13 @@ export default function App() {
                       setGoals={setMonthlyGoals} 
                       availableChannels={channels.map(c => c.name)}
                     />
+                  ) : activeMenu === "editorial_calendar" ? (
+                    <EditorialCalendarSection
+                      events={editorialEvents}
+                      setEvents={setEditorialEvents}
+                      availableChannels={channels.map(c => c.name)}
+                    />
+
 
                   ) : (
                     <div>
