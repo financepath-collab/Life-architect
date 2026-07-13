@@ -39,7 +39,7 @@ export const INITIAL_HABITS: DailyHabit[] = [
 ];
 
 export const INITIAL_WEEKLY_OBJECTIVES: WeeklyObjective[] = [
-  { id: "o1", text: "Publier au moins 1 vidéo d'impact sur une des chaînes d'élite", completed: false },
+  { id: "o1", text: "Publier au moins 1 vidéo d'impact sur une des chaînes d'élite", completed: false, isPriority: true },
   { id: "o2", text: "Rédiger et planifier 3 articles d'analyse de marché", completed: false },
   { id: "o3", text: "Finaliser un nouveau module de cours pour l'Académie (Udemy/Site)", completed: false },
 ];

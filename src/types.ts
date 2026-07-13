@@ -74,6 +74,7 @@ export interface WeeklyObjective {
   id: string;
   text: string;
   completed: boolean;
+  isPriority?: boolean;
 }
 
 // === NEW MODULES DEFINED FOR ADVANCED PLATFORM ===

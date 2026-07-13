@@ -122,7 +122,10 @@ import {
   Moon,
   Globe,
   FolderKanban,
-  Target
+  Target,
+  ClipboardCheck,
+  CalendarDays,
+  Star
 } from "lucide-react";
 
 function Logo({ className = "w-8 h-8 text-indigo-500" }: { className?: string }) {
@@ -356,6 +359,65 @@ export default function App() {
     localStorage.setItem("mp_skin_v2", JSON.stringify(skinTrackers));
   }, [skinTrackers]);
 
+  // Synchronisation bidirectionnelle : Skin Tracker -> Habit Tracker
+  useEffect(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayEntry = skinTrackers.find(entry => entry.date === todayStr);
+    const isDoneToday = todayEntry ? (todayEntry.morningRoutine || todayEntry.eveningRoutine) : false;
+    
+    setDailyHabits(prev => {
+      const targetHabit = prev.find(h => h.id === "h5" || h.name.toLowerCase().includes("skin care") || h.name.toLowerCase().includes("routine de soins"));
+      if (targetHabit && targetHabit.completed !== isDoneToday) {
+        return prev.map(h => (h.id === targetHabit.id) ? { ...h, completed: isDoneToday } : h);
+      }
+      return prev;
+    });
+  }, [skinTrackers]);
+
+  // Synchronisation bidirectionnelle : Habit Tracker -> Skin Tracker
+  useEffect(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const skinHabit = dailyHabits.find(h => h.id === "h5" || h.name.toLowerCase().includes("skin care") || h.name.toLowerCase().includes("routine de soins"));
+    if (!skinHabit) return;
+    
+    const isHabitCompleted = skinHabit.completed;
+    const todayEntry = skinTrackers.find(entry => entry.date === todayStr);
+    const isSkinCompleted = todayEntry ? (todayEntry.morningRoutine || todayEntry.eveningRoutine) : false;
+    
+    if (isHabitCompleted !== isSkinCompleted) {
+      if (isHabitCompleted) {
+        setSkinTrackers(prev => {
+          const existing = prev.find(e => e.date === todayStr);
+          if (existing) {
+            if (!existing.morningRoutine && !existing.eveningRoutine) {
+              return prev.map(e => e.date === todayStr ? { ...e, morningRoutine: true } : e);
+            }
+            return prev;
+          } else {
+            const newEntry = {
+              id: "sk_" + Date.now(),
+              date: todayStr,
+              morningRoutine: true,
+              eveningRoutine: false,
+              skinCondition: "Bonne" as const,
+              productsUsed: "Routine soins (Auto-sync)",
+              waterIntakeLiters: 1.5
+            };
+            return [newEntry, ...prev];
+          }
+        });
+      } else {
+        setSkinTrackers(prev => {
+          const existing = prev.find(e => e.date === todayStr);
+          if (existing && (existing.morningRoutine || existing.eveningRoutine)) {
+            return prev.map(e => e.date === todayStr ? { ...e, morningRoutine: false, eveningRoutine: false } : e);
+          }
+          return prev;
+        });
+      }
+    }
+  }, [dailyHabits]);
+
   useEffect(() => {
     localStorage.setItem("mp_meal_v2", JSON.stringify(mealPlanners));
   }, [mealPlanners]);
@@ -424,20 +486,28 @@ export default function App() {
 
   // Weekly objective handlers
   const [newObjectiveText, setNewObjectiveText] = useState("");
+  const [newObjectiveIsPriority, setNewObjectiveIsPriority] = useState(false);
+  
   const handleAddObjectiveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newObjectiveText.trim()) return;
     const newObj: WeeklyObjective = {
       id: "obj_" + Date.now(),
       text: newObjectiveText.trim(),
-      completed: false
+      completed: false,
+      isPriority: newObjectiveIsPriority
     };
     setWeeklyObjectives(prev => [...prev, newObj]);
     setNewObjectiveText("");
+    setNewObjectiveIsPriority(false);
   };
 
   const toggleWeeklyObjective = (id: string) => {
     setWeeklyObjectives(prev => prev.map(o => o.id === id ? { ...o, completed: !o.completed } : o));
+  };
+
+  const toggleWeeklyObjectivePriority = (id: string) => {
+    setWeeklyObjectives(prev => prev.map(o => o.id === id ? { ...o, isPriority: !o.isPriority } : o));
   };
 
   const deleteWeeklyObjective = (id: string) => {
@@ -1016,6 +1086,21 @@ export default function App() {
     setActiveMenu(moduleId);
     setSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const getWeekRangeLabel = () => {
+    const today = new Date();
+    const day = today.getDay();
+    // Adjust so Monday is index 0 and Sunday is 6
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(today.setDate(diff));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    const formatDate = (d: Date) => {
+      return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+    };
+    return `${formatDate(monday)} au ${formatDate(sunday)}`;
   };
 
   // Dynamic Metrics helper for Category Hubs
@@ -1884,6 +1969,144 @@ export default function App() {
                     transition={{ duration: 0.2 }}
                     className="grid grid-cols-1 lg:grid-cols-2 gap-6"
                   >
+                    {/* 0. Résumé Hebdomadaire */}
+                    <div className="col-span-1 lg:col-span-2 bg-gradient-to-br from-neutral-50 to-neutral-100/30 border border-neutral-200/80 rounded-3xl p-6 shadow-3xs space-y-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 bg-neutral-900 text-white rounded-xl shadow-xs">
+                            <ClipboardCheck className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black text-neutral-900 uppercase tracking-tight">Résumé Hebdomadaire</h3>
+                            <p className="text-[10px] text-neutral-400 font-medium">Bilan automatique de vos performances et objectifs de la semaine</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-neutral-600 bg-white border border-neutral-200/60 px-3 py-1.5 rounded-full self-start sm:self-center">
+                          <CalendarDays className="w-3.5 h-3.5 text-neutral-400" />
+                          <span>Semaine du {getWeekRangeLabel()}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-1">
+                        {/* Left side: completed tasks metrics */}
+                        <div className="md:col-span-5 space-y-4">
+                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Performances Réalisées</span>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white border border-neutral-200/50 rounded-2xl p-4 space-y-1 shadow-3xs">
+                              <span className="text-[9px] font-bold text-neutral-400 uppercase block">Objectifs Validés</span>
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-2xl font-black font-mono text-neutral-900">
+                                  {weeklyObjectives.filter(o => o.completed).length}
+                                </span>
+                                <span className="text-xs text-neutral-400 font-semibold">
+                                  / {weeklyObjectives.length}
+                                </span>
+                              </div>
+                              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden mt-1">
+                                <div 
+                                  className="bg-neutral-900 h-full rounded-full transition-all duration-500" 
+                                  style={{ width: `${weeklyObjectives.length > 0 ? (weeklyObjectives.filter(o => o.completed).length / weeklyObjectives.length) * 100 : 0}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="bg-white border border-neutral-200/50 rounded-2xl p-4 space-y-1 shadow-3xs">
+                              <span className="text-[9px] font-bold text-neutral-400 uppercase block">Disciplines du Jour</span>
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-2xl font-black font-mono text-neutral-900">
+                                  {dailyHabits.filter(h => h.completed).length}
+                                </span>
+                                <span className="text-xs text-neutral-400 font-semibold">
+                                  / {dailyHabits.length}
+                                </span>
+                              </div>
+                              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden mt-1">
+                                <div 
+                                  className="bg-neutral-900 h-full rounded-full transition-all duration-500" 
+                                  style={{ width: `${dailyHabits.length > 0 ? (dailyHabits.filter(h => h.completed).length / dailyHabits.length) * 100 : 0}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-neutral-900 text-neutral-100 rounded-2xl p-4 flex items-center justify-between border border-neutral-850 shadow-3xs">
+                            <div className="space-y-0.5">
+                              <span className="text-[9px] font-bold text-neutral-400 uppercase block">Total Tâches Complétées</span>
+                              <span className="text-2xl font-black font-mono tracking-tight text-white block">
+                                {weeklyObjectives.filter(o => o.completed).length + dailyHabits.filter(h => h.completed).length}
+                              </span>
+                              <span className="text-[9px] text-neutral-400 block font-medium">Objectifs de la semaine + Habitudes du jour</span>
+                            </div>
+                            <div className="p-2 bg-neutral-800 rounded-xl text-neutral-200 border border-neutral-700/50">
+                              <Award className="w-5 h-5 text-neutral-200 animate-bounce" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right side: objectives remaining */}
+                        <div className="md:col-span-7 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Objectifs Restants de la Semaine</span>
+                            <span className="text-[9px] bg-white border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full font-mono font-bold shadow-3xs">
+                              {weeklyObjectives.filter(o => !o.completed).length} en attente
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            {weeklyObjectives.filter(o => !o.completed).length === 0 ? (
+                              <div className="text-xs text-neutral-500 italic py-8 text-center bg-white rounded-2xl border border-dashed border-neutral-200 flex flex-col items-center justify-center gap-1 shadow-3xs">
+                                <span className="text-base">🎉</span>
+                                <span className="font-bold text-neutral-800">Parfait ! Aucun objectif restant</span>
+                                <span className="text-[9px] text-neutral-400 max-w-[280px]">Tous les objectifs hebdomadaires de la semaine ont été complétés !</span>
+                              </div>
+                            ) : (
+                              [...weeklyObjectives.filter(o => !o.completed)].sort((a, b) => {
+                                if (a.isPriority && !b.isPriority) return -1;
+                                if (!a.isPriority && b.isPriority) return 1;
+                                return 0;
+                              }).map((obj) => (
+                                <div
+                                  key={obj.id}
+                                  className={`flex items-center justify-between p-3 rounded-xl border transition-all shadow-3xs ${
+                                    obj.isPriority 
+                                      ? "bg-amber-50/30 border-amber-200/80 hover:bg-amber-50/50" 
+                                      : "bg-white border-neutral-200/60 hover:bg-neutral-50/50"
+                                  }`}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleWeeklyObjective(obj.id)}
+                                    className="flex-1 flex items-center gap-2.5 text-left cursor-pointer"
+                                  >
+                                    <Square className={`w-4 h-4 shrink-0 ${obj.isPriority ? "text-amber-400" : "text-neutral-300"}`} />
+                                    <span className="text-xs font-semibold text-neutral-800 leading-snug flex items-center gap-1.5">
+                                      {obj.isPriority && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
+                                      {obj.text}
+                                    </span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleWeeklyObjectivePriority(obj.id)}
+                                    className={`p-1 rounded-lg transition-colors shrink-0 ml-2 cursor-pointer ${
+                                      obj.isPriority
+                                        ? "text-amber-500 hover:text-amber-600 bg-amber-50/60"
+                                        : "text-neutral-300 hover:text-neutral-500 hover:bg-neutral-50"
+                                    }`}
+                                    title={obj.isPriority ? "Retirer la priorité" : "Marquer comme prioritaire"}
+                                  >
+                                    <Star className={`w-3.5 h-3.5 ${obj.isPriority ? "fill-amber-500" : ""}`} />
+                                  </button>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* 1. Daily Habits discipline tracker */}
                     <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
                       <div className="flex items-center justify-between">
@@ -1955,13 +2178,27 @@ export default function App() {
 
                       {/* Add weekly objective Form */}
                       <form onSubmit={handleAddObjectiveSubmit} className="flex gap-2">
-                        <input
-                          type="text"
-                          value={newObjectiveText}
-                          onChange={(e) => setNewObjectiveText(e.target.value)}
-                          placeholder="Ex: Écrire 3 articles LinkedIn, Préparer l'intro..."
-                          className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white transition-all font-medium"
-                        />
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                            value={newObjectiveText}
+                            onChange={(e) => setNewObjectiveText(e.target.value)}
+                            placeholder="Ex: Écrire 3 articles LinkedIn, Préparer l'intro..."
+                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-3.5 pr-10 py-2 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white transition-all font-medium"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setNewObjectiveIsPriority(!newObjectiveIsPriority)}
+                            className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors cursor-pointer ${
+                              newObjectiveIsPriority 
+                                ? "text-amber-500 hover:text-amber-600 bg-amber-50" 
+                                : "text-neutral-300 hover:text-neutral-500"
+                            }`}
+                            title={newObjectiveIsPriority ? "Prioritaire" : "Marquer comme prioritaire"}
+                          >
+                            <Star className={`w-4 h-4 ${newObjectiveIsPriority ? "fill-amber-500" : ""}`} />
+                          </button>
+                        </div>
                         <button
                           type="submit"
                           className="bg-neutral-950 hover:bg-neutral-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center justify-center shadow-xs"
@@ -1976,13 +2213,21 @@ export default function App() {
                             Aucun objectif hebdomadaire pour l'instant. Saisissez-en un ci-dessus !
                           </div>
                         ) : (
-                          weeklyObjectives.map((obj) => (
+                          [...weeklyObjectives].sort((a, b) => {
+                            if (a.completed && !b.completed) return 1;
+                            if (!a.completed && b.completed) return -1;
+                            if (a.isPriority && !b.isPriority) return -1;
+                            if (!a.isPriority && b.isPriority) return 1;
+                            return 0;
+                          }).map((obj) => (
                             <div
                               key={obj.id}
                               className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
                                 obj.completed
                                   ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
-                                  : "bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-50"
+                                  : obj.isPriority
+                                    ? "bg-amber-50/30 border-amber-200 text-neutral-800 hover:bg-amber-50/50"
+                                    : "bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-50"
                               }`}
                             >
                               <button
@@ -1994,14 +2239,28 @@ export default function App() {
                                   {obj.completed ? (
                                     <CheckCircle className="w-4 h-4 text-neutral-900 fill-neutral-900 text-white" />
                                   ) : (
-                                    <Square className="w-4 h-4 text-neutral-300" />
+                                    <Square className={`w-4 h-4 ${obj.isPriority ? "text-amber-400" : "text-neutral-300"}`} />
                                   )}
                                 </div>
-                                <span className={`text-xs font-semibold leading-snug ${obj.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
+                                <span className={`text-xs font-semibold leading-snug flex items-center gap-1.5 ${obj.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
+                                  {obj.isPriority && !obj.completed && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
                                   {obj.text}
                                 </span>
                               </button>
                               
+                              <button
+                                type="button"
+                                onClick={() => toggleWeeklyObjectivePriority(obj.id)}
+                                className={`p-1 rounded-lg transition-colors shrink-0 ml-2 cursor-pointer ${
+                                  obj.isPriority
+                                    ? "text-amber-500 hover:text-amber-600 bg-amber-50/60"
+                                    : "text-neutral-300 hover:text-neutral-500 hover:bg-neutral-50"
+                                }`}
+                                title={obj.isPriority ? "Retirer la priorité" : "Marquer comme prioritaire"}
+                              >
+                                <Star className={`w-3.5 h-3.5 ${obj.isPriority ? "fill-amber-500" : ""}`} />
+                              </button>
+
                               <button
                                 type="button"
                                 onClick={() => deleteWeeklyObjective(obj.id)}
