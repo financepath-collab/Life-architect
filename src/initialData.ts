@@ -156,9 +156,9 @@ export const INITIAL_BOOKS: BookItem[] = [
 ];
 
 export const INITIAL_SCREENMEDIA: ScreenMediaItem[] = [
-  { id: "sm1", title: "Billions", type: "Série", status: "En cours", currentEpisode: 8, totalEpisodes: 12, rating: 5, notes: "Saison 4 - Excellente tension dramatique autour de la haute finance.", platform: "Netflix" },
+  { id: "sm1", title: "Billions", type: "Série", status: "En cours", currentEpisode: 8, totalEpisodes: 12, season: 4, rating: 5, notes: "Saison 4 - Excellente tension dramatique autour de la haute finance.", platform: "Netflix" },
   { id: "sm2", title: "Wall Street: Money Never Sleeps", type: "Film", status: "Terminé", rating: 4, notes: "Bonne suite du classique, très axé sur la crise de 2008.", platform: "Prime Video" },
-  { id: "sm3", title: "Death Note", type: "Anime", status: "À regarder", currentEpisode: 0, totalEpisodes: 37, rating: 0, notes: "Recommandé pour le suspense tactique.", platform: "Netflix" },
+  { id: "sm3", title: "Death Note", type: "Anime", status: "À regarder", currentEpisode: 0, totalEpisodes: 37, season: 1, rating: 0, notes: "Recommandé pour le suspense tactique.", platform: "Netflix" },
   { id: "sm4", title: "Spirited Away", type: "Anime", status: "Terminé", rating: 5, notes: "Chef-d'œuvre de Ghibli.", platform: "Crunchyroll" }
 ];
 

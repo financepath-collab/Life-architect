@@ -31,6 +31,7 @@ export default function ScreenMediaSection({ screenMedia, setScreenMedia }: Scre
   const [title, setTitle] = useState("");
   const [type, setType] = useState<"Film" | "Série" | "Anime">("Série");
   const [platform, setPlatform] = useState("");
+  const [season, setSeason] = useState<number>(1);
   const [currentEpisode, setCurrentEpisode] = useState<number>(0);
   const [totalEpisodes, setTotalEpisodes] = useState<number>(12);
   const [rating, setRating] = useState<number>(0);
@@ -50,6 +51,7 @@ export default function ScreenMediaSection({ screenMedia, setScreenMedia }: Scre
       title: title.trim(),
       type,
       platform: platform.trim() || "Netflix",
+      season: type === "Film" ? undefined : (Number(season) || 1),
       currentEpisode: type === "Film" ? undefined : (status === "Terminé" ? totalEpisodes : Number(currentEpisode) || 0),
       totalEpisodes: type === "Film" ? undefined : (Number(totalEpisodes) || 1),
       rating: status === "Terminé" ? rating : 0,
@@ -62,6 +64,7 @@ export default function ScreenMediaSection({ screenMedia, setScreenMedia }: Scre
     // Reset Form
     setTitle("");
     setPlatform("");
+    setSeason(1);
     setCurrentEpisode(0);
     setTotalEpisodes(12);
     setRating(0);
@@ -168,7 +171,9 @@ export default function ScreenMediaSection({ screenMedia, setScreenMedia }: Scre
                       {media.type !== "Film" && (
                         <div className="flex flex-col items-end shrink-0">
                           <span className="text-lg font-black font-mono text-red-400">{percent}%</span>
-                          <span className="text-[10px] text-neutral-400 font-semibold mt-0.5 font-mono">Ep {media.currentEpisode} / {media.totalEpisodes}</span>
+                          <span className="text-[10px] text-neutral-400 font-semibold mt-0.5 font-mono">
+                            {media.season ? `Saison ${media.season} • ` : ""}Ep {media.currentEpisode} / {media.totalEpisodes}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -390,6 +395,17 @@ export default function ScreenMediaSection({ screenMedia, setScreenMedia }: Scre
                 {type !== "Film" && (
                   <>
                     <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase">Saison</label>
+                      <input 
+                        type="number" 
+                        min={1}
+                        value={season}
+                        onChange={(e) => setSeason(Number(e.target.value))}
+                        className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-xs text-neutral-900 focus:outline-none focus:border-neutral-900"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-neutral-400 uppercase">Épisodes Totaux</label>
                       <input 
                         type="number" 
@@ -505,11 +521,16 @@ export default function ScreenMediaSection({ screenMedia, setScreenMedia }: Scre
                       </span>
                     </div>
 
-                    <div className="space-y-0.5">
+                    <div className="space-y-0.5 font-sans">
                       <h4 className="text-xs font-black text-neutral-900 leading-tight flex items-center gap-1.5">
                         <Clapperboard className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
                         <span>{media.title}</span>
                       </h4>
+                      {media.type !== "Film" && media.season && (
+                        <span className="text-[10px] text-neutral-400 font-semibold block pl-5 mt-0.5">
+                          Saison {media.season}
+                        </span>
+                      )}
                     </div>
 
                     {media.type !== "Film" && media.status !== "À regarder" && (

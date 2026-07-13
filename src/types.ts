@@ -278,6 +278,7 @@ export interface ScreenMediaItem {
   status: "À regarder" | "En cours" | "Terminé";
   currentEpisode?: number;
   totalEpisodes?: number;
+  season?: number;
   rating: number; // 1-5
   notes: string;
   platform: string;

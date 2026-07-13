@@ -1184,25 +1184,8 @@ export default function App() {
         );
 
       case "formation":
-        const averageProgress = formations.length > 0 
-          ? Math.round(formations.reduce((sum, f) => sum + f.progressPercent, 0) / formations.length) 
-          : 0;
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
-            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Formations Enregistrées</span>
-                <span className="text-base font-extrabold font-mono text-neutral-900 block">{formations.length} Cours</span>
-              </div>
-              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><GraduationCap className="w-4 h-4" /></div>
-            </div>
-            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-sans">Progression Moyenne</span>
-                <span className="text-base font-extrabold font-mono text-neutral-900 block">{averageProgress}% Complete</span>
-              </div>
-              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><TrendingUp className="w-4 h-4" /></div>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl animate-in fade-in duration-300">
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
               <div className="space-y-0.5">
                 <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Lectures & Livres</span>
