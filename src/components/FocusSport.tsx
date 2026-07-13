@@ -40,7 +40,13 @@ const SUGGESTED_PLAYLIST = [
   { id: "track_5", title: "Creativity Flow Workout", artist: "The Moroccan Analyst Project", duration: "3:15", tempo: "135 BPM", coverColor: "from-rose-500 to-orange-500" },
 ];
 
-export default function FocusSport() {
+export default function FocusSport({ 
+  exercises: propsExercises, 
+  setExercises: propsSetExercises 
+}: { 
+  exercises?: any[]; 
+  setExercises?: React.Dispatch<React.SetStateAction<any[]>>; 
+} = {}) {
   // --- TIMER STATES (30 mins = 1800s) ---
   const INITIAL_SECONDS = 1800;
   const [secondsLeft, setSecondsLeft] = useState(INITIAL_SECONDS);
@@ -48,10 +54,21 @@ export default function FocusSport() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- EXERCISES STATES ---
-  const [exercises, setExercises] = useState(() => {
+  const [localExercises, setLocalExercises] = useState(() => {
     const saved = localStorage.getItem("mp_sport_exercises");
     return saved ? JSON.parse(saved) : DEFAULT_EXERCISES;
   });
+
+  const exercises = propsExercises !== undefined ? propsExercises : localExercises;
+  const setExercises = propsSetExercises !== undefined ? propsSetExercises : setLocalExercises;
+
+  // Keep local state in sync if props are not provided
+  useEffect(() => {
+    if (propsExercises === undefined) {
+      localStorage.setItem("mp_sport_exercises", JSON.stringify(localExercises));
+    }
+  }, [localExercises, propsExercises]);
+
   const [newExName, setNewExName] = useState("");
   const [newExDesc, setNewExDesc] = useState("");
   const [newExDuration, setNewExDuration] = useState("5 min");

@@ -226,6 +226,19 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_SKIN_TRACKERS;
   });
 
+  const [sportExercises, setSportExercises] = useState<any[]>(() => {
+    const saved = localStorage.getItem("mp_sport_exercises");
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: "ex_1", name: "Échauffement Articulaire & Cardio", desc: "Rotations des bras, genoux hauts et jumping jacks doux.", duration: "5 min", completed: false },
+      { id: "ex_2", name: "Squats de l'Atlas", desc: "Descente contrôlée, fesses en arrière, poids sur les talons.", duration: "5 min (3 séries x 15)", completed: false },
+      { id: "ex_3", name: "Pompes Solides (Push-ups)", desc: "Gainage parfait, coudes à 45 degrés. Sur les genoux si besoin.", duration: "5 min (3 séries x 12)", completed: false },
+      { id: "ex_4", name: "Fentes Alternées", desc: "Fente avant droite puis gauche, angle de 90° pour chaque genou.", duration: "5 min (3 séries x 10/jambe)", completed: false },
+      { id: "ex_5", name: "Gainage Planche Royale", desc: "Appui sur les avant-bras, corps aligné, abdos et fessiers contractés.", duration: "5 min (4 x 45s de travail)", completed: false },
+      { id: "ex_6", name: "Étirements & Retour au Calme", desc: "Respiration profonde, étirement des quadriceps, du dos et des épaules.", duration: "5 min", completed: false },
+    ];
+  });
+
   const [mealPlanners, setMealPlanners] = useState<MealPlanner[]>(() => {
     const saved = localStorage.getItem("mp_meal_v2");
     return saved ? JSON.parse(saved) : INITIAL_MEAL_PLANNERS;
@@ -417,6 +430,40 @@ export default function App() {
       }
     }
   }, [dailyHabits]);
+
+  // Synchronisation bidirectionnelle : Sport Exercises -> Habit Tracker
+  useEffect(() => {
+    const isAnyExerciseDone = sportExercises.some(ex => ex.completed);
+    
+    setDailyHabits(prev => {
+      const targetHabit = prev.find(h => h.id === "h3" || h.name.toLowerCase().includes("sport"));
+      if (targetHabit && targetHabit.completed !== isAnyExerciseDone) {
+        return prev.map(h => (h.id === targetHabit.id) ? { ...h, completed: isAnyExerciseDone } : h);
+      }
+      return prev;
+    });
+  }, [sportExercises]);
+
+  // Synchronisation bidirectionnelle : Habit Tracker -> Sport Exercises
+  useEffect(() => {
+    const sportHabit = dailyHabits.find(h => h.id === "h3" || h.name.toLowerCase().includes("sport"));
+    if (!sportHabit) return;
+    
+    const isHabitCompleted = sportHabit.completed;
+    const isAnyExerciseDone = sportExercises.some(ex => ex.completed);
+    
+    if (isHabitCompleted !== isAnyExerciseDone) {
+      if (isHabitCompleted) {
+        setSportExercises(prev => prev.map(ex => ({ ...ex, completed: true })));
+      } else {
+        setSportExercises(prev => prev.map(ex => ({ ...ex, completed: false })));
+      }
+    }
+  }, [dailyHabits]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_sport_exercises", JSON.stringify(sportExercises));
+  }, [sportExercises]);
 
   useEffect(() => {
     localStorage.setItem("mp_meal_v2", JSON.stringify(mealPlanners));
@@ -1128,8 +1175,7 @@ export default function App() {
       return sum + acc.balance * rate;
     }, 0);
 
-    const savedSportExercises = localStorage.getItem("mp_sport_exercises");
-    const sportExercisesCount = savedSportExercises ? JSON.parse(savedSportExercises).length : 6;
+    const sportExercisesCount = sportExercises.length;
 
     switch (catId) {
       case "finance":
@@ -2479,7 +2525,7 @@ export default function App() {
                       <NetSavingsChart transactions={transactions} />
                     </div>
                                     ) : activeMenu === "sport" ? (
-                    <FocusSport />
+                    <FocusSport exercises={sportExercises} setExercises={setSportExercises} />
                   ) : activeMenu === "books" ? (
                     <BooksSection books={books} setBooks={setBooks} />
                   ) : activeMenu === "screenmedia" ? (
