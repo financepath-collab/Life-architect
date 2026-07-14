@@ -11,7 +11,7 @@ import {
   TrendingDown, 
   Coins, 
   Wallet, 
-  PieChart, 
+  PieChart as PieIcon, 
   CheckCircle2, 
   AlertCircle,
   BarChart3
@@ -24,8 +24,25 @@ import {
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip 
+  Tooltip,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell
 } from "recharts";
+
+const CATEGORY_COLORS = [
+  "#171717", // Charcoal / Carbon
+  "#404040", // Medium Slate
+  "#737373", // Neutral Gray
+  "#a3a3a3", // Soft Gray
+  "#0f766e", // Teal / Deep Emerald
+  "#d97706", // Amber / Saffron
+  "#2563eb", // Royal Indigo Blue
+  "#4f46e5", // Indigo
+  "#c026d3", // Fuchsia
+  "#ea580c", // Morocco Orange
+  "#e11d48", // Crimson Rose
+];
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -197,6 +214,13 @@ export default function FinanceCharts({
       });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [transactions]);
+
+  const pieChartData = React.useMemo(() => {
+    return expensesByCategory.map(([category, amount]) => ({
+      name: category,
+      value: amount,
+    }));
+  }, [expensesByCategory]);
 
   const maxExpenseCategoryAmount = expensesByCategory[0]?.[1] || 1;
 
@@ -512,7 +536,7 @@ export default function FinanceCharts({
           <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-neutral-950 flex items-center gap-2">
-                <PieChart className="w-4 h-4 text-neutral-800" />
+                <PieIcon className="w-4 h-4 text-neutral-800" />
                 <span>Utilisation des Budgets Mensuels</span>
               </h3>
               <span className={`text-xs font-semibold font-mono px-2.5 py-0.5 rounded-full border ${
@@ -621,35 +645,96 @@ export default function FinanceCharts({
               <span>Dépenses par Catégorie</span>
             </h3>
 
-            <div className="space-y-4">
-              {expensesByCategory.length === 0 ? (
-                <div className="text-xs text-neutral-400 italic text-center py-12">
-                  Aucune dépense enregistrée pour afficher la répartition.
+            {expensesByCategory.length === 0 ? (
+              <div className="text-xs text-neutral-400 italic text-center py-12">
+                Aucune dépense enregistrée pour afficher la répartition.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                
+                {/* Left side: Circular Pie/Donut Chart */}
+                <div className="md:col-span-5 relative flex items-center justify-center min-h-[220px]">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <RechartsPieChart>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={65}
+                        outerRadius={88}
+                        paddingAngle={2.5}
+                        dataKey="value"
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} 
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => [`${value.toLocaleString("fr-FR")} MAD`, "Dépenses"]}
+                        contentStyle={{
+                          backgroundColor: "#ffffff",
+                          border: "1px solid #e5e5e5",
+                          borderRadius: "12px",
+                          fontSize: "11px",
+                          fontWeight: "bold",
+                          boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.05)",
+                        }}
+                      />
+                    </RechartsPieChart>
+                  </ResponsiveContainer>
+                  
+                  {/* Center Totals Label */}
+                  <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">Total</span>
+                    <span className="text-base font-black font-mono text-neutral-950 leading-none py-0.5">
+                      {totalOutflow.toLocaleString("fr-FR")}
+                    </span>
+                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">MAD</span>
+                  </div>
                 </div>
-              ) : (
-                expensesByCategory.map(([cat, amount]) => {
-                  const percentage = totalOutflow > 0 ? (amount / totalOutflow) * 100 : 0;
-                  const ratio = (amount / maxExpenseCategoryAmount) * 100;
-                  return (
-                    <div key={cat} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-neutral-700 font-semibold">{cat}</span>
-                        <div className="font-mono text-right">
-                          <span className="text-neutral-900 font-bold">{amount.toLocaleString("fr-FR")} MAD</span>
-                          <span className="text-neutral-400 text-[10px] ml-1.5">({percentage.toFixed(0)}%)</span>
+
+                {/* Right side: Color-coded progress list */}
+                <div className="md:col-span-7 space-y-3">
+                  {expensesByCategory.map(([cat, amount], index) => {
+                    const percentage = totalOutflow > 0 ? (amount / totalOutflow) * 100 : 0;
+                    const ratio = (amount / maxExpenseCategoryAmount) * 100;
+                    const color = CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+                    
+                    return (
+                      <div key={cat} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span 
+                              className="w-2.5 h-2.5 rounded-xs shrink-0 transition-colors" 
+                              style={{ backgroundColor: color }}
+                            />
+                            <span className="text-neutral-700 font-semibold">{cat}</span>
+                          </div>
+                          <div className="font-mono text-right">
+                            <span className="text-neutral-950 font-bold">
+                              {amount.toLocaleString("fr-FR")} MAD
+                            </span>
+                            <span className="text-neutral-400 text-[10px] ml-1.5 font-bold">
+                              ({percentage.toFixed(0)}%)
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all duration-500" 
+                            style={{ width: `${ratio}%`, backgroundColor: color }}
+                          />
                         </div>
                       </div>
-                      <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
-                        <div 
-                          className="bg-neutral-900 h-full rounded-full transition-all duration-500" 
-                          style={{ width: `${ratio}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                    );
+                  })}
+                </div>
+
+              </div>
+            )}
           </div>
 
           {/* Subscriptions cost impact */}

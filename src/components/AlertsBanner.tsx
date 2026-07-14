@@ -45,7 +45,7 @@ export default function AlertsBanner({
   dailyHabits,
   onNavigateToModule
 }: AlertsBannerProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "urgent" | "subscription" | "project">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dismissedIds, setDismissedIds] = useState<string[]>(() => {

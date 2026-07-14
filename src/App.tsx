@@ -151,6 +151,7 @@ export default function App() {
   const [dashboardTab, setDashboardTab] = useState<"routines" | "charts" | "launchpad">("routines");
   const [activeChartsSubTab, setActiveChartsSubTab] = useState<"finance" | "correlations" | "fire">("finance");
   const [focusMode, setFocusMode] = useState<boolean>(false);
+  const [showWeather, setShowWeather] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem("la_theme") === "dark";
   });
@@ -1305,6 +1306,72 @@ export default function App() {
     return `${formatDate(monday)} au ${formatDate(sunday)}`;
   };
 
+  const getWeeklyPerformanceMetrics = () => {
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+    const day = today.getDay();
+    // Adjust so Monday of this week is index 0
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(today.getTime());
+    monday.setDate(diff);
+    monday.setHours(0, 0, 0, 0);
+
+    // Generate date strings from Monday to Today
+    const datesThisWeek: string[] = [];
+    const tempDate = new Date(monday.getTime());
+    
+    const startOfToday = new Date(today.getTime());
+    startOfToday.setHours(0, 0, 0, 0);
+
+    while (tempDate <= startOfToday) {
+      const dateStr = tempDate.toISOString().split("T")[0];
+      datesThisWeek.push(dateStr);
+      tempDate.setDate(tempDate.getDate() + 1);
+    }
+
+    let totalCompletedHabits = 0;
+    let totalExpectedHabits = 0;
+
+    datesThisWeek.forEach(dateStr => {
+      if (dateStr === todayStr) {
+        totalCompletedHabits += dailyHabits.filter(h => h.completed).length;
+      } else {
+        const completedOnDay = habitHistory[dateStr] || [];
+        const validCompletedCount = completedOnDay.filter(id => dailyHabits.some(h => h.id === id)).length;
+        totalCompletedHabits += validCompletedCount;
+      }
+      totalExpectedHabits += dailyHabits.length;
+    });
+
+    const totalMissedHabits = Math.max(0, totalExpectedHabits - totalCompletedHabits);
+    const completionRate = totalExpectedHabits > 0 
+      ? Math.round((totalCompletedHabits / totalExpectedHabits) * 100) 
+      : 0;
+
+    // Weekly objectives metrics
+    const priorityObjectives = weeklyObjectives.filter(o => o.isPriority);
+    const completedPriority = priorityObjectives.filter(o => o.completed).length;
+
+    const standardObjectives = weeklyObjectives.filter(o => !o.isPriority);
+    const completedStandard = standardObjectives.filter(o => o.completed).length;
+
+    const totalObjectives = weeklyObjectives.length;
+    const totalCompletedObjectives = weeklyObjectives.filter(o => o.completed).length;
+
+    return {
+      completedHabits: totalCompletedHabits,
+      missedHabits: totalMissedHabits,
+      expectedHabits: totalExpectedHabits,
+      completionRate,
+      priorityTotal: priorityObjectives.length,
+      priorityCompleted: completedPriority,
+      standardTotal: standardObjectives.length,
+      standardCompleted: completedStandard,
+      totalObjectives,
+      totalCompletedObjectives
+    };
+  };
+
   // Dynamic Metrics helper for Category Hubs
   const renderCategoryMetrics = (catId: string) => {
     const totalInflow = transactions
@@ -1970,34 +2037,57 @@ export default function App() {
                   </p>
                 </div>
                 
-                {/* Focus Mode Toggle */}
-                <button
-                  onClick={() => {
-                    setFocusMode(!focusMode);
-                    if (!focusMode) {
-                      setDashboardTab("routines");
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer select-none font-sans text-xs font-bold ${
-                    focusMode
-                      ? "bg-neutral-900 border-neutral-900 text-white shadow-xs hover:bg-neutral-800"
-                      : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
-                  }`}
-                  title="Masquer le financier et se concentrer sur les disciplines quotidiennes"
-                >
-                  <div className="relative w-7 h-4 rounded-full bg-neutral-200 transition-colors shrink-0">
-                    <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-xs transition-transform duration-205 ${
-                      focusMode ? "translate-x-3 bg-neutral-900" : "bg-neutral-400"
-                    }`} />
-                  </div>
-                  <span className="whitespace-nowrap uppercase tracking-wider text-[10px]">
-                    {focusMode ? "Concentration Active" : "Mode Concentration"}
-                  </span>
-                </button>
+                {/* Actions Group */}
+                <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center">
+                  {/* Weather Toggle */}
+                  <button
+                    onClick={() => setShowWeather(!showWeather)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer select-none font-sans text-xs font-bold ${
+                      showWeather
+                        ? "bg-neutral-900 border-neutral-900 text-white shadow-xs hover:bg-neutral-800"
+                        : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+                    }`}
+                    title="Afficher la météo inspirante du Maroc"
+                  >
+                    <span className="text-sm">⛅</span>
+                    <span className="whitespace-nowrap uppercase tracking-wider text-[10px]">
+                      {showWeather ? "Masquer Météo" : "Météo Inspirante"}
+                    </span>
+                  </button>
+
+                  {/* Focus Mode Toggle */}
+                  <button
+                    onClick={() => {
+                      setFocusMode(!focusMode);
+                      if (!focusMode) {
+                        setDashboardTab("routines");
+                      }
+                    }}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer select-none font-sans text-xs font-bold ${
+                      focusMode
+                        ? "bg-neutral-900 border-neutral-900 text-white shadow-xs hover:bg-neutral-800"
+                        : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+                    }`}
+                    title="Masquer le financier et se concentrer sur les disciplines quotidiennes"
+                  >
+                    <div className="relative w-7 h-4 rounded-full bg-neutral-200 transition-colors shrink-0">
+                      <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-xs transition-transform duration-205 ${
+                        focusMode ? "translate-x-3 bg-neutral-900" : "bg-neutral-400"
+                      }`} />
+                    </div>
+                    <span className="whitespace-nowrap uppercase tracking-wider text-[10px]">
+                      {focusMode ? "Concentration Active" : "Mode Concentration"}
+                    </span>
+                  </button>
+                </div>
               </div>
 
-              {/* Weather Widget */}
-              <WeatherWidget />
+              {/* Weather Widget (Collapsible) */}
+              {showWeather && (
+                <div className="animate-in slide-in-from-top duration-250">
+                  <WeatherWidget />
+                </div>
+              )}
 
               {/* Critical Subscriptions Alert (Prélèvements imminents < 3 jours) */}
               {!focusMode && (
@@ -2172,147 +2262,176 @@ export default function App() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+                    className="space-y-6"
                   >
-                    {/* 0. Résumé Hebdomadaire */}
-                    <div className="col-span-1 lg:col-span-2 bg-gradient-to-br from-neutral-50 to-neutral-100/30 border border-neutral-200/80 rounded-3xl p-6 shadow-3xs space-y-5">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-2 bg-neutral-900 text-white rounded-xl shadow-xs">
-                            <ClipboardCheck className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-black text-neutral-900 uppercase tracking-tight">Résumé Hebdomadaire</h3>
-                            <p className="text-[10px] text-neutral-400 font-medium">Bilan automatique de vos performances et objectifs de la semaine</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-neutral-600 bg-white border border-neutral-200/60 px-3 py-1.5 rounded-full self-start sm:self-center">
-                          <CalendarDays className="w-3.5 h-3.5 text-neutral-400" />
-                          <span>Semaine du {getWeekRangeLabel()}</span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 pt-1">
-                        {/* Left side: completed tasks metrics */}
-                        <div className="md:col-span-5 space-y-4">
-                          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Performances Réalisées</span>
-                          
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-white border border-neutral-200/50 rounded-2xl p-4 space-y-1 shadow-3xs">
-                              <span className="text-[9px] font-bold text-neutral-400 uppercase block">Objectifs Validés</span>
-                              <div className="flex items-baseline gap-1.5">
-                                <span className="text-2xl font-black font-mono text-neutral-900">
-                                  {weeklyObjectives.filter(o => o.completed).length}
-                                </span>
-                                <span className="text-xs text-neutral-400 font-semibold">
-                                  / {weeklyObjectives.length}
-                                </span>
-                              </div>
-                              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden mt-1">
-                                <div 
-                                  className="bg-neutral-900 h-full rounded-full transition-all duration-500" 
-                                  style={{ width: `${weeklyObjectives.length > 0 ? (weeklyObjectives.filter(o => o.completed).length / weeklyObjectives.length) * 100 : 0}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="bg-white border border-neutral-200/50 rounded-2xl p-4 space-y-1 shadow-3xs">
-                              <span className="text-[9px] font-bold text-neutral-400 uppercase block">Disciplines du Jour</span>
-                              <div className="flex items-baseline gap-1.5">
-                                <span className="text-2xl font-black font-mono text-neutral-900">
-                                  {dailyHabits.filter(h => h.completed).length}
-                                </span>
-                                <span className="text-xs text-neutral-400 font-semibold">
-                                  / {dailyHabits.length}
-                                </span>
-                              </div>
-                              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden mt-1">
-                                <div 
-                                  className="bg-neutral-900 h-full rounded-full transition-all duration-500" 
-                                  style={{ width: `${dailyHabits.length > 0 ? (dailyHabits.filter(h => h.completed).length / dailyHabits.length) * 100 : 0}%` }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="bg-neutral-900 text-neutral-100 rounded-2xl p-4 flex items-center justify-between border border-neutral-850 shadow-3xs">
-                            <div className="space-y-0.5">
-                              <span className="text-[9px] font-bold text-neutral-400 uppercase block">Total Tâches Complétées</span>
-                              <span className="text-2xl font-black font-mono tracking-tight text-white block">
-                                {weeklyObjectives.filter(o => o.completed).length + dailyHabits.filter(h => h.completed).length}
+                    {/* Bilan des Performances de la Semaine */}
+                    {(() => {
+                      const metrics = getWeeklyPerformanceMetrics();
+                      return (
+                        <div className="bg-neutral-50/60 border border-neutral-200/80 rounded-2xl p-5 shadow-3xs space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
+                                <TrendingUp className="w-4 h-4" />
                               </span>
-                              <span className="text-[9px] text-neutral-400 block font-medium">Objectifs de la semaine + Habitudes du jour</span>
+                              <div>
+                                <h3 className="text-xs font-black text-neutral-950 uppercase tracking-tight block">
+                                  Bilan des Performances de la Semaine
+                                </h3>
+                                <p className="text-[10px] text-neutral-400 font-medium">
+                                  Suivi de votre discipline quotidienne et objectifs de la semaine
+                                </p>
+                              </div>
                             </div>
-                            <div className="p-2 bg-neutral-800 rounded-xl text-neutral-200 border border-neutral-700/50">
-                              <Award className="w-5 h-5 text-neutral-200 animate-bounce" />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right side: objectives remaining */}
-                        <div className="md:col-span-7 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Objectifs Restants de la Semaine</span>
-                            <span className="text-[9px] bg-white border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full font-mono font-bold shadow-3xs">
-                              {weeklyObjectives.filter(o => !o.completed).length} en attente
+                            <span className="text-[10px] font-bold text-neutral-500 bg-white border border-neutral-200 px-2.5 py-1 rounded-full font-mono shadow-3xs self-start sm:self-center">
+                              Semaine du {getWeekRangeLabel()}
                             </span>
                           </div>
 
-                          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                            {weeklyObjectives.filter(o => !o.completed).length === 0 ? (
-                              <div className="text-xs text-neutral-500 italic py-8 text-center bg-white rounded-2xl border border-dashed border-neutral-200 flex flex-col items-center justify-center gap-1 shadow-3xs">
-                                <span className="text-base">🎉</span>
-                                <span className="font-bold text-neutral-800">Parfait ! Aucun objectif restant</span>
-                                <span className="text-[9px] text-neutral-400 max-w-[280px]">Tous les objectifs hebdomadaires de la semaine ont été complétés !</span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Card 1: Habits Completion vs Missed */}
+                            <div className="bg-white border border-neutral-200/60 rounded-xl p-4 shadow-3xs flex flex-col justify-between space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+                                  Discipline Quotidienne
+                                </span>
+                                <span className="p-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg">
+                                  <Flame className="w-3.5 h-3.5" />
+                                </span>
                               </div>
-                            ) : (
-                              [...weeklyObjectives.filter(o => !o.completed)].sort((a, b) => {
-                                if (a.isPriority && !b.isPriority) return -1;
-                                if (!a.isPriority && b.isPriority) return 1;
-                                return 0;
-                              }).map((obj) => (
-                                <div
-                                  key={obj.id}
-                                  className={`flex items-center justify-between p-3 rounded-xl border transition-all shadow-3xs ${
-                                    obj.isPriority 
-                                      ? "bg-amber-50/30 border-amber-200/80 hover:bg-amber-50/50" 
-                                      : "bg-white border-neutral-200/60 hover:bg-neutral-50/50"
-                                  }`}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleWeeklyObjective(obj.id)}
-                                    className="flex-1 flex items-center gap-2.5 text-left cursor-pointer"
-                                  >
-                                    <Square className={`w-4 h-4 shrink-0 ${obj.isPriority ? "text-amber-400" : "text-neutral-300"}`} />
-                                    <span className="text-xs font-semibold text-neutral-800 leading-snug flex items-center gap-1.5">
-                                      {obj.isPriority && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
-                                      {obj.text}
-                                    </span>
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleWeeklyObjectivePriority(obj.id)}
-                                    className={`p-1 rounded-lg transition-colors shrink-0 ml-2 cursor-pointer ${
-                                      obj.isPriority
-                                        ? "text-amber-500 hover:text-amber-600 bg-amber-50/60"
-                                        : "text-neutral-300 hover:text-neutral-500 hover:bg-neutral-50"
-                                    }`}
-                                    title={obj.isPriority ? "Retirer la priorité" : "Marquer comme prioritaire"}
-                                  >
-                                    <Star className={`w-3.5 h-3.5 ${obj.isPriority ? "fill-amber-500" : ""}`} />
-                                  </button>
+                              <div>
+                                <div className="flex items-baseline gap-1.5">
+                                  <span className="text-xl font-black font-mono text-neutral-950">
+                                    {metrics.completedHabits}
+                                  </span>
+                                  <span className="text-xs text-neutral-400 font-bold">
+                                    /{metrics.expectedHabits}
+                                  </span>
+                                  <span className="text-[10px] text-neutral-400 font-bold ml-1">
+                                    réalisées
+                                  </span>
                                 </div>
-                              ))
-                            )}
+                                <div className="flex items-center gap-2 mt-1 text-[10px] font-bold">
+                                  <span className="text-emerald-600 bg-emerald-50/50 border border-emerald-100 px-1.5 py-0.5 rounded">
+                                    {metrics.completionRate}% Assiduité
+                                  </span>
+                                  <span className="text-neutral-400">
+                                    • {metrics.missedHabits} manquée(s)
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className="bg-neutral-900 h-full rounded-full transition-all duration-500" 
+                                  style={{ width: `${metrics.completionRate}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Card 2: Priority Objectives Reached */}
+                            <div className="bg-white border border-neutral-200/60 rounded-xl p-4 shadow-3xs flex flex-col justify-between space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+                                  Objectifs Prioritaires
+                                </span>
+                                <span className="p-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg">
+                                  <Star className="w-3.5 h-3.5 fill-amber-500" />
+                                </span>
+                              </div>
+                              <div>
+                                {metrics.priorityTotal === 0 ? (
+                                  <div className="text-[11px] text-neutral-400 italic py-1 font-medium">
+                                    Aucun objectif prioritaire défini
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex items-baseline gap-1.5">
+                                      <span className="text-xl font-black font-mono text-neutral-950">
+                                        {metrics.priorityCompleted}
+                                      </span>
+                                      <span className="text-xs text-neutral-400 font-bold">
+                                        /{metrics.priorityTotal}
+                                      </span>
+                                      <span className="text-[10px] text-neutral-400 font-bold ml-1">
+                                        atteints
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1 text-[10px] font-bold">
+                                      <span className="text-amber-600 bg-amber-50/50 border border-amber-100 px-1.5 py-0.5 rounded">
+                                        {metrics.priorityTotal > 0 
+                                          ? `${Math.round((metrics.priorityCompleted / metrics.priorityTotal) * 100)}% Atteint`
+                                          : "À définir"
+                                        }
+                                      </span>
+                                      <span className="text-neutral-400">
+                                        • {metrics.priorityTotal - metrics.priorityCompleted} restants
+                                      </span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className="bg-amber-500 h-full rounded-full transition-all duration-500" 
+                                  style={{ width: `${metrics.priorityTotal > 0 ? (metrics.priorityCompleted / metrics.priorityTotal) * 100 : 0}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Card 3: Overall Goal Progress */}
+                            <div className="bg-white border border-neutral-200/60 rounded-xl p-4 shadow-3xs flex flex-col justify-between space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
+                                  Tous les Objectifs Hebdo
+                                </span>
+                                <span className="p-1 bg-neutral-100 text-neutral-800 border border-neutral-200 rounded-lg">
+                                  <Award className="w-3.5 h-3.5" />
+                                </span>
+                              </div>
+                              <div>
+                                {metrics.totalObjectives === 0 ? (
+                                  <div className="text-[11px] text-neutral-400 italic py-1 font-medium">
+                                    Aucun objectif défini
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="flex items-baseline gap-1.5">
+                                      <span className="text-xl font-black font-mono text-neutral-950">
+                                        {metrics.totalCompletedObjectives}
+                                      </span>
+                                      <span className="text-xs text-neutral-400 font-bold">
+                                        /{metrics.totalObjectives}
+                                      </span>
+                                      <span className="text-[10px] text-neutral-400 font-bold ml-1">
+                                        complétés
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1 text-[10px] font-bold">
+                                      <span className="text-neutral-700 bg-neutral-50 border border-neutral-200 px-1.5 py-0.5 rounded">
+                                        {metrics.totalObjectives > 0 ? Math.round((metrics.totalCompletedObjectives / metrics.totalObjectives) * 100) : 0}% Global
+                                      </span>
+                                      <span className="text-neutral-400">
+                                        • {metrics.totalObjectives - metrics.totalCompletedObjectives} restants
+                                      </span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className="bg-neutral-950 h-full rounded-full transition-all duration-500" 
+                                  style={{ width: `${metrics.totalObjectives > 0 ? (metrics.totalCompletedObjectives / metrics.totalObjectives) * 100 : 0}%` }}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
 
-                    {/* 1. Daily Habits discipline tracker */}
+                    {/* Active trackers columns */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* 1. Daily Habits discipline tracker */}
                     <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -2478,6 +2597,7 @@ export default function App() {
                           ))
                         )}
                       </div>
+                    </div>
                     </div>
                   </motion.div>
                 )}

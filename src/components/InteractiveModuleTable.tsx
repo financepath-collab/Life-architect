@@ -54,6 +54,11 @@ export default function InteractiveModuleTable({
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilters, setActiveFilters] = useState<{ [key: string]: string }>({});
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
+
+  // History / Period filter states
+  const [historyMode, setHistoryMode] = useState<"all" | "monthly" | "yearly">("all");
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
   
   // Dialog / form state
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -173,6 +178,28 @@ export default function InteractiveModuleTable({
       }
     });
 
+    // 2.5 Apply History Filter (Monthly / Yearly) if there is a date column
+    if (historyMode !== "all" && columns.some(col => col.key === "date")) {
+      result = result.filter(item => {
+        const itemDate = item["date"];
+        if (!itemDate) return false;
+        
+        // Split date assuming standard formats like YYYY-MM-DD
+        const parts = String(itemDate).split("-");
+        if (parts.length >= 2) {
+          const year = Number(parts[0]);
+          const month = Number(parts[1]);
+          
+          if (historyMode === "yearly") {
+            return year === selectedYear;
+          } else if (historyMode === "monthly") {
+            return year === selectedYear && month === selectedMonth;
+          }
+        }
+        return true;
+      });
+    }
+
     // 3. Apply Sorting
     if (sortConfig) {
       const { key, direction } = sortConfig;
@@ -189,6 +216,20 @@ export default function InteractiveModuleTable({
           return direction === "asc" ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
         }
         
+        if (column?.type === "date") {
+          const timeA = new Date(valA).getTime();
+          const timeB = new Date(valB).getTime();
+          if (!isNaN(timeA) && !isNaN(timeB)) {
+            return direction === "asc" ? timeA - timeB : timeB - timeA;
+          }
+        }
+
+        if (column?.type === "boolean") {
+          const numA = valA ? 1 : 0;
+          const numB = valB ? 1 : 0;
+          return direction === "asc" ? numA - numB : numB - numA;
+        }
+        
         return direction === "asc"
           ? String(valA).localeCompare(String(valB), "fr", { numeric: true })
           : String(valB).localeCompare(String(valA), "fr", { numeric: true });
@@ -196,7 +237,7 @@ export default function InteractiveModuleTable({
     }
 
     return result;
-  }, [data, searchTerm, activeFilters, sortConfig, columns]);
+  }, [data, searchTerm, activeFilters, sortConfig, columns, historyMode, selectedYear, selectedMonth]);
 
   // Export to CSV masquerading as Excel
   const handleExportCSV = () => {
@@ -411,28 +452,169 @@ export default function InteractiveModuleTable({
         )}
       </div>
 
+      {/* View 'Historique' for Modules with Date Column (like Transactions) */}
+      {columns.some(col => col.key === "date") && (
+        <div className="bg-neutral-50/60 border border-neutral-200/60 rounded-2xl p-4 space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
+                <Filter className="w-3.5 h-3.5" />
+              </span>
+              <div>
+                <span className="text-xs font-black text-neutral-950 uppercase tracking-tight block">Vue Historique & Périodes</span>
+                <span className="text-[10px] text-neutral-400 font-medium block">Filtrer rapidement les flux par mois ou par année</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl self-start">
+              <button
+                type="button"
+                onClick={() => setHistoryMode("all")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  historyMode === "all"
+                    ? "bg-white text-neutral-950 shadow-3xs"
+                    : "text-neutral-500 hover:text-neutral-900"
+                }`}
+              >
+                Tout l'historique
+              </button>
+              <button
+                type="button"
+                onClick={() => setHistoryMode("monthly")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  historyMode === "monthly"
+                    ? "bg-white text-neutral-950 shadow-3xs"
+                    : "text-neutral-500 hover:text-neutral-900"
+                }`}
+              >
+                Par Mois
+              </button>
+              <button
+                type="button"
+                onClick={() => setHistoryMode("yearly")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  historyMode === "yearly"
+                    ? "bg-white text-neutral-950 shadow-3xs"
+                    : "text-neutral-500 hover:text-neutral-900"
+                }`}
+              >
+                Par Année
+              </button>
+            </div>
+          </div>
+
+          {historyMode !== "all" && (
+            <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-neutral-200/50">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Sélectionner :</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {/* Year Selection Dropdown */}
+                <div className="relative shrink-0">
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="appearance-none bg-white border border-neutral-200 text-neutral-800 pl-3 pr-8 py-2 text-xs rounded-xl focus:outline-none focus:border-neutral-900 font-semibold cursor-pointer transition-all"
+                  >
+                    {[2024, 2025, 2026, 2027].map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-neutral-400 absolute right-2.5 top-2.5 pointer-events-none" />
+                </div>
+
+                {/* Month Selection Dropdown (Only if monthly) */}
+                {historyMode === "monthly" && (
+                  <div className="relative shrink-0">
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                      className="appearance-none bg-white border border-neutral-200 text-neutral-800 pl-3 pr-8 py-2 text-xs rounded-xl focus:outline-none focus:border-neutral-900 font-semibold cursor-pointer transition-all"
+                    >
+                      {[
+                        { value: 1, label: "Janvier" },
+                        { value: 2, label: "Février" },
+                        { value: 3, label: "Mars" },
+                        { value: 4, label: "Avril" },
+                        { value: 5, label: "Mai" },
+                        { value: 6, label: "Juin" },
+                        { value: 7, label: "Juillet" },
+                        { value: 8, label: "Août" },
+                        { value: 9, label: "Septembre" },
+                        { value: 10, label: "Octobre" },
+                        { value: 11, label: "Novembre" },
+                        { value: 12, label: "Décembre" },
+                      ].map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-neutral-400 absolute right-2.5 top-2.5 pointer-events-none" />
+                  </div>
+                )}
+              </div>
+
+              {/* Reset shortcut */}
+              <button
+                type="button"
+                onClick={() => {
+                  setHistoryMode("all");
+                }}
+                className="text-xs text-neutral-500 hover:text-neutral-900 font-bold transition-colors cursor-pointer"
+              >
+                Réinitialiser les filtres temporels
+              </button>
+
+              <div className="ml-auto text-[10px] text-neutral-500 font-bold bg-white border border-neutral-200/60 px-3 py-1.5 rounded-full shadow-3xs">
+                {historyMode === "monthly" ? (
+                  <span>
+                    📅 {[
+                      "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", 
+                      "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+                    ][selectedMonth - 1]} {selectedYear}
+                  </span>
+                ) : (
+                  <span>📅 Année {selectedYear}</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main Table View */}
       <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
         <table className="w-full border-collapse text-left text-xs">
           <thead>
             <tr className="bg-neutral-50 border-b border-neutral-200 text-neutral-500 font-semibold tracking-wide">
-              {columns.map(col => (
-                <th 
-                  key={col.key}
-                  onClick={() => handleSort(col.key)}
-                  className="px-4 py-3 cursor-pointer hover:bg-neutral-100/60 hover:text-neutral-900 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>{col.label}</span>
-                    <ArrowUpDown className="w-3.5 h-3.5 opacity-40 hover:opacity-100" />
-                    {sortConfig?.key === col.key && (
-                      <span className="text-[10px] text-neutral-900 font-bold">
-                        {sortConfig.direction === "asc" ? "▲" : "▼"}
+              {columns.map(col => {
+                const isSorted = sortConfig?.key === col.key;
+                return (
+                  <th 
+                    key={col.key}
+                    onClick={() => handleSort(col.key)}
+                    className={`px-4 py-3 cursor-pointer hover:bg-neutral-100/80 hover:text-neutral-900 transition-colors select-none group ${
+                      isSorted ? "bg-neutral-100/40 text-neutral-950 font-bold" : ""
+                    }`}
+                    title={`Trier par ${col.label}`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>{col.label}</span>
+                      <span className="inline-flex items-center transition-transform">
+                        {isSorted ? (
+                          sortConfig.direction === "asc" ? (
+                            <span className="text-neutral-950 text-xs font-black font-mono leading-none">▲</span>
+                          ) : (
+                            <span className="text-neutral-950 text-xs font-black font-mono leading-none">▼</span>
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-neutral-400 opacity-20 group-hover:opacity-100 transition-opacity" />
+                        )}
                       </span>
-                    )}
-                  </div>
-                </th>
-              ))}
+                    </div>
+                  </th>
+                );
+              })}
               <th className="px-4 py-3 text-right font-semibold text-neutral-500">Actions</th>
             </tr>
           </thead>
