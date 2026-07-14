@@ -583,6 +583,131 @@ export default function FormationsSection({
                 </button>
               </div>
 
+              {/* Graphique circulaire d'avancement des formations */}
+              <div className="bg-white border border-neutral-200/90 rounded-2xl p-5 shadow-3xs">
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                  {/* SVG Circle Column */}
+                  <div className="flex flex-col items-center justify-center space-y-2 select-none">
+                    <div className="relative w-28 h-28 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90">
+                        {/* Background track */}
+                        <circle
+                          cx="56"
+                          cy="56"
+                          r="46"
+                          className="text-neutral-100"
+                          strokeWidth="8"
+                          stroke="currentColor"
+                          fill="transparent"
+                        />
+                        {/* Progress ring */}
+                        <circle
+                          cx="56"
+                          cy="56"
+                          r="46"
+                          className="text-indigo-600 transition-all duration-500"
+                          strokeWidth="8"
+                          strokeDasharray={2 * Math.PI * 46}
+                          strokeDashoffset={2 * Math.PI * 46 * (1 - (formations.length > 0 ? (formations.filter(f => f.progressPercent === 100 || f.status === "Terminé").length / formations.length) : 0))}
+                          strokeLinecap="round"
+                          stroke="currentColor"
+                          fill="transparent"
+                        />
+                      </svg>
+                      {/* Center content */}
+                      <div className="absolute flex flex-col items-center justify-center text-center">
+                        <span className="text-xl font-black font-mono text-neutral-950 leading-none">
+                          {formations.length > 0 
+                            ? Math.round((formations.filter(f => f.progressPercent === 100 || f.status === "Terminé").length / formations.length) * 100) 
+                            : 0}
+                          <span className="text-xs font-bold text-neutral-400">%</span>
+                        </span>
+                        <span className="text-[8px] font-bold text-neutral-400 uppercase tracking-wider mt-0.5 font-sans">
+                          Complété
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider font-sans">
+                      Taux de Complétion
+                    </span>
+                  </div>
+
+                  {/* Detailed statistics column */}
+                  <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {/* Stat 1: Total Courses */}
+                    <div className="bg-neutral-50/60 border border-neutral-100 p-3.5 rounded-xl flex flex-col justify-between">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block font-sans">
+                        Formations
+                      </span>
+                      <div className="mt-1 flex items-baseline gap-1">
+                        <span className="text-xl font-black font-mono text-neutral-950">
+                          {formations.length}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-bold">cours</span>
+                      </div>
+                      <span className="text-[9px] text-neutral-400 font-medium block mt-1">
+                        Inscrit au total
+                      </span>
+                    </div>
+
+                    {/* Stat 2: Completed / In progress */}
+                    <div className="bg-neutral-50/60 border border-neutral-100 p-3.5 rounded-xl flex flex-col justify-between">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block font-sans">
+                        Complétés
+                      </span>
+                      <div className="mt-1 flex items-baseline gap-1">
+                        <span className="text-xl font-black font-mono text-emerald-600">
+                          {formations.filter(f => f.progressPercent === 100 || f.status === "Terminé").length}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-bold">
+                          / {formations.length}
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-emerald-600/80 font-bold block mt-1">
+                        ★ {formations.filter(f => f.progressPercent === 100 || f.status === "Terminé").length} Certifications
+                      </span>
+                    </div>
+
+                    {/* Stat 3: Average progress */}
+                    <div className="bg-neutral-50/60 border border-neutral-100 p-3.5 rounded-xl flex flex-col justify-between">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block font-sans">
+                        Progression Moyenne
+                      </span>
+                      <div className="mt-1 flex items-baseline gap-1">
+                        <span className="text-xl font-black font-mono text-indigo-600">
+                          {globalLearnProgress}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-bold">%</span>
+                      </div>
+                      <div className="w-full bg-neutral-200 h-1 rounded-full mt-2 overflow-hidden">
+                        <div 
+                          className="bg-indigo-600 h-full rounded-full" 
+                          style={{ width: `${globalLearnProgress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Stat 4: Hours Completed */}
+                    <div className="bg-neutral-50/60 border border-neutral-100 p-3.5 rounded-xl flex flex-col justify-between">
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block font-sans">
+                        Volume Horaire
+                      </span>
+                      <div className="mt-1 flex items-baseline gap-1">
+                        <span className="text-xl font-black font-mono text-neutral-950">
+                          {Math.round(formations.reduce((sum, f) => sum + ((f.durationHours || 0) * (f.progressPercent || 0) / 100), 0))}
+                        </span>
+                        <span className="text-[10px] text-neutral-400 font-bold">
+                          / {formations.reduce((sum, f) => sum + (f.durationHours || 0), 0)} h
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-neutral-400 font-medium block mt-1">
+                        Heures d'études cumulées
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Grid representation */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {formations.length === 0 ? (

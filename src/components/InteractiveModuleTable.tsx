@@ -14,7 +14,8 @@ import {
   Filter,
   Star,
   FileSpreadsheet,
-  AlertCircle
+  AlertCircle,
+  PieChart
 } from "lucide-react";
 
 export interface TableColumn {
@@ -239,6 +240,45 @@ export default function InteractiveModuleTable({
     return result;
   }, [data, searchTerm, activeFilters, sortConfig, columns, historyMode, selectedYear, selectedMonth]);
 
+  // Calcule les dépenses les plus élevées du mois courant (uniquement pour les Transactions Réelles)
+  const currentMonthExpensesData = useMemo(() => {
+    if (title !== "Transactions Réelles") return { top3: [], total: 0 };
+
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth() + 1; // 1-12
+
+    let total = 0;
+    const categoryTotals: { [category: string]: number } = {};
+
+    data.forEach(item => {
+      if (!item) return;
+      const typeStr = String(item.type || "").trim().toLowerCase();
+      const isExpense = typeStr === "dépense" || typeStr === "depense" || typeStr.includes("dépense") || typeStr.includes("depense");
+      if (!isExpense) return;
+
+      const dateStr = String(item.date || "");
+      const parts = dateStr.split("-");
+      const isCurrentMonth = parts.length >= 2 &&
+                             Number(parts[0]) === curYear &&
+                             Number(parts[1]) === curMonth;
+
+      if (isCurrentMonth) {
+        const amt = Number(item.amount) || 0;
+        total += amt;
+        const cat = String(item.category || "Autres").trim();
+        categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
+      }
+    });
+
+    const top3 = Object.entries(categoryTotals)
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 3);
+
+    return { top3, total };
+  }, [data, title]);
+
   // Export to CSV masquerading as Excel
   const handleExportCSV = () => {
     if (processedData.length === 0) return;
@@ -397,6 +437,91 @@ export default function InteractiveModuleTable({
           </button>
         </div>
       </div>
+
+      {/* Résumé des dépenses les plus élevées pour le module Transactions */}
+      {title === "Transactions Réelles" && (
+        <div className="bg-neutral-50/60 border border-neutral-200/60 rounded-2xl p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="p-2 bg-neutral-950 text-white rounded-xl shadow-3xs">
+                <PieChart className="w-4 h-4" />
+              </span>
+              <div>
+                <h3 className="text-xs font-black text-neutral-950 uppercase tracking-tight block">
+                  Postes de Dépenses les plus Coûteux (Ce Mois-ci)
+                </h3>
+                <p className="text-[10px] text-neutral-400 font-medium block">
+                  Les 3 catégories de dépenses les plus importantes pour {[
+                    "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+                    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+                  ][new Date().getMonth()]} {new Date().getFullYear()}
+                </p>
+              </div>
+            </div>
+            <div className="text-[10px] font-bold text-neutral-500 bg-white border border-neutral-200/60 px-3 py-2 rounded-full shadow-3xs self-start sm:self-center">
+              Dépenses mensuelles globales : <span className="font-mono text-neutral-950 font-black">{currentMonthExpensesData.total.toLocaleString("fr-FR")} {currencySymbol}</span>
+            </div>
+          </div>
+
+          {currentMonthExpensesData.top3.length === 0 ? (
+            <div className="text-xs text-neutral-400 italic py-8 text-center bg-white rounded-xl border border-dashed border-neutral-200/80">
+              Aucune dépense enregistrée pour le mois courant.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {currentMonthExpensesData.top3.map((item, index) => {
+                const percentage = currentMonthExpensesData.total > 0
+                  ? Math.round((item.amount / currentMonthExpensesData.total) * 100)
+                  : 0;
+
+                // Color accents depending on ranking
+                const rankColors = [
+                  { bg: "bg-red-50/60 border-red-100/60", text: "text-red-700", bar: "bg-red-500" },
+                  { bg: "bg-amber-50/60 border-amber-100/60", text: "text-amber-700", bar: "bg-amber-500" },
+                  { bg: "bg-neutral-50 border-neutral-200/40", text: "text-neutral-700", bar: "bg-neutral-600" }
+                ][index] || { bg: "bg-neutral-50 border-neutral-200/40", text: "text-neutral-700", bar: "bg-neutral-500" };
+
+                return (
+                  <div 
+                    key={item.category} 
+                    className="bg-white border border-neutral-200/60 rounded-xl p-4 shadow-3xs flex flex-col justify-between space-y-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest font-mono">
+                          #{index + 1}
+                        </span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${rankColors.bg} ${rankColors.text} border`}>
+                          {percentage}% des dépenses
+                        </span>
+                      </div>
+                      <span className="text-xs font-extrabold text-neutral-900 truncate max-w-[120px]" title={item.category}>
+                        {item.category}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-lg font-black font-mono text-neutral-950 tracking-tight">
+                        {item.amount.toLocaleString("fr-FR")}
+                      </span>
+                      <span className="text-[10px] text-neutral-400 font-bold ml-1 font-mono">
+                        {currencySymbol}
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className={`${rankColors.bar} h-full rounded-full transition-all duration-500`} 
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
