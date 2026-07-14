@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Abonnement, ProfilAmelioration, FinanceEpargne } from "../types";
+import { Abonnement, ProfilAmelioration, FinanceEpargne, DailyHabit } from "../types";
 import { 
   Bell, 
   Calendar, 
@@ -21,6 +21,7 @@ interface AlertsBannerProps {
   abonnements: Abonnement[];
   profilAmeliorations: ProfilAmelioration[];
   epargnes: FinanceEpargne[];
+  dailyHabits?: DailyHabit[];
   onNavigateToModule: (moduleId: string) => void;
 }
 
@@ -41,6 +42,7 @@ export default function AlertsBanner({
   abonnements,
   profilAmeliorations,
   epargnes,
+  dailyHabits,
   onNavigateToModule
 }: AlertsBannerProps) {
   const [isOpen, setIsOpen] = useState(true);
@@ -170,6 +172,39 @@ export default function AlertsBanner({
         amountText: `${(e.targetAmount - e.currentAmount).toLocaleString("fr-FR")} MAD restants`
       });
     });
+
+  // 4. Process overdue daily habits
+  if (dailyHabits) {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMin = now.getMinutes();
+
+    dailyHabits
+      .filter(h => h.isImportant && !h.completed && h.dueTime)
+      .forEach(h => {
+        const parts = h.dueTime!.split(":");
+        if (parts.length === 2) {
+          const dueHour = parseInt(parts[0], 10);
+          const dueMin = parseInt(parts[1], 10);
+          if (!isNaN(dueHour) && !isNaN(dueMin)) {
+            const isLate = (currentHour > dueHour) || (currentHour === dueHour && currentMin >= dueMin);
+            if (isLate) {
+              alertsList.push({
+                id: `habit_${h.id}`,
+                title: h.name,
+                subtitle: `Discipline quotidienne importante : ${h.description || "Aucune description"}`,
+                type: "project",
+                statusText: `En retard (${h.dueTime})`,
+                targetDate: new Date().toISOString().split("T")[0] + " " + h.dueTime,
+                daysRemaining: 0,
+                urgency: "overdue",
+                moduleId: "dashboard"
+              });
+            }
+          }
+        }
+      });
+  }
 
   // Sort by urgency severity: overdue first, then lowest remaining days, then alphabetical
   const sortedAlerts = [...alertsList].sort((a, b) => {

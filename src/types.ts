@@ -4,6 +4,8 @@ export interface DailyHabit {
   description: string;
   completed: boolean;
   category: "personal" | "professional";
+  isImportant?: boolean;
+  dueTime?: string;
 }
 
 export interface VideoFocus {
@@ -306,5 +308,7 @@ export interface EditorialEvent {
   status: "Brouillon" | "En cours" | "Planifié" | "Publié";
   contentType: "Vidéo Longue" | "Short / Reel" | "Carrousel" | "Post Écrit" | "Podcast" | "Autre";
   notes?: string;
+  googleEventId?: string;
+  outlookEventId?: string;
 }
 

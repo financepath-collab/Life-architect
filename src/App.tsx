@@ -72,6 +72,9 @@ import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert"
 import MonthlyPerformanceCard from "./components/MonthlyPerformanceCard";
 import MonthlyGoalsSection from "./components/MonthlyGoalsSection";
 import EditorialCalendarSection from "./components/EditorialCalendarSection";
+import WeatherWidget from "./components/WeatherWidget";
+import DisciplineHeatmap from "./components/DisciplineHeatmap";
+import FireCalculator from "./components/FireCalculator";
 
 
 
@@ -146,13 +149,47 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string>("dashboard"); // "dashboard", or "submodule_id"
   const [dashboardTab, setDashboardTab] = useState<"routines" | "charts" | "launchpad">("routines");
-  const [activeChartsSubTab, setActiveChartsSubTab] = useState<"finance" | "correlations">("finance");
+  const [activeChartsSubTab, setActiveChartsSubTab] = useState<"finance" | "correlations" | "fire">("finance");
   const [focusMode, setFocusMode] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem("la_theme") === "dark";
   });
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem("la_is_unlocked") === "true";
+  });
+
+  // --- HABIT HISTORY (HEATMAP TRACKER) ---
+  const [habitHistory, setHabitHistory] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem("mp_habit_history_v2");
+    if (saved) return JSON.parse(saved);
+
+    // Seed realistic daily routine completions for the year 2026 (Jan 1, 2026 to July 14, 2026)
+    const seed: Record<string, string[]> = {};
+    const startDate = new Date(2026, 0, 1);
+    const endDate = new Date(2026, 6, 14); // July 14, 2026
+    const habitIds = ["h1", "h2", "h3", "h4", "h5", "h6", "h7"];
+
+    let current = new Date(startDate);
+    while (current <= endDate) {
+      const dateStr = current.toISOString().split("T")[0];
+      const rand = Math.random();
+      
+      let completedCount = 0;
+      if (rand < 0.15) {
+        completedCount = Math.floor(Math.random() * 3); // Low completion days
+      } else if (rand < 0.45) {
+        completedCount = 3 + Math.floor(Math.random() * 3); // Normal days
+      } else {
+        completedCount = 6 + Math.floor(Math.random() * 2); // Perfect/near-perfect days (Gold or forest greens!)
+      }
+
+      // Random subset of completed habits
+      const shuffled = [...habitIds].sort(() => 0.5 - Math.random());
+      seed[dateStr] = shuffled.slice(0, completedCount);
+
+      current.setDate(current.getDate() + 1);
+    }
+    return seed;
   });
   const [usernameInput, setUsernameInput] = useState<string>("");
   const [passwordInput, setPasswordInput] = useState<string>("");
@@ -171,8 +208,26 @@ export default function App() {
   // --- CORE SYSTEM STATES (Persistent via LocalStorage) ---
   const [dailyHabits, setDailyHabits] = useState<DailyHabit[]>(() => {
     const saved = localStorage.getItem("mp_habits_v2");
-    return saved ? JSON.parse(saved) : INITIAL_HABITS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as DailyHabit[];
+        return parsed.map(h => {
+          const initial = INITIAL_HABITS.find(ih => ih.id === h.id);
+          return {
+            ...h,
+            isImportant: h.isImportant !== undefined ? h.isImportant : (initial?.isImportant ?? false),
+            dueTime: h.dueTime !== undefined ? h.dueTime : (initial?.dueTime ?? "")
+          };
+        });
+      } catch (err) {
+        return INITIAL_HABITS;
+      }
+    }
+    return INITIAL_HABITS;
   });
+
+  const [overdueHabitsAlert, setOverdueHabitsAlert] = useState<DailyHabit[]>([]);
+  const [showOverdueModal, setShowOverdueModal] = useState<boolean>(false);
 
   const [weeklyObjectives, setWeeklyObjectives] = useState<WeeklyObjective[]>(() => {
     const saved = localStorage.getItem("mp_weekly_objectives_v2");
@@ -342,6 +397,38 @@ export default function App() {
     return saved ? parseInt(saved) : 7;
   });
 
+  // --- VERIFICATION DES HABITUDES EN RETARD AU CHARGEMENT ---
+  useEffect(() => {
+    if (!isUnlocked) return;
+
+    const alreadyAlerted = sessionStorage.getItem("la_overdue_alert_shown") === "true";
+    if (alreadyAlerted) return;
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMin = now.getMinutes();
+
+    const late = dailyHabits.filter(h => {
+      if (!h.isImportant || h.completed || !h.dueTime) return false;
+
+      const parts = h.dueTime.split(":");
+      if (parts.length !== 2) return false;
+
+      const dueHour = parseInt(parts[0], 10);
+      const dueMin = parseInt(parts[1], 10);
+
+      if (isNaN(dueHour) || isNaN(dueMin)) return false;
+
+      return (currentHour > dueHour) || (currentHour === dueHour && currentMin >= dueMin);
+    });
+
+    if (late.length > 0) {
+      setOverdueHabitsAlert(late);
+      setShowOverdueModal(true);
+      sessionStorage.setItem("la_overdue_alert_shown", "true");
+    }
+  }, [isUnlocked, dailyHabits]);
+
   // --- THEME SYNC EFFECT ---
   useEffect(() => {
     if (isDarkMode) {
@@ -356,6 +443,26 @@ export default function App() {
   // --- LOCALSTORAGE SYNC EFFECT ---
   useEffect(() => {
     localStorage.setItem("mp_habits_v2", JSON.stringify(dailyHabits));
+  }, [dailyHabits]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_habit_history_v2", JSON.stringify(habitHistory));
+  }, [habitHistory]);
+
+  // Sync today's active habits state to the persistent habitHistory
+  useEffect(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const completedIds = dailyHabits.filter(h => h.completed).map(h => h.id);
+    setHabitHistory(prev => {
+      const currentToday = prev[todayStr] || [];
+      if (JSON.stringify([...currentToday].sort()) === JSON.stringify([...completedIds].sort())) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [todayStr]: completedIds
+      };
+    });
   }, [dailyHabits]);
 
   useEffect(() => {
@@ -831,6 +938,8 @@ export default function App() {
             { key: "name", label: "Habitude", type: "text", required: true },
             { key: "description", label: "Description / Fréquence", type: "text" },
             { key: "category", label: "Catégorie", type: "select", options: ["personal", "professional"] },
+            { key: "isImportant", label: "Importante", type: "boolean" },
+            { key: "dueTime", label: "Heure Limite (ex: 12:00)", type: "text" },
             { key: "completed", label: "Fait Aujourd'hui", type: "boolean" }
           ] as TableColumn[]
         };
@@ -1887,6 +1996,9 @@ export default function App() {
                 </button>
               </div>
 
+              {/* Weather Widget */}
+              <WeatherWidget />
+
               {/* Critical Subscriptions Alert (Prélèvements imminents < 3 jours) */}
               {!focusMode && (
                 <CriticalSubscriptionsAlert
@@ -1901,6 +2013,7 @@ export default function App() {
                   abonnements={abonnements}
                   profilAmeliorations={profilAmeliorations}
                   epargnes={epargnes}
+                  dailyHabits={dailyHabits}
                   onNavigateToModule={handleNavigateToModule}
                 />
               )}
@@ -2583,6 +2696,16 @@ export default function App() {
                           >
                             Corrélations Bien-être
                           </button>
+                          <button
+                            onClick={() => setActiveChartsSubTab("fire")}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              activeChartsSubTab === "fire"
+                                ? "bg-white text-neutral-950 shadow-3xs"
+                                : "text-neutral-500 hover:text-neutral-900"
+                            }`}
+                          >
+                            Liberté Financière (FIRE)
+                          </button>
                         </div>
                       </div>
 
@@ -2597,12 +2720,14 @@ export default function App() {
                           />
                           <NetSavingsChart transactions={transactions} />
                         </div>
-                      ) : (
+                      ) : activeChartsSubTab === "correlations" ? (
                         <PerformanceCorrelations
                           sportHistory={sportHistory}
                           weeklyObjectives={weeklyObjectives}
                           transactions={transactions}
                         />
+                      ) : (
+                        <FireCalculator />
                       )}
                     </div>
                                     ) : activeMenu === "sport" ? (
@@ -2634,8 +2759,13 @@ export default function App() {
                       setEvents={setEditorialEvents}
                       availableChannels={channels.map(c => c.name)}
                     />
-
-
+                  ) : activeMenu === "habits" ? (
+                    <DisciplineHeatmap
+                      habitHistory={habitHistory}
+                      setHabitHistory={setHabitHistory}
+                      dailyHabitsList={dailyHabits}
+                      streakCount={streakCount}
+                    />
                   ) : (
                     <div>
                       {(() => {
@@ -2697,6 +2827,86 @@ export default function App() {
         </footer>
 
       </div>
+
+      {/* OVERDUE HABITS ALERTS MODAL */}
+      <AnimatePresence>
+        {showOverdueModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowOverdueModal(false)}
+              className="absolute inset-0 bg-neutral-950/60 backdrop-blur-xs"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="relative w-full max-w-md bg-white border border-neutral-200 shadow-xl rounded-3xl overflow-hidden p-6 space-y-6 text-neutral-800 animate-in fade-in zoom-in duration-200"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-600 shrink-0 animate-bounce">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div className="space-y-1.5 flex-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 block">Rappel de Discipline</span>
+                  <h3 className="text-base font-black text-neutral-900 leading-tight">Habitudes importantes en retard !</h3>
+                  <p className="text-xs text-neutral-500 leading-relaxed">
+                    Certaines de vos disciplines d'élite indispensables à votre réussite n'ont pas encore été complétées aujourd'hui et l'heure limite est dépassée.
+                  </p>
+                </div>
+              </div>
+
+              {/* Overdue habits list */}
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {overdueHabitsAlert.map(h => (
+                  <div 
+                    key={h.id}
+                    className="flex items-center justify-between p-3.5 bg-neutral-50 border border-neutral-200 rounded-2xl shadow-3xs"
+                  >
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold text-neutral-900 block">{h.name}</span>
+                      {h.description && (
+                        <span className="text-[10px] text-neutral-400 block">{h.description}</span>
+                      )}
+                    </div>
+                    <span className="text-[9px] bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full font-bold font-mono shrink-0">
+                      Limite: {h.dueTime}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idsToComplete = overdueHabitsAlert.map(h => h.id);
+                    setDailyHabits(prev => prev.map(h => idsToComplete.includes(h.id) ? { ...h, completed: true } : h));
+                    setShowOverdueModal(false);
+                  }}
+                  className="flex-1 bg-neutral-950 hover:bg-neutral-800 text-white font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-xl transition-all cursor-pointer shadow-xs text-center"
+                >
+                  Tout marquer comme complété
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowOverdueModal(false)}
+                  className="bg-white hover:bg-neutral-50 text-neutral-700 border border-neutral-200 font-bold text-xs uppercase tracking-wider py-3 px-5 rounded-xl transition-all cursor-pointer text-center"
+                >
+                  Fermer
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

@@ -29,13 +29,13 @@ import {
 
 
 export const INITIAL_HABITS: DailyHabit[] = [
-  { id: "h1", name: "Lire pendant 10 minutes", description: "S'évader et stimuler l'imagination", completed: false, category: "professional" },
-  { id: "h2", name: "Apprendre pendant 30 minutes", description: "Suivre une formation ou lire un article technique", completed: false, category: "professional" },
-  { id: "h3", name: "Faire du sport", description: "Activité physique (Gym, course, marche)", completed: false, category: "personal" },
-  { id: "h4", name: "Préparer le dîner de demain", description: "Planifier ses repas pour gagner du temps", completed: false, category: "personal" },
-  { id: "h5", name: "Routine de soins (Skin care)", description: "Nettoyage, hydratation et protection solaire", completed: false, category: "personal" },
-  { id: "h6", name: "Méditation & Respiration", description: "5-10 minutes de cohérence cardiaque", completed: false, category: "personal" },
-  { id: "h7", name: "Nettoyage rapide de l'espace", description: "Ranger son bureau et sa pièce de travail", completed: false, category: "personal" },
+  { id: "h1", name: "Lire pendant 10 minutes", description: "S'évader et stimuler l'imagination", completed: false, category: "professional", isImportant: false, dueTime: "" },
+  { id: "h2", name: "Apprendre pendant 30 minutes", description: "Suivre une formation ou lire un article technique", completed: false, category: "professional", isImportant: true, dueTime: "12:00" },
+  { id: "h3", name: "Faire du sport", description: "Activité physique (Gym, course, marche)", completed: false, category: "personal", isImportant: true, dueTime: "08:00" },
+  { id: "h4", name: "Préparer le dîner de demain", description: "Planifier ses repas pour gagner du temps", completed: false, category: "personal", isImportant: false, dueTime: "" },
+  { id: "h5", name: "Routine de soins (Skin care)", description: "Nettoyage, hydratation et protection solaire", completed: false, category: "personal", isImportant: true, dueTime: "09:00" },
+  { id: "h6", name: "Méditation & Respiration", description: "5-10 minutes de cohérence cardiaque", completed: false, category: "personal", isImportant: false, dueTime: "" },
+  { id: "h7", name: "Nettoyage rapide de l'espace", description: "Ranger son bureau et sa pièce de travail", completed: false, category: "personal", isImportant: false, dueTime: "" },
 ];
 
 export const INITIAL_WEEKLY_OBJECTIVES: WeeklyObjective[] = [

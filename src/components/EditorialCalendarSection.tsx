@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { EditorialEvent } from "../types";
 import { 
   Calendar as CalendarIcon, 
@@ -20,9 +20,34 @@ import {
   Play,
   Briefcase,
   Layers,
-  HelpCircle
+  HelpCircle,
+  RefreshCw,
+  CloudLightning,
+  Link2,
+  Unlink
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { User } from "firebase/auth";
+import { 
+  googleSignIn, 
+  initAuth, 
+  logout as googleLogout, 
+  fetchGoogleEvents, 
+  createGoogleEvent, 
+  updateGoogleEvent, 
+  deleteGoogleEvent 
+} from "../googleCalendarService";
+import {
+  isOutlookConnected,
+  getOutlookAccessToken,
+  loginOutlook,
+  logoutOutlook,
+  fetchOutlookEvents,
+  createOutlookEvent,
+  updateOutlookEvent,
+  deleteOutlookEvent,
+  OutlookEvent
+} from "../outlookCalendarService";
 
 interface EditorialCalendarSectionProps {
   events: EditorialEvent[];
@@ -41,8 +66,46 @@ export default function EditorialCalendarSection({
   ]
 }: EditorialCalendarSectionProps) {
   
-  // View mode: 'calendar' or 'list'
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  // View mode: 'calendar' or 'list' or 'kanban'
+  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'kanban'>('calendar');
+
+  // Google Calendar Integration State
+  const [googleUser, setGoogleUser] = useState<User | null>(null);
+  const [googleToken, setGoogleToken] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
+
+  // Outlook Calendar Integration State
+  const [outlookToken, setOutlookToken] = useState<string | null>(null);
+  const [isOutlookLinked, setIsOutlookLinked] = useState(false);
+
+  useEffect(() => {
+    const checkOutlook = async () => {
+      const token = await getOutlookAccessToken();
+      if (token) {
+        setOutlookToken(token);
+        setIsOutlookLinked(true);
+      } else {
+        setOutlookToken(null);
+        setIsOutlookLinked(false);
+      }
+    };
+    checkOutlook();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        setGoogleToken(token);
+      },
+      () => {
+        setGoogleUser(null);
+        setGoogleToken(null);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   // Active filter state
   const [filterChannel, setFilterChannel] = useState<string>("all");
@@ -130,8 +193,550 @@ export default function EditorialCalendarSection({
     };
   }, [events, year, month]);
 
+  // --- GOOGLE CALENDAR SYNC HANDLERS ---
+  const handleGoogleSignInClick = async () => {
+    setIsSyncing(true);
+    setSyncStatusMsg({ type: "info", text: "Connexion à Google en cours..." });
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setGoogleUser(result.user);
+        setGoogleToken(result.accessToken);
+        setSyncStatusMsg({ type: "success", text: `Connecté avec succès : ${result.user.email}` });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMsg({ type: "error", text: `Connexion échouée : ${err.message}` });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleGoogleLogoutClick = async () => {
+    setIsSyncing(true);
+    try {
+      await googleLogout();
+      setGoogleUser(null);
+      setGoogleToken(null);
+      setSyncStatusMsg({ type: "success", text: "Déconnecté du compte Google." });
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMsg({ type: "error", text: `Erreur déconnexion : ${err.message}` });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleImportGoogleEvents = async () => {
+    if (!googleToken) {
+      setSyncStatusMsg({ type: "error", text: "Veuillez d'abord vous connecter à Google Calendar." });
+      return;
+    }
+    setIsSyncing(true);
+    setSyncStatusMsg({ type: "info", text: "Récupération de vos événements Google..." });
+    try {
+      const startDate = new Date(year, month - 1, 1).toISOString();
+      const endDate = new Date(year, month + 2, 1).toISOString();
+      const gEvents = await fetchGoogleEvents(googleToken, startDate, endDate);
+
+      let importedCount = 0;
+      const updatedEvents = [...events];
+
+      gEvents.forEach(ge => {
+        if (!ge.id || !ge.summary) return;
+
+        const alreadyExists = events.some(e => e.googleEventId === ge.id || e.id === ge.id || e.id === "ge_" + ge.id);
+        if (alreadyExists) return;
+
+        let dateStr = "";
+        if (ge.start.date) {
+          dateStr = ge.start.date;
+        } else if (ge.start.dateTime) {
+          dateStr = ge.start.dateTime.split("T")[0];
+        }
+
+        if (!dateStr) return;
+
+        let platform = "YouTube";
+        let title = ge.summary;
+        const upperSummary = ge.summary.toUpperCase();
+        if (upperSummary.includes("[YOUTUBE]")) {
+          platform = "YouTube";
+          title = ge.summary.replace(/\[YOUTUBE\]/i, "").trim();
+        } else if (upperSummary.includes("[TIKTOK]")) {
+          platform = "TikTok";
+          title = ge.summary.replace(/\[TIKTOK\]/i, "").trim();
+        } else if (upperSummary.includes("[LINKEDIN]")) {
+          platform = "LinkedIn";
+          title = ge.summary.replace(/\[LINKEDIN\]/i, "").trim();
+        } else if (upperSummary.includes("[INSTAGRAM]")) {
+          platform = "Instagram";
+          title = ge.summary.replace(/\[INSTAGRAM\]/i, "").trim();
+        } else if (upperSummary.includes("[SPOTIFY]")) {
+          platform = "Spotify";
+          title = ge.summary.replace(/\[SPOTIFY\]/i, "").trim();
+        }
+
+        let contentType: EditorialEvent["contentType"] = "Vidéo Longue";
+        if (platform === "TikTok" || platform === "Instagram") contentType = "Short / Reel";
+        if (platform === "LinkedIn") contentType = "Post Écrit";
+        if (platform === "Spotify") contentType = "Podcast";
+
+        updatedEvents.push({
+          id: "ge_" + ge.id,
+          title: title,
+          channelName: "The Moroccan Analyst",
+          platform: platform,
+          scheduledDate: dateStr,
+          status: "Planifié",
+          contentType: contentType,
+          notes: ge.description || "Importé automatiquement de Google Calendar",
+          googleEventId: ge.id
+        });
+        importedCount++;
+      });
+
+      if (importedCount > 0) {
+        setEvents(updatedEvents);
+        setSyncStatusMsg({ type: "success", text: `${importedCount} événement(s) importé(s) de Google Calendar !` });
+      } else {
+        setSyncStatusMsg({ type: "success", text: "Votre calendrier est déjà synchronisé." });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMsg({ type: "error", text: `Erreur d'importation : ${err.message}` });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleExportGoogleEvents = async () => {
+    if (!googleToken) {
+      setSyncStatusMsg({ type: "error", text: "Veuillez d'abord vous connecter à Google Calendar." });
+      return;
+    }
+
+    const toExport = events.filter(e => !e.googleEventId);
+    if (toExport.length === 0) {
+      setSyncStatusMsg({ type: "info", text: "Toutes vos publications sont déjà exportées sur Google Calendar." });
+      return;
+    }
+
+    const confirmExport = window.confirm(
+      `Voulez-vous exporter ${toExport.length} publication(s) locales vers votre Google Calendar ?`
+    );
+    if (!confirmExport) return;
+
+    setIsSyncing(true);
+    setSyncStatusMsg({ type: "info", text: `Exportation de ${toExport.length} événements vers Google Calendar...` });
+
+    try {
+      let exportedCount = 0;
+      const updatedEvents = [...events];
+
+      for (const evt of toExport) {
+        const payload = {
+          summary: `[${evt.platform.toUpperCase()}] ${evt.title}`,
+          description: `Canal : ${evt.channelName}\nFormat : ${evt.contentType}\nStatut : ${evt.status}\n\nNotes :\n${evt.notes || ""}`,
+          start: { date: evt.scheduledDate },
+          end: { date: evt.scheduledDate }
+        };
+
+        const createdGe = await createGoogleEvent(googleToken, payload);
+        const idx = updatedEvents.findIndex(item => item.id === evt.id);
+        if (idx !== -1) {
+          updatedEvents[idx] = {
+            ...updatedEvents[idx],
+            googleEventId: createdGe.id
+          };
+        }
+        exportedCount++;
+      }
+
+      setEvents(updatedEvents);
+      setSyncStatusMsg({ type: "success", text: `${exportedCount} publications exportées vers Google Calendar !` });
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMsg({ type: "error", text: `Erreur d'exportation : ${err.message}` });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleFullTwoWaySync = async () => {
+    if (!googleToken) return;
+    setIsSyncing(true);
+    setSyncStatusMsg({ type: "info", text: "Synchronisation automatique bidirectionnelle..." });
+    try {
+      // 1. Export local publications
+      const toExport = events.filter(e => !e.googleEventId);
+      let exportCount = 0;
+      const updatedEvents = [...events];
+
+      for (const evt of toExport) {
+        const payload = {
+          summary: `[${evt.platform.toUpperCase()}] ${evt.title}`,
+          description: `Canal : ${evt.channelName}\nFormat : ${evt.contentType}\nStatut : ${evt.status}\n\nNotes :\n${evt.notes || ""}`,
+          start: { date: evt.scheduledDate },
+          end: { date: evt.scheduledDate }
+        };
+        const createdGe = await createGoogleEvent(googleToken, payload);
+        const idx = updatedEvents.findIndex(item => item.id === evt.id);
+        if (idx !== -1) {
+          updatedEvents[idx].googleEventId = createdGe.id;
+        }
+        exportCount++;
+      }
+
+      // 2. Import from Google
+      const startDate = new Date(year, month - 1, 1).toISOString();
+      const endDate = new Date(year, month + 2, 1).toISOString();
+      const gEvents = await fetchGoogleEvents(googleToken, startDate, endDate);
+      let importCount = 0;
+
+      gEvents.forEach(ge => {
+        if (!ge.id || !ge.summary) return;
+        const alreadyExists = updatedEvents.some(e => e.googleEventId === ge.id || e.id === ge.id || e.id === "ge_" + ge.id);
+        if (alreadyExists) return;
+
+        let dateStr = "";
+        if (ge.start.date) dateStr = ge.start.date;
+        else if (ge.start.dateTime) dateStr = ge.start.dateTime.split("T")[0];
+
+        if (!dateStr) return;
+
+        let platform = "YouTube";
+        let title = ge.summary;
+        const upperSummary = ge.summary.toUpperCase();
+        if (upperSummary.includes("[YOUTUBE]")) {
+          platform = "YouTube";
+          title = ge.summary.replace(/\[YOUTUBE\]/i, "").trim();
+        } else if (upperSummary.includes("[TIKTOK]")) {
+          platform = "TikTok";
+          title = ge.summary.replace(/\[TIKTOK\]/i, "").trim();
+        } else if (upperSummary.includes("[LINKEDIN]")) {
+          platform = "LinkedIn";
+          title = ge.summary.replace(/\[LINKEDIN\]/i, "").trim();
+        } else if (upperSummary.includes("[INSTAGRAM]")) {
+          platform = "Instagram";
+          title = ge.summary.replace(/\[INSTAGRAM\]/i, "").trim();
+        } else if (upperSummary.includes("[SPOTIFY]")) {
+          platform = "Spotify";
+          title = ge.summary.replace(/\[SPOTIFY\]/i, "").trim();
+        }
+
+        let contentType: EditorialEvent["contentType"] = "Vidéo Longue";
+        if (platform === "TikTok" || platform === "Instagram") contentType = "Short / Reel";
+        if (platform === "LinkedIn") contentType = "Post Écrit";
+        if (platform === "Spotify") contentType = "Podcast";
+
+        updatedEvents.push({
+          id: "ge_" + ge.id,
+          title: title,
+          channelName: "The Moroccan Analyst",
+          platform: platform,
+          scheduledDate: dateStr,
+          status: "Planifié",
+          contentType: contentType,
+          notes: ge.description || "Importé automatiquement de Google Calendar",
+          googleEventId: ge.id
+        });
+        importCount++;
+      });
+
+      setEvents(updatedEvents);
+      setSyncStatusMsg({
+        type: "success",
+        text: `Synchronisation automatique terminée ! Export : ${exportCount} | Import : ${importCount}`
+      });
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMsg({ type: "error", text: `Erreur synchronisation automatique : ${err.message}` });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // --- OUTLOOK CALENDAR SYNC HANDLERS ---
+  const handleOutlookSignInClick = async () => {
+    setIsSyncing(true);
+    setSyncStatusMsg({ type: "info", text: "Connexion à Outlook en cours..." });
+    try {
+      const success = await loginOutlook(window.location.origin);
+      if (success) {
+        const token = await getOutlookAccessToken();
+        setOutlookToken(token);
+        setIsOutlookLinked(true);
+        setSyncStatusMsg({ type: "success", text: "Connecté avec succès à votre compte Outlook !" });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMsg({ type: "error", text: `Connexion Outlook échouée : ${err.message}` });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleOutlookLogoutClick = async () => {
+    setIsSyncing(true);
+    try {
+      logoutOutlook();
+      setOutlookToken(null);
+      setIsOutlookLinked(false);
+      setSyncStatusMsg({ type: "success", text: "Déconnecté du compte Outlook." });
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMsg({ type: "error", text: `Erreur déconnexion Outlook : ${err.message}` });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleImportOutlookEvents = async () => {
+    const token = await getOutlookAccessToken();
+    if (!token) {
+      setSyncStatusMsg({ type: "error", text: "Veuillez d'abord vous connecter à Outlook." });
+      return;
+    }
+    setIsSyncing(true);
+    setSyncStatusMsg({ type: "info", text: "Récupération de vos événements Outlook..." });
+    try {
+      // Fetch for previous month up to 3 months ahead
+      const startDate = new Date(year, month - 1, 1).toISOString().split(".")[0];
+      const endDate = new Date(year, month + 2, 1).toISOString().split(".")[0];
+      const oEvents = await fetchOutlookEvents(token, startDate, endDate);
+
+      let importedCount = 0;
+      const updatedEvents = [...events];
+
+      oEvents.forEach(oe => {
+        if (!oe.id || !oe.subject) return;
+
+        const alreadyExists = events.some(e => e.outlookEventId === oe.id || e.id === oe.id || e.id === "oe_" + oe.id);
+        if (alreadyExists) return;
+
+        const dateStr = oe.start.dateTime.split("T")[0];
+        if (!dateStr) return;
+
+        let platform = "YouTube";
+        let title = oe.subject;
+        const upperSubject = oe.subject.toUpperCase();
+        if (upperSubject.includes("[YOUTUBE]")) {
+          platform = "YouTube";
+          title = oe.subject.replace(/\[YOUTUBE\]/i, "").trim();
+        } else if (upperSubject.includes("[TIKTOK]")) {
+          platform = "TikTok";
+          title = oe.subject.replace(/\[TIKTOK\]/i, "").trim();
+        } else if (upperSubject.includes("[LINKEDIN]")) {
+          platform = "LinkedIn";
+          title = oe.subject.replace(/\[LINKEDIN\]/i, "").trim();
+        } else if (upperSubject.includes("[INSTAGRAM]")) {
+          platform = "Instagram";
+          title = oe.subject.replace(/\[INSTAGRAM\]/i, "").trim();
+        } else if (upperSubject.includes("[SPOTIFY]")) {
+          platform = "Spotify";
+          title = oe.subject.replace(/\[SPOTIFY\]/i, "").trim();
+        }
+
+        let contentType: EditorialEvent["contentType"] = "Vidéo Longue";
+        if (platform === "TikTok" || platform === "Instagram") contentType = "Short / Reel";
+        if (platform === "LinkedIn") contentType = "Post Écrit";
+        if (platform === "Spotify") contentType = "Podcast";
+
+        updatedEvents.push({
+          id: "oe_" + oe.id,
+          title: title,
+          channelName: "The Moroccan Analyst",
+          platform: platform,
+          scheduledDate: dateStr,
+          status: "Planifié",
+          contentType: contentType,
+          notes: oe.body?.content || "Importé automatiquement d'Outlook Calendar",
+          outlookEventId: oe.id
+        });
+        importedCount++;
+      });
+
+      if (importedCount > 0) {
+        setEvents(updatedEvents);
+        setSyncStatusMsg({ type: "success", text: `${importedCount} événement(s) importé(s) d'Outlook !` });
+      } else {
+        setSyncStatusMsg({ type: "success", text: "Votre calendrier Outlook est déjà synchronisé." });
+      }
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMsg({ type: "error", text: `Erreur d'importation Outlook : ${err.message}` });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleExportOutlookEvents = async () => {
+    const token = await getOutlookAccessToken();
+    if (!token) {
+      setSyncStatusMsg({ type: "error", text: "Veuillez d'abord vous connecter à Outlook." });
+      return;
+    }
+
+    const toExport = events.filter(e => !e.outlookEventId);
+    if (toExport.length === 0) {
+      setSyncStatusMsg({ type: "info", text: "Toutes vos publications sont déjà exportées sur Outlook." });
+      return;
+    }
+
+    const confirmExport = window.confirm(
+      `Voulez-vous exporter ${toExport.length} publication(s) locales vers votre compte Outlook ?`
+    );
+    if (!confirmExport) return;
+
+    setIsSyncing(true);
+    setSyncStatusMsg({ type: "info", text: `Exportation de ${toExport.length} événements vers Outlook...` });
+
+    try {
+      let exportedCount = 0;
+      const updatedEvents = [...events];
+
+      for (const evt of toExport) {
+        const payload: OutlookEvent = {
+          subject: `[${evt.platform.toUpperCase()}] ${evt.title}`,
+          body: {
+            contentType: "text",
+            content: `Canal : ${evt.channelName}\nFormat : ${evt.contentType}\nStatut : ${evt.status}\n\nNotes :\n${evt.notes || ""}`
+          },
+          start: {
+            dateTime: `${evt.scheduledDate}T09:00:00`,
+            timeZone: "UTC"
+          },
+          end: {
+            dateTime: `${evt.scheduledDate}T10:00:00`,
+            timeZone: "UTC"
+          }
+        };
+
+        const createdOe = await createOutlookEvent(token, payload);
+        const idx = updatedEvents.findIndex(item => item.id === evt.id);
+        if (idx !== -1) {
+          updatedEvents[idx] = {
+            ...updatedEvents[idx],
+            outlookEventId: createdOe.id
+          };
+        }
+        exportedCount++;
+      }
+
+      setEvents(updatedEvents);
+      setSyncStatusMsg({ type: "success", text: `${exportedCount} publications exportées vers Outlook !` });
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMsg({ type: "error", text: `Erreur d'exportation Outlook : ${err.message}` });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleOutlookTwoWaySync = async () => {
+    const token = await getOutlookAccessToken();
+    if (!token) return;
+    setIsSyncing(true);
+    setSyncStatusMsg({ type: "info", text: "Synchronisation automatique bidirectionnelle Outlook..." });
+    try {
+      // 1. Export local publications
+      const toExport = events.filter(e => !e.outlookEventId);
+      let exportCount = 0;
+      const updatedEvents = [...events];
+
+      for (const evt of toExport) {
+        const payload: OutlookEvent = {
+          subject: `[${evt.platform.toUpperCase()}] ${evt.title}`,
+          body: {
+            contentType: "text",
+            content: `Canal : ${evt.channelName}\nFormat : ${evt.contentType}\nStatut : ${evt.status}\n\nNotes :\n${evt.notes || ""}`
+          },
+          start: {
+            dateTime: `${evt.scheduledDate}T09:00:00`,
+            timeZone: "UTC"
+          },
+          end: {
+            dateTime: `${evt.scheduledDate}T10:00:00`,
+            timeZone: "UTC"
+          }
+        };
+        const createdOe = await createOutlookEvent(token, payload);
+        const idx = updatedEvents.findIndex(item => item.id === evt.id);
+        if (idx !== -1) {
+          updatedEvents[idx].outlookEventId = createdOe.id;
+        }
+        exportCount++;
+      }
+
+      // 2. Import from Outlook
+      const startDate = new Date(year, month - 1, 1).toISOString().split(".")[0];
+      const endDate = new Date(year, month + 2, 1).toISOString().split(".")[0];
+      const oEvents = await fetchOutlookEvents(token, startDate, endDate);
+      let importCount = 0;
+
+      oEvents.forEach(oe => {
+        if (!oe.id || !oe.subject) return;
+        const alreadyExists = updatedEvents.some(e => e.outlookEventId === oe.id || e.id === oe.id || e.id === "oe_" + oe.id);
+        if (alreadyExists) return;
+
+        const dateStr = oe.start.dateTime.split("T")[0];
+        if (!dateStr) return;
+
+        let platform = "YouTube";
+        let title = oe.subject;
+        const upperSubject = oe.subject.toUpperCase();
+        if (upperSubject.includes("[YOUTUBE]")) {
+          platform = "YouTube";
+          title = oe.subject.replace(/\[YOUTUBE\]/i, "").trim();
+        } else if (upperSubject.includes("[TIKTOK]")) {
+          platform = "TikTok";
+          title = oe.subject.replace(/\[TIKTOK\]/i, "").trim();
+        } else if (upperSubject.includes("[LINKEDIN]")) {
+          platform = "LinkedIn";
+          title = oe.subject.replace(/\[LINKEDIN\]/i, "").trim();
+        } else if (upperSubject.includes("[INSTAGRAM]")) {
+          platform = "Instagram";
+          title = oe.subject.replace(/\[INSTAGRAM\]/i, "").trim();
+        } else if (upperSubject.includes("[SPOTIFY]")) {
+          platform = "Spotify";
+          title = oe.subject.replace(/\[SPOTIFY\]/i, "").trim();
+        }
+
+        let contentType: EditorialEvent["contentType"] = "Vidéo Longue";
+        if (platform === "TikTok" || platform === "Instagram") contentType = "Short / Reel";
+        if (platform === "LinkedIn") contentType = "Post Écrit";
+        if (platform === "Spotify") contentType = "Podcast";
+
+        updatedEvents.push({
+          id: "oe_" + oe.id,
+          title: title,
+          channelName: "The Moroccan Analyst",
+          platform: platform,
+          scheduledDate: dateStr,
+          status: "Planifié",
+          contentType: contentType,
+          notes: oe.body?.content || "Importé automatiquement d'Outlook Calendar",
+          outlookEventId: oe.id
+        });
+        importCount++;
+      });
+
+      setEvents(updatedEvents);
+      setSyncStatusMsg({
+        type: "success",
+        text: `Synchronisation Outlook terminée ! Export : ${exportCount} | Import : ${importCount}`
+      });
+    } catch (err: any) {
+      console.error(err);
+      setSyncStatusMsg({ type: "error", text: `Erreur synchronisation Outlook : ${err.message}` });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Add/Edit Submission
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const channelVal = formChannelName === "Autre / Custom" 
@@ -140,25 +745,9 @@ export default function EditorialCalendarSection({
 
     if (editingEventId) {
       // Edit
-      setEvents(prev => prev.map(evt => {
-        if (evt.id === editingEventId) {
-          return {
-            ...evt,
-            title: formTitle.trim() || "Sans titre",
-            channelName: channelVal,
-            platform: formPlatform,
-            scheduledDate: formScheduledDate,
-            status: formStatus,
-            contentType: formContentType,
-            notes: formNotes.trim()
-          };
-        }
-        return evt;
-      }));
-    } else {
-      // Create
-      const newEvent: EditorialEvent = {
-        id: "ee_" + Date.now(),
+      const oldEvt = events.find(evt => evt.id === editingEventId);
+      const updatedEvt = {
+        ...oldEvt!,
         title: formTitle.trim() || "Sans titre",
         channelName: channelVal,
         platform: formPlatform,
@@ -167,7 +756,106 @@ export default function EditorialCalendarSection({
         contentType: formContentType,
         notes: formNotes.trim()
       };
-      setEvents(prev => [...prev, newEvent]);
+
+      setEvents(prev => prev.map(evt => evt.id === editingEventId ? updatedEvt : evt));
+
+      // Auto update Google Event if connected
+      if (googleToken && updatedEvt.googleEventId) {
+        updateGoogleEvent(googleToken, updatedEvt.googleEventId, {
+          summary: `[${updatedEvt.platform.toUpperCase()}] ${updatedEvt.title}`,
+          description: `Canal : ${updatedEvt.channelName}\nFormat : ${updatedEvt.contentType}\nStatut : ${updatedEvt.status}\n\nNotes :\n${updatedEvt.notes || ""}`,
+          start: { date: updatedEvt.scheduledDate },
+          end: { date: updatedEvt.scheduledDate }
+        }).catch(err => console.error("Auto Google Calendar update failed:", err));
+      }
+
+      // Auto update Outlook Event if connected
+      if (outlookToken && updatedEvt.outlookEventId) {
+        updateOutlookEvent(outlookToken, updatedEvt.outlookEventId, {
+          subject: `[${updatedEvt.platform.toUpperCase()}] ${updatedEvt.title}`,
+          body: {
+            contentType: "text",
+            content: `Canal : ${updatedEvt.channelName}\nFormat : ${updatedEvt.contentType}\nStatut : ${updatedEvt.status}\n\nNotes :\n${updatedEvt.notes || ""}`
+          },
+          start: {
+            dateTime: `${updatedEvt.scheduledDate}T09:00:00`,
+            timeZone: "UTC"
+          },
+          end: {
+            dateTime: `${updatedEvt.scheduledDate}T10:00:00`,
+            timeZone: "UTC"
+          }
+        }).catch(err => console.error("Auto Outlook Calendar update failed:", err));
+      }
+    } else {
+      // Create
+      const newId = "ee_" + Date.now();
+      const newEvent: EditorialEvent = {
+        id: newId,
+        title: formTitle.trim() || "Sans titre",
+        channelName: channelVal,
+        platform: formPlatform,
+        scheduledDate: formScheduledDate,
+        status: formStatus,
+        contentType: formContentType,
+        notes: formNotes.trim()
+      };
+
+      if (googleToken || outlookToken) {
+        setIsSyncing(true);
+        setSyncStatusMsg({ type: "info", text: "Création de la publication sur vos calendriers synchronisés..." });
+        
+        try {
+          // Google Calendar integration
+          if (googleToken) {
+            try {
+              const createdGe = await createGoogleEvent(googleToken, {
+                summary: `[${newEvent.platform.toUpperCase()}] ${newEvent.title}`,
+                description: `Canal : ${newEvent.channelName}\nFormat : ${newEvent.contentType}\nStatut : ${newEvent.status}\n\nNotes :\n${newEvent.notes || ""}`,
+                start: { date: newEvent.scheduledDate },
+                end: { date: newEvent.scheduledDate }
+              });
+              newEvent.googleEventId = createdGe.id;
+            } catch (errG) {
+              console.error("Auto Google Calendar creation failed:", errG);
+            }
+          }
+
+          // Outlook Integration
+          if (outlookToken) {
+            try {
+              const createdOe = await createOutlookEvent(outlookToken, {
+                subject: `[${newEvent.platform.toUpperCase()}] ${newEvent.title}`,
+                body: {
+                  contentType: "text",
+                  content: `Canal : ${newEvent.channelName}\nFormat : ${newEvent.contentType}\nStatut : ${newEvent.status}\n\nNotes :\n${newEvent.notes || ""}`
+                },
+                start: {
+                  dateTime: `${newEvent.scheduledDate}T09:00:00`,
+                  timeZone: "UTC"
+                },
+                end: {
+                  dateTime: `${newEvent.scheduledDate}T10:00:00`,
+                  timeZone: "UTC"
+                }
+              });
+              newEvent.outlookEventId = createdOe.id;
+            } catch (errO) {
+              console.error("Auto Outlook Calendar creation failed:", errO);
+            }
+          }
+
+          setEvents(prev => [...prev, newEvent]);
+          setSyncStatusMsg({ type: "success", text: "Publication ajoutée et synchronisée avec vos calendriers !" });
+        } catch (errAll) {
+          console.error("Calendar creations failed:", errAll);
+          setEvents(prev => [...prev, newEvent]);
+        } finally {
+          setIsSyncing(false);
+        }
+      } else {
+        setEvents(prev => [...prev, newEvent]);
+      }
     }
 
     resetForm();
@@ -207,12 +895,55 @@ export default function EditorialCalendarSection({
 
   // Fast toggles
   const handleQuickStatusChange = (id: string, newStatus: EditorialEvent["status"]) => {
-    setEvents(prev => prev.map(evt => evt.id === id ? { ...evt, status: newStatus } : evt));
+    setEvents(prev => prev.map(evt => {
+      if (evt.id === id) {
+        const updated = { ...evt, status: newStatus };
+        
+        // Auto update Google Event if connected
+        if (googleToken && updated.googleEventId) {
+          updateGoogleEvent(googleToken, updated.googleEventId, {
+            summary: `[${updated.platform.toUpperCase()}] ${updated.title}`,
+            description: `Canal : ${updated.channelName}\nFormat : ${updated.contentType}\nStatut : ${updated.status}\n\nNotes :\n${updated.notes || ""}`
+          }).catch(err => console.error("Google Calendar status update failed:", err));
+        }
+
+        // Auto update Outlook Event if connected
+        if (outlookToken && updated.outlookEventId) {
+          updateOutlookEvent(outlookToken, updated.outlookEventId, {
+            subject: `[${updated.platform.toUpperCase()}] ${updated.title}`,
+            body: {
+              contentType: "text",
+              content: `Canal : ${updated.channelName}\nFormat : ${updated.contentType}\nStatut : ${updated.status}\n\nNotes :\n${updated.notes || ""}`
+            }
+          }).catch(err => console.error("Outlook Calendar status update failed:", err));
+        }
+
+        return updated;
+      }
+      return evt;
+    }));
   };
 
   const handleDelete = (id: string) => {
+    const evtToDelete = events.find(evt => evt.id === id);
     if (confirm("Voulez-vous supprimer cet événement du calendrier éditorial ?")) {
       setEvents(prev => prev.filter(evt => evt.id !== id));
+
+      if (googleToken && evtToDelete?.googleEventId) {
+        deleteGoogleEvent(googleToken, evtToDelete.googleEventId)
+          .then(() => {
+            setSyncStatusMsg({ type: "success", text: "Événement supprimé localement et sur votre Google Calendar." });
+          })
+          .catch(err => console.error("Google Calendar event deletion failed:", err));
+      }
+
+      if (outlookToken && evtToDelete?.outlookEventId) {
+        deleteOutlookEvent(outlookToken, evtToDelete.outlookEventId)
+          .then(() => {
+            setSyncStatusMsg({ type: "success", text: "Événement supprimé localement et de votre compte Outlook." });
+          })
+          .catch(err => console.error("Outlook Calendar event deletion failed:", err));
+      }
     }
   };
 
@@ -285,7 +1016,25 @@ export default function EditorialCalendarSection({
 
     setEvents(prev => prev.map(evt => {
       if (evt.id === eventId) {
-        return { ...evt, scheduledDate: targetDate };
+        const updated = { ...evt, scheduledDate: targetDate };
+        
+        // Auto update Google Event if connected
+        if (googleToken && updated.googleEventId) {
+          updateGoogleEvent(googleToken, updated.googleEventId, {
+            start: { date: targetDate },
+            end: { date: targetDate }
+          }).catch(err => console.error("Google Calendar drop update failed:", err));
+        }
+
+        // Auto update Outlook Event if connected
+        if (outlookToken && updated.outlookEventId) {
+          updateOutlookEvent(outlookToken, updated.outlookEventId, {
+            start: { dateTime: `${targetDate}T09:00:00`, timeZone: "UTC" },
+            end: { dateTime: `${targetDate}T10:00:00`, timeZone: "UTC" }
+          }).catch(err => console.error("Outlook Calendar drop update failed:", err));
+        }
+
+        return updated;
       }
       return evt;
     }));
@@ -325,6 +1074,14 @@ export default function EditorialCalendarSection({
               <List className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Liste</span>
             </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`p-1.5 rounded-lg transition-all text-xs font-bold cursor-pointer flex items-center gap-1 ${viewMode === 'kanban' ? 'bg-white dark:bg-zinc-900 text-neutral-900 dark:text-neutral-50 shadow-3xs' : 'text-neutral-400 hover:text-neutral-600'}`}
+              title="Vue Kanban"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Kanban</span>
+            </button>
           </div>
 
           <button
@@ -335,6 +1092,129 @@ export default function EditorialCalendarSection({
             <span>Ajouter une Publication</span>
           </button>
         </div>
+      </div>
+
+      {/* GOOGLE CALENDAR SYNC PANEL */}
+      <div className="bg-neutral-50/50 dark:bg-zinc-900/30 border border-neutral-200/70 dark:border-neutral-800/70 p-4 rounded-2xl shadow-3xs flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+              <CalendarIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-neutral-800 dark:text-neutral-100 uppercase tracking-wide flex items-center gap-2">
+                <span>Synchronisation Google Calendar</span>
+                {googleUser && (
+                  <span className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Automatique
+                  </span>
+                )}
+              </h4>
+              <p className="text-xs text-neutral-400 mt-1 max-w-xl leading-relaxed">
+                {googleUser 
+                  ? "Votre calendrier éditorial local et votre Google Calendar sont connectés. Toute modification ou ajout de publication sera synchronisé instantanément !"
+                  : "Connectez votre agenda Google pour synchroniser automatiquement vos dates de publication, éviter les doublons et recevoir des alertes par email."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
+            {!googleUser ? (
+              <button
+                onClick={handleGoogleSignInClick}
+                disabled={isSyncing}
+                className="flex items-center gap-2.5 bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-zinc-800 text-neutral-700 dark:text-neutral-200 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-3xs cursor-pointer select-none disabled:opacity-50"
+              >
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-4 h-4">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                </svg>
+                <span>{isSyncing ? "Connexion..." : "Se connecter avec Google"}</span>
+              </button>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 bg-neutral-100 dark:bg-zinc-850 px-3 py-1.5 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50">
+                  {googleUser.photoURL ? (
+                    <img 
+                      src={googleUser.photoURL} 
+                      alt="Avatar" 
+                      className="w-4 h-4 rounded-full" 
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">
+                      {googleUser.email ? googleUser.email[0].toUpperCase() : "G"}
+                    </div>
+                  )}
+                  <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 max-w-[120px] truncate">
+                    {googleUser.email}
+                  </span>
+                </div>
+
+                <button
+                  onClick={handleFullTwoWaySync}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-3xs cursor-pointer select-none disabled:opacity-50"
+                  title="Lancer une synchronisation bidirectionnelle"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                  <span>Synchroniser</span>
+                </button>
+
+                <button
+                  onClick={handleImportGoogleEvents}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1.5 bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-zinc-800 text-neutral-700 dark:text-neutral-200 text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-3xs cursor-pointer select-none disabled:opacity-50"
+                  title="Importer les événements de votre calendrier Google vers l'application"
+                >
+                  <span>Importer</span>
+                </button>
+
+                <button
+                  onClick={handleExportGoogleEvents}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1.5 bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-zinc-800 text-neutral-700 dark:text-neutral-200 text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-3xs cursor-pointer select-none disabled:opacity-50"
+                  title="Exporter les publications créées localement vers Google Calendar"
+                >
+                  <span>Exporter</span>
+                </button>
+
+                <button
+                  onClick={handleGoogleLogoutClick}
+                  disabled={isSyncing}
+                  className="bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer select-none"
+                  title="Se déconnecter"
+                >
+                  Déconnecter
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {syncStatusMsg && (
+          <div className={`p-3 rounded-xl flex items-center justify-between text-xs font-bold border ${
+            syncStatusMsg.type === "success" 
+              ? "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50" 
+              : syncStatusMsg.type === "error"
+              ? "bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/50"
+              : "bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-900/50"
+          }`}>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-current" />
+              <span>{syncStatusMsg.text}</span>
+            </div>
+            <button 
+              onClick={() => setSyncStatusMsg(null)}
+              className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* STATS DE PERFORMANCES ÉDITORIALES DU MOIS SELECTIONNÉ */}
@@ -583,7 +1463,7 @@ export default function EditorialCalendarSection({
 
         </div>
 
-      ) : (
+      ) : viewMode === 'list' ? (
         
         /* LIST VIEW (Gives a chronological layout, extremely good on small screens) */
         <div className="space-y-3.5">
@@ -695,6 +1575,165 @@ export default function EditorialCalendarSection({
                 })}
             </div>
           )}
+        </div>
+
+      ) : (
+        
+        /* TABLEAU KANBAN DE PRODUCTION DE CONTENU */
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto pb-4 scrollbar-thin">
+          {[
+            { id: "Brouillon", title: "1. Idée / Scripting", color: "bg-neutral-50/60 dark:bg-zinc-950/10 border-neutral-200 dark:border-neutral-800", iconColor: "bg-neutral-400", allowedStatuses: ["Brouillon", "Idée"] },
+            { id: "Scénarisé", title: "2. Scénarisé", color: "bg-sky-500/5 border-sky-100/50 dark:bg-sky-950/10 dark:border-sky-900/30", iconColor: "bg-sky-400", allowedStatuses: ["Scénarisé"] },
+            { id: "Tourné", title: "3. Tourné", color: "bg-purple-500/5 border-purple-100/50 dark:bg-purple-950/10 dark:border-purple-900/30", iconColor: "bg-purple-400", allowedStatuses: ["Tourné"] },
+            { id: "En cours", title: "4. Montage", color: "bg-amber-500/5 border-amber-100/50 dark:bg-amber-950/10 dark:border-amber-900/30", iconColor: "bg-amber-400", allowedStatuses: ["En cours", "Monté"] },
+            { id: "Planifié", title: "5. Prêt / Publié", color: "bg-emerald-500/5 border-emerald-100/50 dark:bg-emerald-950/10 dark:border-emerald-900/30", iconColor: "bg-emerald-400", allowedStatuses: ["Planifié", "Prêt à Publier", "Publié"] },
+          ].map(column => {
+            const columnEvents = filteredEvents.filter(e => column.allowedStatuses.includes(e.status));
+            
+            return (
+              <div
+                key={column.id}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const eventId = e.dataTransfer.getData("text/plain");
+                  if (!eventId) return;
+                  setEvents(prev => prev.map(evt => {
+                    if (evt.id === eventId) {
+                      // Map back to a valid status supported by system
+                      let nextStatus: EditorialEvent["status"] = column.id as any;
+                      if (column.id === "En cours") nextStatus = "En cours";
+                      if (column.id === "Planifié") nextStatus = "Planifié";
+                      if (column.id === "Brouillon") nextStatus = "Brouillon";
+                      return { ...evt, status: nextStatus };
+                    }
+                    return evt;
+                  }));
+                }}
+                className={`flex flex-col rounded-2xl border p-3.5 min-w-[220px] max-w-[280px] h-[550px] shrink-0 ${column.color}`}
+              >
+                {/* Column Header */}
+                <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-neutral-200/50 dark:border-neutral-800">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full ${column.iconColor}`} />
+                    <h4 className="text-[11px] font-black text-neutral-800 dark:text-neutral-200 tracking-tight uppercase">
+                      {column.title}
+                    </h4>
+                  </div>
+                  <span className="text-[9px] bg-white dark:bg-zinc-950 text-neutral-600 dark:text-neutral-400 font-extrabold font-mono px-2 py-0.5 rounded-md border border-neutral-200/60 dark:border-neutral-800">
+                    {columnEvents.length}
+                  </span>
+                </div>
+
+                {/* Column Body - Cards List */}
+                <div className="flex-1 overflow-y-auto space-y-2.5 pr-0.5 scrollbar-thin">
+                  {columnEvents.length === 0 ? (
+                    <div className="text-center py-12 text-[10px] text-neutral-400 italic border border-dashed border-neutral-200/50 dark:border-neutral-800 rounded-xl bg-white/20 dark:bg-zinc-950/5 flex flex-col justify-center items-center gap-1.5">
+                      <span className="text-sm">📌</span>
+                      <span>Glisser un sujet ici</span>
+                    </div>
+                  ) : (
+                    columnEvents.map(evt => {
+                      const colors = getPlatformColors(evt.platform);
+                      
+                      // Move card one click to the left
+                      const handleMoveLeft = (e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        const stages = ["Brouillon", "Scénarisé", "Tourné", "En cours", "Planifié"];
+                        const currentIdx = stages.indexOf(column.id);
+                        if (currentIdx > 0) {
+                          const nextStatus = stages[currentIdx - 1];
+                          setEvents(prev => prev.map(e => e.id === evt.id ? { ...e, status: nextStatus as any } : e));
+                        }
+                      };
+
+                      // Move card one click to the right
+                      const handleMoveRight = (e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        const stages = ["Brouillon", "Scénarisé", "Tourné", "En cours", "Planifié"];
+                        const currentIdx = stages.indexOf(column.id);
+                        if (currentIdx < stages.length - 1 && currentIdx >= 0) {
+                          const nextStatus = stages[currentIdx + 1];
+                          setEvents(prev => prev.map(e => e.id === evt.id ? { ...e, status: nextStatus as any } : e));
+                        }
+                      };
+
+                      const currentStageIdx = ["Brouillon", "Scénarisé", "Tourné", "En cours", "Planifié"].indexOf(column.id);
+
+                      return (
+                        <div
+                          key={evt.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, evt.id)}
+                          onClick={() => handleEditStart(evt)}
+                          className="bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-neutral-800 p-3 rounded-xl hover:shadow-2xs transition-all cursor-grab active:cursor-grabbing space-y-2.5 hover:border-neutral-400 dark:hover:border-neutral-700"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded border ${colors.bg}`}>
+                              {evt.platform}
+                            </span>
+                            <span className="text-[8px] text-neutral-400 font-bold font-mono">
+                              {evt.scheduledDate.split("-")[2]}/{evt.scheduledDate.split("-")[1]}
+                            </span>
+                          </div>
+
+                          <div>
+                            <h5 className="text-[10px] font-black text-neutral-800 dark:text-neutral-100 leading-snug line-clamp-2">
+                              {evt.title}
+                            </h5>
+                            <span className="text-[8px] text-neutral-400 font-bold block mt-1 font-mono">
+                              {evt.channelName}
+                            </span>
+                          </div>
+
+                          {/* Footer with actions and Arrows */}
+                          <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                            {/* Action Tools */}
+                            <div className="flex items-center gap-0.5">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEditStart(evt); }}
+                                className="p-1 text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg cursor-pointer"
+                                title="Modifier"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(evt.id); }}
+                                className="p-1 text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg cursor-pointer"
+                                title="Supprimer"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+
+                            {/* Click to Move */}
+                            <div className="flex items-center gap-0.5 bg-neutral-100 dark:bg-zinc-800 p-0.5 rounded-md">
+                              <button
+                                onClick={handleMoveLeft}
+                                disabled={currentStageIdx === 0}
+                                className={`p-0.5 rounded-md transition-all ${currentStageIdx === 0 ? "text-neutral-300 dark:text-zinc-700 cursor-not-allowed" : "text-neutral-600 hover:bg-white dark:text-neutral-300 dark:hover:bg-zinc-900 cursor-pointer"}`}
+                                title="Déplacer à gauche"
+                              >
+                                <ChevronLeft className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={handleMoveRight}
+                                disabled={currentStageIdx === 4}
+                                className={`p-0.5 rounded-md transition-all ${currentStageIdx === 4 ? "text-neutral-300 dark:text-zinc-700 cursor-not-allowed" : "text-neutral-600 hover:bg-white dark:text-neutral-300 dark:hover:bg-zinc-900 cursor-pointer"}`}
+                                title="Déplacer à droite"
+                              >
+                                <ChevronRight className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
       )}
