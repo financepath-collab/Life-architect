@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   DailyHabit, 
@@ -67,6 +67,7 @@ import PerformanceCorrelations from "./components/PerformanceCorrelations";
 import BooksSection from "./components/BooksSection";
 import ScreenMediaSection from "./components/ScreenMediaSection";
 import FormationsSection from "./components/FormationsSection";
+import ProjectFoldersSection from "./components/ProjectFoldersSection";
 import AlertsBanner from "./components/AlertsBanner";
 import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
 import MonthlyPerformanceCard from "./components/MonthlyPerformanceCard";
@@ -126,6 +127,9 @@ import {
   Sun,
   Moon,
   Globe,
+  Folder,
+  FolderOpen,
+  FolderPlus,
   FolderKanban,
   Target,
   ClipboardCheck,
@@ -150,7 +154,9 @@ export default function App() {
   const [activeMenu, setActiveMenu] = useState<string>("dashboard"); // "dashboard", or "submodule_id"
   const [dashboardTab, setDashboardTab] = useState<"routines" | "charts" | "launchpad">("routines");
   const [activeChartsSubTab, setActiveChartsSubTab] = useState<"finance" | "correlations" | "fire">("finance");
-  const [focusMode, setFocusMode] = useState<boolean>(false);
+  const [focusMode, setFocusMode] = useState<boolean>(() => {
+    return localStorage.getItem("la_focus_mode") === "true";
+  });
   const [showWeather, setShowWeather] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem("la_theme") === "dark";
@@ -624,6 +630,10 @@ export default function App() {
   }, [mealPlanners]);
 
   useEffect(() => {
+    localStorage.setItem("la_focus_mode", String(focusMode));
+  }, [focusMode]);
+
+  useEffect(() => {
     localStorage.setItem("mp_achats_v2", JSON.stringify(achatsMensuels));
   }, [achatsMensuels]);
 
@@ -721,6 +731,23 @@ export default function App() {
     setStreakCount(prev => prev + 1);
   };
 
+  // Focus Mode Toggle handler with redirect and state check
+  const handleToggleFocusMode = () => {
+    const nextVal = !focusMode;
+    setFocusMode(nextVal);
+    if (nextVal) {
+      setDashboardTab("routines");
+      const distractingMenuIds = [
+        "comptes", "transactions", "virements", "stocks", "budgets", "salaires", "epargnes", "charts",
+        "achats", "abonnements", "wishlist", "achats_couteux",
+        "books", "screenmedia"
+      ];
+      if (distractingMenuIds.includes(activeMenu)) {
+        setActiveMenu("dashboard");
+      }
+    }
+  };
+
   // Toggle Category Collapsibles
   const toggleCategoryExpand = (catId: string) => {
     setExpandedCategories(prev => ({
@@ -786,6 +813,7 @@ export default function App() {
       label: "Projets & Académie",
       icon: FolderKanban,
       items: [
+        { id: "project_folders", label: "Dossiers de Projets", icon: FolderOpen, desc: "Organisez vos formations, objectifs de croissance et ressources par projet créateur ou d'académie." },
         { id: "formations", label: "Carrière & Formations", icon: GraduationCap, desc: "Suivi complet de vos formations, compétences ciblées et opportunités de recrutement." },
         { id: "macircle", label: "Académie \"The MA Circle\"", icon: Globe, desc: "Monétisation de vos canaux YouTube, formations produites et ventes de produits digitaux." },
         { id: "channels", label: "Chaînes & Médias", icon: Tv, desc: "Abonnés et fréquence de publication de vos chaînes." },
@@ -803,6 +831,12 @@ export default function App() {
       ]
     }
   ];
+
+  const visibleCategories = useMemo(() => {
+    if (!focusMode) return categories;
+    // Masquer les flux financiers et de divertissement (Finance, Achats, Lectures & Écrans)
+    return categories.filter(cat => cat.id !== "finance" && cat.id !== "purchases" && cat.id !== "formation");
+  }, [focusMode, categories]);
 
   const getModuleConfig = (moduleId: string) => {
     switch (moduleId) {
@@ -1735,7 +1769,7 @@ export default function App() {
             </div>
             <div className="hidden 2xl:block">
               <span className="text-[8px] font-bold text-neutral-400 block tracking-widest uppercase font-mono leading-none">SYSTEM INTEGRATION</span>
-              <span className="text-xs font-black text-neutral-900 block leading-tight mt-0.5">Life Architect</span>
+              <span className="text-xs font-black text-neutral-900 block leading-tight mt-0.5">LIFE ARCHITECT</span>
             </div>
           </div>
 
@@ -1757,7 +1791,7 @@ export default function App() {
             </button>
 
             {/* Categories Hover Dropdowns */}
-            {categories.map(cat => {
+            {visibleCategories.map(cat => {
               const CatIcon = cat.icon;
               const isCatActive = activeCategoryObj?.id === cat.id;
               
@@ -1866,6 +1900,20 @@ export default function App() {
               )}
             </div>
 
+            {/* Focus Mode Toggle (Main Menu) */}
+            <button
+              onClick={handleToggleFocusMode}
+              className={`text-[9.5px] 2xl:text-[11px] px-2 xl:px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1.5 border ${
+                focusMode
+                  ? "bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-sm animate-pulse"
+                  : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+              }`}
+              title="Activer/Désactiver le mode concentration pour masquer les flux financiers et écrans de divertissement"
+            >
+              <Flame className={`w-3.5 h-3.5 shrink-0 ${focusMode ? "text-white fill-white" : "text-neutral-500"}`} />
+              <span>{focusMode ? "Focus Actif" : "Mode Focus"}</span>
+            </button>
+
             {/* Daily Reset Routine Button */}
             <button
               onClick={resetDailyRoutines}
@@ -1949,9 +1997,24 @@ export default function App() {
                   <span>TABLEAU DE BORD</span>
                 </button>
 
+                {/* Focus Mode Toggle Mobile */}
+                <button
+                  onClick={() => {
+                    handleToggleFocusMode();
+                  }}
+                  className={`w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl border font-black text-xs uppercase tracking-wider transition-all cursor-pointer select-none ${
+                    focusMode
+                      ? "bg-red-600 border-red-600 text-white shadow-md animate-pulse"
+                      : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+                  }`}
+                >
+                  <Flame className={`w-4 h-4 shrink-0 ${focusMode ? "text-white fill-white" : "text-neutral-500"}`} />
+                  <span>{focusMode ? "CONCENTRATION ACTIVE" : "ACTIVER LE MODE FOCUS"}</span>
+                </button>
+
                 {/* Collapsible Sectors */}
                 <div className="space-y-2">
-                  {categories.map(cat => {
+                  {visibleCategories.map(cat => {
                     const isExpanded = !!expandedCategories[cat.id];
                     const CatIcon = cat.icon;
                     const isCatActive = activeCategoryObj?.id === cat.id;
@@ -2618,7 +2681,7 @@ export default function App() {
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {categories.map(cat => {
+                      {visibleCategories.map(cat => {
                         const CatIcon = cat.icon;
                         return (
                           <div 
@@ -2863,6 +2926,15 @@ export default function App() {
                     <BooksSection books={books} setBooks={setBooks} />
                   ) : activeMenu === "screenmedia" ? (
                     <ScreenMediaSection screenMedia={screenMedia} setScreenMedia={setScreenMedia} />
+                  ) : activeMenu === "project_folders" ? (
+                    <ProjectFoldersSection
+                      formations={formations}
+                      setFormations={setFormations}
+                      links={links}
+                      setLinks={setLinks}
+                      monthlyGoals={monthlyGoals}
+                      setMonthlyGoals={setMonthlyGoals}
+                    />
                   ) : activeMenu === "formations" ? (
                     <FormationsSection formations={formations} setFormations={setFormations} activeTab="carriere_pro" hideTabs={true} />
                   ) : activeMenu === "macircle" ? (
