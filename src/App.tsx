@@ -25,7 +25,8 @@ import {
   WishListItem,
   AchatCouteuxItem,
   MonthlyGoal,
-  EditorialEvent
+  EditorialEvent,
+  ProjectFolder
 } from "./types";
 
 
@@ -55,7 +56,8 @@ import {
   INITIAL_WISHLIST,
   INITIAL_ACHATS_COUTEUX,
   INITIAL_MONTHLY_GOALS,
-  INITIAL_EDITORIAL_EVENTS
+  INITIAL_EDITORIAL_EVENTS,
+  INITIAL_PROJECT_FOLDERS
 } from "./initialData";
 
 import InteractiveModuleTable, { TableColumn } from "./components/InteractiveModuleTable";
@@ -395,6 +397,15 @@ export default function App() {
     const saved = localStorage.getItem("mp_editorial_events_v2");
     return saved ? JSON.parse(saved) : INITIAL_EDITORIAL_EVENTS;
   });
+
+  const [folders, setFolders] = useState<ProjectFolder[]>(() => {
+    const saved = localStorage.getItem("mp_project_folders_v1");
+    return saved ? JSON.parse(saved) : INITIAL_PROJECT_FOLDERS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("mp_project_folders_v1", JSON.stringify(folders));
+  }, [folders]);
 
 
 
@@ -2928,27 +2939,35 @@ export default function App() {
                     <ScreenMediaSection screenMedia={screenMedia} setScreenMedia={setScreenMedia} />
                   ) : activeMenu === "project_folders" ? (
                     <ProjectFoldersSection
+                      folders={folders}
+                      setFolders={setFolders}
                       formations={formations}
                       setFormations={setFormations}
                       links={links}
                       setLinks={setLinks}
                       monthlyGoals={monthlyGoals}
                       setMonthlyGoals={setMonthlyGoals}
+                      events={editorialEvents}
+                      setEvents={setEditorialEvents}
                     />
                   ) : activeMenu === "formations" ? (
-                    <FormationsSection formations={formations} setFormations={setFormations} activeTab="carriere_pro" hideTabs={true} />
+                    <FormationsSection formations={formations} setFormations={setFormations} folders={folders} setFolders={setFolders} activeTab="carriere_pro" hideTabs={true} />
                   ) : activeMenu === "macircle" ? (
-                    <FormationsSection formations={formations} setFormations={setFormations} activeTab="ma_circle" hideTabs={true} />
+                    <FormationsSection formations={formations} setFormations={setFormations} folders={folders} setFolders={setFolders} activeTab="ma_circle" hideTabs={true} />
                   ) : activeMenu === "monthly_goals" ? (
                     <MonthlyGoalsSection 
                       goals={monthlyGoals} 
                       setGoals={setMonthlyGoals} 
+                      folders={folders}
+                      setFolders={setFolders}
                       availableChannels={channels.map(c => c.name)}
                     />
                   ) : activeMenu === "editorial_calendar" ? (
                     <EditorialCalendarSection
                       events={editorialEvents}
                       setEvents={setEditorialEvents}
+                      folders={folders}
+                      setFolders={setFolders}
                       availableChannels={channels.map(c => c.name)}
                     />
                   ) : activeMenu === "habits" ? (

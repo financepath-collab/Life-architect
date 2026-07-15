@@ -310,5 +310,20 @@ export interface EditorialEvent {
   notes?: string;
   googleEventId?: string;
   outlookEventId?: string;
+  projectId?: string;
+}
+
+export interface ProjectFolder {
+  id: string;
+  name: string;
+  description: string;
+  category: "YouTube" | "Formation" | "E-commerce" | "Finance" | "Autre";
+  createdAt: string;
+  associatedFormationIds: string[];
+  associatedLinkIds: string[];
+  associatedGoalIds: string[];
+  customObjectives: { id: string; text: string; completed: boolean }[];
+  customLinks: { id: string; title: string; url: string; category: string }[];
+  notes: string;
 }
 

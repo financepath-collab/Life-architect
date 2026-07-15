@@ -24,7 +24,8 @@ import {
   BookItem,
   ScreenMediaItem,
   MonthlyGoal,
-  EditorialEvent
+  EditorialEvent,
+  ProjectFolder
 } from "./types";
 
 
@@ -282,6 +283,49 @@ export const INITIAL_EDITORIAL_EVENTS: EditorialEvent[] = [
     notes: "Post d'analyse macro-économique rapide avec infographie."
   }
 ];
+
+export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
+  {
+    id: "proj_1",
+    name: "Chaîne YouTube - The Moroccan Analyst",
+    description: "Planification des tutoriels de modélisation financière, analyses macroéconomiques et développement de l'audience.",
+    category: "YouTube",
+    createdAt: "2026-05-15",
+    associatedFormationIds: ["f1", "f2"], // we can prelink some if we like
+    associatedLinkIds: [],
+    associatedGoalIds: ["mg1"],
+    customObjectives: [
+      { id: "co_1", text: "Atteindre 10k abonnés d'ici la fin d'année", completed: false },
+      { id: "co_2", text: "Publier 2 vidéos de haute qualité par semaine", completed: true },
+      { id: "co_3", text: "Finaliser le script de la vidéo de Private Equity", completed: false }
+    ],
+    customLinks: [
+      { id: "cl_1", title: "YouTube Creator Studio", url: "https://studio.youtube.com", category: "Outils" },
+      { id: "cl_2", title: "Inspiration : Financial Modeling World Cup", url: "https://fmworldcup.com", category: "Ressources" }
+    ],
+    notes: "Axe principal de croissance de l'audience. Les vidéos de modélisation de LBO sur Excel ont le meilleur taux de rétention. Se concentrer sur l'aspect éducationnel premium."
+  },
+  {
+    id: "proj_2",
+    name: "Lancement de la Formation Private Equity",
+    description: "Création et monétisation du programme d'accompagnement premium d'analyse transactionnelle pour professionnels de la finance.",
+    category: "Formation",
+    createdAt: "2026-06-10",
+    associatedFormationIds: ["f3"],
+    associatedLinkIds: [],
+    associatedGoalIds: ["mg2"],
+    customObjectives: [
+      { id: "co_4", text: "Enregistrer les 15 premiers modules vidéos", completed: false },
+      { id: "co_5", text: "Préparer le template de modèle financier de LBO", completed: true },
+      { id: "co_6", text: "Créer la page de capture de leads de l'Académie", completed: false }
+    ],
+    customLinks: [
+      { id: "cl_3", title: "Kajabi Dashboard", url: "https://kajabi.com", category: "Outils" }
+    ],
+    notes: "Tarification prévue : formule premium directe. Tester l'offre auprès de 50 premiers bêta-testeurs de la communauté 'The MA Circle'."
+  }
+];
+
 
 
 

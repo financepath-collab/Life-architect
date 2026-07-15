@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Formation, ResourceLink, MonthlyGoal } from "../types";
+import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent } from "../types";
 import { 
   Folder, 
   FolderOpen, 
@@ -19,7 +19,7 @@ import {
   Check, 
   X, 
   AlertCircle, 
-  Calendar, 
+  Calendar as CalendarIcon, 
   ChevronRight, 
   Globe, 
   Search,
@@ -29,98 +29,32 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
-interface ProjectFolder {
-  id: string;
-  name: string;
-  description: string;
-  category: "YouTube" | "Formation" | "E-commerce" | "Finance" | "Autre";
-  createdAt: string;
-  associatedFormationIds: string[];
-  associatedLinkIds: string[];
-  associatedGoalIds: string[];
-  customObjectives: { id: string; text: string; completed: boolean }[];
-  customLinks: { id: string; title: string; url: string; category: string }[];
-  notes: string;
-}
-
 interface ProjectFoldersSectionProps {
+  folders: ProjectFolder[];
+  setFolders: React.Dispatch<React.SetStateAction<ProjectFolder[]>>;
   formations: Formation[];
   setFormations: React.Dispatch<React.SetStateAction<Formation[]>>;
   links: ResourceLink[];
   setLinks: React.Dispatch<React.SetStateAction<ResourceLink[]>>;
   monthlyGoals: MonthlyGoal[];
   setMonthlyGoals: React.Dispatch<React.SetStateAction<MonthlyGoal[]>>;
+  events: EditorialEvent[];
+  setEvents: React.Dispatch<React.SetStateAction<EditorialEvent[]>>;
 }
 
-const DEFAULT_PROJECT_FOLDERS: ProjectFolder[] = [
-  {
-    id: "proj_1",
-    name: "Chaîne YouTube - The Moroccan Analyst",
-    description: "Planification des tutoriels de modélisation financière, analyses macroéconomiques et développement de l'audience.",
-    category: "YouTube",
-    createdAt: "2026-05-15",
-    associatedFormationIds: [],
-    associatedLinkIds: [],
-    associatedGoalIds: [],
-    customObjectives: [
-      { id: "co_1", text: "Atteindre 10k abonnés d'ici la fin d'année", completed: false },
-      { id: "co_2", text: "Publier 2 vidéos de haute qualité par semaine", completed: true },
-      { id: "co_3", text: "Finaliser le script de la vidéo de Private Equity", completed: false }
-    ],
-    customLinks: [
-      { id: "cl_1", title: "YouTube Creator Studio", url: "https://studio.youtube.com", category: "Outils" },
-      { id: "cl_2", title: "Inspiration : Financial Modeling World Cup", url: "https://fmworldcup.com", category: "Ressources" }
-    ],
-    notes: "Axe principal de croissance de l'audience. Les vidéos de modélisation de LBO sur Excel ont le meilleur taux de rétention. Se concentrer sur l'aspect éducationnel premium."
-  },
-  {
-    id: "proj_2",
-    name: "Lancement de la Formation Private Equity",
-    description: "Création et monétisation du programme d'accompagnement premium d'analyse transactionnelle pour professionnels de la finance.",
-    category: "Formation",
-    createdAt: "2026-06-10",
-    associatedFormationIds: [],
-    associatedLinkIds: [],
-    associatedGoalIds: [],
-    customObjectives: [
-      { id: "co_4", text: "Enregistrer les 15 premiers modules vidéos", completed: false },
-      { id: "co_5", text: "Préparer le template de modèle financier de LBO", completed: true },
-      { id: "co_6", text: "Créer la page de capture de leads de l'Académie", completed: false }
-    ],
-    customLinks: [
-      { id: "cl_3", title: "Kajabi Dashboard", url: "https://kajabi.com", category: "Outils" }
-    ],
-    notes: "Tarification prévue : formule premium directe. Tester l'offre auprès de 50 premiers bêta-testeurs de la communauté 'The MA Circle'."
-  }
-];
-
 export default function ProjectFoldersSection({
+  folders = [],
+  setFolders,
   formations = [],
   setFormations,
   links = [],
   setLinks,
   monthlyGoals = [],
-  setMonthlyGoals
+  setMonthlyGoals,
+  events = [],
+  setEvents
 }: ProjectFoldersSectionProps) {
   
-  // State for folders
-  const [folders, setFolders] = useState<ProjectFolder[]>(() => {
-    const saved = localStorage.getItem("mp_project_folders_v1");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Failed to parse project folders", e);
-      }
-    }
-    return DEFAULT_PROJECT_FOLDERS;
-  });
-
-  // Save to local storage
-  useEffect(() => {
-    localStorage.setItem("mp_project_folders_v1", JSON.stringify(folders));
-  }, [folders]);
-
   // Selected folder
   const [selectedFolderId, setSelectedFolderId] = useState<string>(() => {
     return folders[0]?.id || "";
@@ -132,7 +66,7 @@ export default function ProjectFoldersSection({
   }, [folders, selectedFolderId]);
 
   // Tab control within selected folder
-  const [activeTab, setActiveTab] = useState<"overview" | "formations" | "objectives" | "links">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "formations" | "objectives" | "links" | "calendar">("overview");
 
   // Form states for creating/editing projects
   const [showProjectModal, setShowProjectModal] = useState(false);
@@ -399,6 +333,11 @@ export default function ProjectFoldersSection({
     if (!selectedFolder) return [];
     return monthlyGoals.filter(g => selectedFolder.associatedGoalIds.includes(g.id));
   }, [selectedFolder, monthlyGoals]);
+
+  const associatedEvents = useMemo(() => {
+    if (!selectedFolder) return [];
+    return events.filter(e => e.projectId === selectedFolder.id);
+  }, [selectedFolder, events]);
 
   // Compute stats for unified project view
   const projectStats = useMemo(() => {
@@ -701,6 +640,17 @@ export default function ProjectFoldersSection({
                   >
                     <Link2 className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-amber-500" />
                     <span>Liens & Ressources ({selectedFolder.customLinks.length + associatedLinks.length})</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("calendar")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === "calendar" 
+                        ? "bg-neutral-900 text-white shadow-3xs" 
+                        : "bg-neutral-50 border border-neutral-100 text-neutral-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-indigo-500" />
+                    <span>Calendrier & Contenus ({associatedEvents.length})</span>
                   </button>
                 </div>
               </div>
