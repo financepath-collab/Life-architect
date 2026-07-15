@@ -85,6 +85,14 @@ export default function ProjectFoldersSection({
   const [showAssociateFormation, setShowAssociateFormation] = useState(false);
   const [showAssociateGoal, setShowAssociateGoal] = useState(false);
   const [showAssociateLink, setShowAssociateLink] = useState(false);
+  const [showAssociateEvent, setShowAssociateEvent] = useState(false);
+
+  // New project event form states
+  const [newEventTitle, setNewEventTitle] = useState("");
+  const [newEventDate, setNewEventDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [newEventPlatform, setNewEventPlatform] = useState("YouTube");
+  const [newEventContentType, setNewEventContentType] = useState("Vidéo Longue");
+  const [newEventStatus, setNewEventStatus] = useState("Brouillon");
 
   // Edit notes debounced-like local state
   const [localNotes, setLocalNotes] = useState("");
@@ -318,6 +326,41 @@ export default function ProjectFoldersSection({
     setShowAssociateGoal(false);
   };
 
+  // Associate/disassociate an existing calendar event
+  const handleAssociateEvent = (eventId: string) => {
+    if (!selectedFolder) return;
+    setEvents(prev => prev.map(e => {
+      if (e.id === eventId) {
+        return {
+          ...e,
+          projectId: e.projectId === selectedFolder.id ? undefined : selectedFolder.id
+        };
+      }
+      return e;
+    }));
+    setShowAssociateEvent(false);
+  };
+
+  // Add a new project event
+  const handleAddProjectEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFolder || !newEventTitle.trim()) return;
+
+    const newEvt: EditorialEvent = {
+      id: "evt_" + Date.now(),
+      title: newEventTitle.trim(),
+      channelName: "Principal",
+      platform: newEventPlatform,
+      scheduledDate: newEventDate || new Date().toISOString().split("T")[0],
+      status: newEventStatus as any,
+      contentType: newEventContentType as any,
+      projectId: selectedFolder.id
+    };
+
+    setEvents(prev => [newEvt, ...prev]);
+    setNewEventTitle("");
+  };
+
   // Fetch actual data associated with selected project
   const associatedFormations = useMemo(() => {
     if (!selectedFolder) return [];
@@ -402,6 +445,11 @@ export default function ProjectFoldersSection({
     if (!selectedFolder) return [];
     return monthlyGoals.filter(g => !selectedFolder.associatedGoalIds.includes(g.id));
   }, [selectedFolder, monthlyGoals]);
+
+  const unassociatedEvents = useMemo(() => {
+    if (!selectedFolder) return [];
+    return events.filter(e => e.projectId !== selectedFolder.id);
+  }, [selectedFolder, events]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -1189,6 +1237,174 @@ export default function ProjectFoldersSection({
                     )}
                   </div>
 
+                </div>
+              )}
+
+              {/* Tab 5: CALENDAR & CONTENT */}
+              {activeTab === "calendar" && (
+                <div className="bg-white border border-neutral-200/90 rounded-2xl p-5 space-y-5 animate-in fade-in duration-300">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100">
+                    <div>
+                      <h4 className="text-xs font-black text-neutral-900 uppercase">📅 Calendrier Éditorial & Contenus</h4>
+                      <p className="text-[10.5px] text-neutral-400 mt-0.5">Vidéos, publications et événements planifiés directement rattachés à ce projet.</p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      {/* Associate existing event button */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowAssociateEvent(!showAssociateEvent)}
+                          className="bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-800 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Relier Publication Existante</span>
+                        </button>
+
+                        {/* Dropdown for associate events */}
+                        {showAssociateEvent && (
+                          <div className="absolute right-0 mt-2 w-72 bg-white border border-neutral-200 rounded-xl shadow-xl z-30 p-2 max-h-60 overflow-y-auto">
+                            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest block px-2 py-1.5 font-sans border-b border-neutral-100">
+                              Sélectionner le contenu
+                            </span>
+                            {unassociatedEvents.length === 0 ? (
+                              <span className="text-[10px] text-neutral-400 italic block p-3 text-center">Aucun autre contenu disponible.</span>
+                            ) : (
+                              <div className="space-y-1 mt-1 font-sans">
+                                {unassociatedEvents.map(e => (
+                                  <button
+                                    key={e.id}
+                                    onClick={() => handleAssociateEvent(e.id)}
+                                    className="w-full text-left p-2 rounded-lg text-xs hover:bg-neutral-50 flex flex-col gap-0.5"
+                                  >
+                                    <span className="font-bold text-neutral-900 block line-clamp-1">{e.title}</span>
+                                    <span className="text-[9px] text-neutral-400 font-mono block">
+                                      {e.platform} • {e.scheduledDate} ({e.status})
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Add new event form directly in project folder context */}
+                  <form onSubmit={handleAddProjectEvent} className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-neutral-50 p-3 rounded-xl border border-neutral-200/60 font-sans">
+                    <div className="sm:col-span-4">
+                      <input
+                        type="text"
+                        value={newEventTitle}
+                        onChange={(e) => setNewEventTitle(e.target.value)}
+                        placeholder="Titre de la vidéo / post..."
+                        className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 focus:outline-hidden text-neutral-800"
+                        required
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <input
+                        type="date"
+                        value={newEventDate}
+                        onChange={(e) => setNewEventDate(e.target.value)}
+                        className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 focus:outline-hidden text-neutral-800 font-mono"
+                        required
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <select
+                        value={newEventPlatform}
+                        onChange={(e) => setNewEventPlatform(e.target.value)}
+                        className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 focus:outline-hidden text-neutral-800"
+                      >
+                        <option value="YouTube">YouTube</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="LinkedIn">LinkedIn</option>
+                        <option value="Autre">Autre</option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <select
+                        value={newEventContentType}
+                        onChange={(e) => setNewEventContentType(e.target.value)}
+                        className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 focus:outline-hidden text-neutral-800"
+                      >
+                        <option value="Vidéo Longue">Vidéo Longue</option>
+                        <option value="Short / Reel">Short / Reel</option>
+                        <option value="Post Écrit">Post Écrit</option>
+                        <option value="Podcast">Podcast</option>
+                        <option value="Autre">Autre</option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <button
+                        type="submit"
+                        className="w-full bg-neutral-900 hover:bg-neutral-800 text-white p-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer select-none"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Créer</span>
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* List of associated events */}
+                  <div className="space-y-2.5">
+                    {associatedEvents.map(evt => {
+                      const statusColors = {
+                        "Brouillon": "bg-neutral-100 text-neutral-600 border-neutral-200",
+                        "En cours": "bg-blue-50 text-blue-700 border-blue-100",
+                        "Planifié": "bg-indigo-50 text-indigo-700 border-indigo-100",
+                        "Publié": "bg-emerald-50 text-emerald-700 border-emerald-100"
+                      };
+
+                      return (
+                        <div
+                          key={evt.id}
+                          className="border border-neutral-100 bg-neutral-50/20 p-3.5 rounded-xl flex items-center justify-between gap-4 hover:border-neutral-200 hover:bg-white transition-all font-sans"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                              <CalendarIcon className="w-4 h-4" />
+                            </div>
+                            <div className="space-y-0.5">
+                              <h5 className="text-xs font-extrabold text-neutral-950">
+                                {evt.title}
+                              </h5>
+                              <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-neutral-400">
+                                <span className="font-semibold text-neutral-500 font-mono bg-neutral-100 px-1.5 py-0.2 rounded">
+                                  {evt.platform}
+                                </span>
+                                <span>•</span>
+                                <span className="font-mono">{evt.scheduledDate}</span>
+                                <span>•</span>
+                                <span className="italic">{evt.contentType}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border font-mono ${statusColors[evt.status] || "bg-neutral-50 text-neutral-500"}`}>
+                              {evt.status}
+                            </span>
+                            <button
+                              onClick={() => handleAssociateEvent(evt.id)}
+                              className="text-neutral-400 hover:text-red-500 transition-colors p-1"
+                              title="Retirer du projet"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {associatedEvents.length === 0 && (
+                      <div className="text-center py-10 text-neutral-400 italic text-xs">
+                        Aucun contenu ou vidéo planifié pour ce projet. Reliez un contenu existant ou créez-en un nouveau ci-dessus !
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

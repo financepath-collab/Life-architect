@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Formation } from "../types";
+import { Formation, ProjectFolder } from "../types";
 import { 
   GraduationCap, 
   Plus, 
@@ -127,6 +127,8 @@ export interface CreatorWebsite {
 interface FormationsSectionProps {
   formations: Formation[]; 
   setFormations: React.Dispatch<React.SetStateAction<Formation[]>>;
+  folders?: ProjectFolder[];
+  setFolders?: React.Dispatch<React.SetStateAction<ProjectFolder[]>>;
   activeTab?: "carriere_pro" | "ma_circle";
   hideTabs?: boolean;
 }
@@ -134,6 +136,8 @@ interface FormationsSectionProps {
 export default function FormationsSection({ 
   formations, 
   setFormations,
+  folders = [],
+  setFolders,
   activeTab: activeTabProp,
   hideTabs = false
 }: FormationsSectionProps) {
@@ -288,6 +292,8 @@ export default function FormationsSection({
   const [lDuration, setLDuration] = useState(10);
   const [lProgress, setLProgress] = useState(0);
   const [lStatus, setLStatus] = useState<"Non commencé" | "En cours" | "Terminé">("En cours");
+  const [lFolderId, setLFolderId] = useState<string>("");
+  const [selectedFilterFolderId, setSelectedFilterFolderId] = useState<string>("");
 
   const [skName, setSkName] = useState("");
   const [skCategory, setSkCategory] = useState<CareerSkill["category"]>("Finance");
@@ -322,6 +328,13 @@ export default function FormationsSection({
   const completedLearnCourses = formations.filter(f => f.progressPercent === 100 || f.status === "Terminé").length;
   const acquiredSkillsCount = skills.filter(s => s.status === "Acquise").length;
   const activeOpportunities = jobOpportunities.filter(o => o.status !== "Refusé" && o.status !== "Offre").length;
+
+  const filteredFormations = React.useMemo(() => {
+    if (!selectedFilterFolderId) return formations;
+    const folder = folders.find(f => f.id === selectedFilterFolderId);
+    if (!folder) return formations;
+    return formations.filter(f => folder.associatedFormationIds.includes(f.id));
+  }, [formations, folders, selectedFilterFolderId]);
 
   // --- SUBMISSION HANDLERS ---
   const handleAddPublishedCourse = (e: React.FormEvent) => {
@@ -363,12 +376,26 @@ export default function FormationsSection({
   const handleAddLearningCourse = (e: React.FormEvent) => {
     e.preventDefault();
     if (!lTitle.trim()) return;
+    const courseId = "learn_" + Date.now();
     setFormations(prev => [...prev, {
-      id: "learn_" + Date.now(), title: lTitle.trim(), instructor: lInstructor.trim() || "Expert",
+      id: courseId, title: lTitle.trim(), instructor: lInstructor.trim() || "Expert",
       platform: lPlatform.trim() || "Udemy", durationHours: lDuration,
       progressPercent: lStatus === "Terminé" ? 100 : lProgress, status: lStatus
     }]);
-    setLTitle(""); setLInstructor(""); setLPlatform(""); setLDuration(10); setLProgress(0);
+
+    if (lFolderId && setFolders) {
+      setFolders(prev => prev.map(f => {
+        if (f.id === lFolderId) {
+          return {
+            ...f,
+            associatedFormationIds: [...f.associatedFormationIds, courseId]
+          };
+        }
+        return f;
+      }));
+    }
+
+    setLTitle(""); setLInstructor(""); setLPlatform(""); setLDuration(10); setLProgress(0); setLFolderId("");
     setShowLearnForm(false);
   };
 
@@ -574,13 +601,25 @@ export default function FormationsSection({
                   <h3 className="text-xs font-black text-neutral-900 uppercase tracking-tight">Vos Programmes d'Études</h3>
                   <p className="text-[11px] text-neutral-400 font-medium">Gérez votre apprentissage, relisez vos chapitres et complétez les modules de vos cours.</p>
                 </div>
-                <button
-                  onClick={() => setShowLearnForm(true)}
-                  className="bg-neutral-950 hover:bg-neutral-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Enregistrer un cours</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={selectedFilterFolderId}
+                    onChange={(e) => setSelectedFilterFolderId(e.target.value)}
+                    className="text-xs font-bold text-neutral-700 bg-white border border-neutral-200 rounded-xl py-2 px-3 focus:outline-hidden cursor-pointer font-sans"
+                  >
+                    <option value="">📁 Tous les dossiers</option>
+                    {folders.map(f => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setShowLearnForm(true)}
+                    className="bg-neutral-950 hover:bg-neutral-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Enregistrer un cours</span>
+                  </button>
+                </div>
               </div>
 
               {/* Graphique circulaire d'avancement des formations */}
@@ -710,57 +749,100 @@ export default function FormationsSection({
 
               {/* Grid representation */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {formations.length === 0 ? (
+                {filteredFormations.length === 0 ? (
                   <div className="col-span-full py-16 text-center text-neutral-400 bg-white border border-dashed border-neutral-200 rounded-3xl italic text-xs">
                     Aucun cours d'apprentissage enregistré. Cliquez sur le bouton pour en ajouter un.
                   </div>
                 ) : (
-                  formations.map(course => (
-                    <div key={course.id} className="bg-white border border-neutral-200/90 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-start gap-2">
-                          <span className="text-[9px] bg-neutral-100 border border-neutral-200/50 text-neutral-600 px-2.5 py-0.5 rounded-full font-bold font-mono">
-                            {course.platform}
-                          </span>
-                          <button
-                            onClick={() => deleteLearningCourse(course.id)}
-                            className="text-neutral-400 hover:text-red-500 p-1 rounded-lg hover:bg-neutral-50 transition-all cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <h4 className="text-xs font-black text-neutral-900 leading-snug line-clamp-2 min-h-[36px]">{course.title}</h4>
-                        <p className="text-[10px] text-neutral-400 font-bold font-mono">Par {course.instructor} • {course.durationHours} Heures</p>
-                      </div>
+                  filteredFormations.map(course => {
+                    const associatedFolder = folders.find(f => f.associatedFormationIds.includes(course.id));
 
-                      <div className="space-y-3 pt-3 border-t border-dashed border-neutral-100 mt-1">
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[10px] font-bold font-mono text-neutral-400">
-                            <span>Avancement</span>
-                            <span className="text-neutral-900">{course.progressPercent}%</span>
+                    return (
+                      <div key={course.id} className="bg-white border border-neutral-200/90 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="text-[9px] bg-neutral-100 border border-neutral-200/50 text-neutral-600 px-2.5 py-0.5 rounded-full font-bold font-mono">
+                              {course.platform}
+                            </span>
+                            <button
+                              onClick={() => deleteLearningCourse(course.id)}
+                              className="text-neutral-400 hover:text-red-500 p-1 rounded-lg hover:bg-neutral-50 transition-all cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                          <input 
-                            type="range" min="0" max="100" value={course.progressPercent}
-                            onChange={(e) => updateLearningProgress(course.id, Number(e.target.value))}
-                            className="w-full accent-indigo-600 h-1.5 bg-neutral-100 rounded-lg cursor-pointer"
-                          />
+                          <h4 className="text-xs font-black text-neutral-900 leading-snug line-clamp-2 min-h-[36px]">{course.title}</h4>
+                          <p className="text-[10px] text-neutral-400 font-bold font-mono">Par {course.instructor} • {course.durationHours} Heures</p>
+                          
+                          {associatedFolder && (
+                            <div className="pt-1">
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black bg-indigo-50 border border-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md font-sans">
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                                {associatedFolder.name}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                            course.status === "Terminé" ? "bg-emerald-100 text-emerald-800" : "bg-indigo-100 text-indigo-800"
-                          }`}>
-                            {course.status}
-                          </span>
-                          <button
-                            onClick={() => toggleLearningStatus(course.id, course.status)}
-                            className="bg-neutral-900 hover:bg-neutral-800 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-                          >
-                            {course.status === "Terminé" ? "Reprendre" : "Terminer"}
-                          </button>
+
+                        <div className="space-y-3 pt-3 border-t border-dashed border-neutral-100 mt-1">
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] font-bold font-mono text-neutral-400">
+                              <span>Avancement</span>
+                              <span className="text-neutral-900">{course.progressPercent}%</span>
+                            </div>
+                            <input 
+                              type="range" min="0" max="100" value={course.progressPercent}
+                              onChange={(e) => updateLearningProgress(course.id, Number(e.target.value))}
+                              className="w-full accent-indigo-600 h-1.5 bg-neutral-100 rounded-lg cursor-pointer"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            <div className="flex flex-col gap-1">
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full inline-block text-center ${
+                                course.status === "Terminé" ? "bg-emerald-100 text-emerald-800" : "bg-indigo-100 text-indigo-800"
+                              }`}>
+                                {course.status}
+                              </span>
+                              
+                              <select
+                                value={associatedFolder?.id || ""}
+                                onChange={(e) => {
+                                  const targetFolderId = e.target.value;
+                                  if (setFolders) {
+                                    setFolders(prev => prev.map(f => {
+                                      // Remove this course from f
+                                      let ids = f.associatedFormationIds.filter(id => id !== course.id);
+                                      // Add to target folder
+                                      if (f.id === targetFolderId) {
+                                        ids = [...ids, course.id];
+                                      }
+                                      return {
+                                        ...f,
+                                        associatedFormationIds: ids
+                                      };
+                                    }));
+                                  }
+                                }}
+                                className="text-[9px] font-bold text-neutral-500 bg-neutral-50 hover:bg-neutral-100 hover:text-neutral-800 border border-neutral-200 rounded-lg py-0.5 px-1 focus:outline-hidden cursor-pointer max-w-[95px]"
+                              >
+                                <option value="">📁 Projet...</option>
+                                {folders.map(f => (
+                                  <option key={f.id} value={f.id}>{f.name}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <button
+                              onClick={() => toggleLearningStatus(course.id, course.status)}
+                              className="bg-neutral-900 hover:bg-neutral-800 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer shrink-0"
+                            >
+                              {course.status === "Terminé" ? "Reprendre" : "Terminer"}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -1727,6 +1809,21 @@ export default function FormationsSection({
                   <input type="number" required placeholder="Avancement (%)" value={lProgress} onChange={e => setLProgress(Number(e.target.value))} className="bg-neutral-50 border p-2 rounded-xl" />
                   <select value={lStatus} onChange={e => setLStatus(e.target.value as any)} className="bg-neutral-50 border p-2 rounded-xl font-bold font-sans">
                     <option value="Non commencé">Non commencé</option><option value="En cours">En cours</option><option value="Terminé">Terminé</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-neutral-400 uppercase tracking-wider font-sans block">
+                    📁 Associer à un Dossier de Projet
+                  </label>
+                  <select
+                    value={lFolderId}
+                    onChange={(e) => setLFolderId(e.target.value)}
+                    className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs font-bold font-sans"
+                  >
+                    <option value="">-- Aucun --</option>
+                    {folders.map(f => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
                   </select>
                 </div>
                 <button type="submit" className="w-full bg-neutral-900 hover:bg-neutral-800 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Enregistrer</button>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { MonthlyGoal } from "../types";
+import { MonthlyGoal, ProjectFolder } from "../types";
 import { 
   Plus, 
   Trash2, 
@@ -20,12 +20,16 @@ import { motion, AnimatePresence } from "motion/react";
 interface MonthlyGoalsSectionProps {
   goals: MonthlyGoal[];
   setGoals: React.Dispatch<React.SetStateAction<MonthlyGoal[]>>;
+  folders?: ProjectFolder[];
+  setFolders?: React.Dispatch<React.SetStateAction<ProjectFolder[]>>;
   availableChannels?: string[];
 }
 
 export default function MonthlyGoalsSection({ 
   goals = [], 
   setGoals, 
+  folders = [],
+  setFolders,
   availableChannels = [
     "The Moroccan Analyst", 
     "The Moroccan CFO", 
@@ -68,6 +72,7 @@ export default function MonthlyGoalsSection({
   const [formTargetFollowers, setFormTargetFollowers] = useState<number | "">("");
   const [formCurrentFollowers, setFormCurrentFollowers] = useState<number | "">("");
   const [formNote, setFormNote] = useState("");
+  const [gFolderId, setGFolderId] = useState<string>("");
 
   const activeChannel = formChannelName === "Autre / Custom" ? customChannelName : formChannelName;
 
@@ -116,6 +121,8 @@ export default function MonthlyGoalsSection({
     const tFol = Number(formTargetFollowers) || 0;
     const cFol = Number(formCurrentFollowers) || 0;
 
+    const goalId = editingGoalId || ("mg_" + Date.now());
+
     if (editingGoalId) {
       // Edit mode
       setGoals(prev => prev.map(g => {
@@ -137,7 +144,7 @@ export default function MonthlyGoalsSection({
     } else {
       // Add mode
       const newGoal: MonthlyGoal = {
-        id: "mg_" + Date.now(),
+        id: goalId,
         month: formMonth,
         channelName: finalChannelName,
         targetRevenue: tRev,
@@ -147,6 +154,19 @@ export default function MonthlyGoalsSection({
         note: formNote.trim()
       };
       setGoals(prev => [newGoal, ...prev]);
+    }
+
+    if (setFolders) {
+      setFolders(prev => prev.map(f => {
+        let goalIds = f.associatedGoalIds.filter(id => id !== goalId);
+        if (f.id === gFolderId) {
+          goalIds = [...goalIds, goalId];
+        }
+        return {
+          ...f,
+          associatedGoalIds: goalIds
+        };
+      }));
     }
 
     // Reset form states
@@ -163,6 +183,7 @@ export default function MonthlyGoalsSection({
     setFormTargetFollowers("");
     setFormCurrentFollowers("");
     setFormNote("");
+    setGFolderId("");
     setEditingGoalId(null);
   };
 
@@ -184,6 +205,10 @@ export default function MonthlyGoalsSection({
     setFormTargetFollowers(goal.targetFollowers);
     setFormCurrentFollowers(goal.currentFollowers);
     setFormNote(goal.note || "");
+    
+    const associatedFolder = folders.find(f => f.associatedGoalIds.includes(goal.id));
+    setGFolderId(associatedFolder?.id || "");
+    
     setShowForm(true);
   };
 
@@ -426,6 +451,21 @@ export default function MonthlyGoalsSection({
 
               </div>
 
+              {/* Project Folder association */}
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400 block mb-1">📁 Dossier de projet associé</label>
+                <select
+                  value={gFolderId}
+                  onChange={(e) => setGFolderId(e.target.value)}
+                  className="w-full bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-bold text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer font-sans"
+                >
+                  <option value="">-- Aucun --</option>
+                  {folders.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
+
               {/* Note input field */}
               <div>
                 <label className="text-[10px] font-black uppercase tracking-wider text-neutral-400 block mb-1">Notes / Plan d'action pour atteindre cet objectif</label>
@@ -483,6 +523,7 @@ export default function MonthlyGoalsSection({
             {filteredGoals.map((g) => {
               const revPercent = g.targetRevenue > 0 ? Math.round((g.currentRevenue / g.targetRevenue) * 100) : 0;
               const folPercent = g.targetFollowers > 0 ? Math.round((g.currentFollowers / g.targetFollowers) * 100) : 0;
+              const associatedFolder = folders.find(f => f.associatedGoalIds.includes(g.id));
 
               return (
                 <div 
@@ -494,6 +535,15 @@ export default function MonthlyGoalsSection({
                     <div>
                       <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest font-mono">Chaîne</span>
                       <h4 className="text-sm font-black text-neutral-900 dark:text-neutral-50 mt-0.5">{g.channelName}</h4>
+                      
+                      {associatedFolder && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 text-[9px] font-black bg-indigo-50 border border-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md font-sans">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                            {associatedFolder.name}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {g.note && (
@@ -565,20 +615,47 @@ export default function MonthlyGoalsSection({
 
                   {/* Right Column - Actions */}
                   <div className="flex md:flex-col items-center justify-end gap-2 shrink-0 border-t md:border-t-0 border-neutral-100 pt-3 md:pt-0">
-                    <button
-                      onClick={() => startEdit(g)}
-                      className="p-1.5 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-colors cursor-pointer"
-                      title="Modifier l'objectif"
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => startEdit(g)}
+                        className="p-1.5 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-colors cursor-pointer"
+                        title="Modifier l'objectif"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => deleteGoal(g.id)}
+                        className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
+                        title="Supprimer l'objectif"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <select
+                      value={associatedFolder?.id || ""}
+                      onChange={(e) => {
+                        const targetFolderId = e.target.value;
+                        if (setFolders) {
+                          setFolders(prev => prev.map(f => {
+                            let ids = f.associatedGoalIds.filter(id => id !== g.id);
+                            if (f.id === targetFolderId) {
+                              ids = [...ids, g.id];
+                            }
+                            return {
+                              ...f,
+                              associatedGoalIds: ids
+                            };
+                          }));
+                        }
+                      }}
+                      className="text-[9px] font-bold text-neutral-500 bg-neutral-50 hover:bg-neutral-100 hover:text-neutral-800 border border-neutral-200 rounded-lg py-1 px-1.5 focus:outline-hidden cursor-pointer max-w-[100px] font-sans"
                     >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => deleteGoal(g.id)}
-                      className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
-                      title="Supprimer l'objectif"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <option value="">📁 Projet...</option>
+                      {folders.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
                   </div>
 
                 </div>

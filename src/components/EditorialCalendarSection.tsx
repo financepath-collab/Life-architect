@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { EditorialEvent } from "../types";
+import { EditorialEvent, ProjectFolder } from "../types";
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft, 
@@ -52,12 +52,16 @@ import {
 interface EditorialCalendarSectionProps {
   events: EditorialEvent[];
   setEvents: React.Dispatch<React.SetStateAction<EditorialEvent[]>>;
+  folders?: ProjectFolder[];
+  setFolders?: React.Dispatch<React.SetStateAction<ProjectFolder[]>>;
   availableChannels?: string[];
 }
 
 export default function EditorialCalendarSection({ 
   events = [], 
   setEvents,
+  folders = [],
+  setFolders,
   availableChannels = [
     "The Moroccan Analyst", 
     "The Moroccan CFO", 
