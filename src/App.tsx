@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   DailyHabit, 
@@ -136,7 +136,8 @@ import {
   Target,
   ClipboardCheck,
   CalendarDays,
-  Star
+  Star,
+  Save
 } from "lucide-react";
 
 function Logo({ className = "w-8 h-8 text-indigo-500" }: { className?: string }) {
@@ -166,6 +167,21 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem("la_is_unlocked") === "true";
   });
+
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  const triggerToast = (message: string, type: "success" | "error" | "info" = "success") => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // --- HABIT HISTORY (HEATMAP TRACKER) ---
   const [habitHistory, setHabitHistory] = useState<Record<string, string[]>>(() => {
@@ -237,6 +253,168 @@ export default function App() {
 
   const [overdueHabitsAlert, setOverdueHabitsAlert] = useState<DailyHabit[]>([]);
   const [showOverdueModal, setShowOverdueModal] = useState<boolean>(false);
+
+  // --- BROWSER NOTIFICATIONS FOR IMPORTANT HABITS ---
+  const notifiedHabitsRef = useRef<Record<string, string>>({});
+  const [notifiedHabits, setNotifiedHabits] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("mp_notified_habits");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        notifiedHabitsRef.current = parsed;
+        setNotifiedHabits(parsed);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const [notificationPermission, setNotificationPermission] = useState<string>(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      return Notification.permission;
+    }
+    return "default";
+  });
+
+  const requestNotificationPermission = () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+      });
+    }
+  };
+
+  const dailyHabitsRef = useRef(dailyHabits);
+  useEffect(() => {
+    dailyHabitsRef.current = dailyHabits;
+  }, [dailyHabits]);
+
+  const [notificationInterval, setNotificationInterval] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("mp_notification_interval");
+      return saved ? parseInt(saved, 10) : 15; // default 15 seconds
+    } catch (e) {
+      return 15;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("mp_notification_interval", notificationInterval.toString());
+  }, [notificationInterval]);
+
+  const [manualCheckFeedback, setManualCheckFeedback] = useState<string | null>(null);
+
+  const runNotificationCheck = (isManual = false) => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      if (isManual) {
+        setManualCheckFeedback("Les notifications ne sont pas prises en charge.");
+        setTimeout(() => setManualCheckFeedback(null), 3000);
+      }
+      return;
+    }
+    if (Notification.permission !== "granted") {
+      if (isManual) {
+        setManualCheckFeedback("Autorisation de notification manquante.");
+        setTimeout(() => setManualCheckFeedback(null), 3000);
+      }
+      return;
+    }
+
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const currentHour = now.getHours();
+    const currentMin = now.getMinutes();
+
+    const habitsToNotify = dailyHabitsRef.current.filter(h => {
+      if (!h.isImportant || h.completed || !h.dueTime) return false;
+
+      // Check if already notified today
+      const lastNotifiedDate = notifiedHabitsRef.current[h.id];
+      if (lastNotifiedDate === todayStr) return false;
+
+      // Parse dueTime (format "HH:MM")
+      const parts = h.dueTime.split(":");
+      if (parts.length !== 2) return false;
+      const dueHour = parseInt(parts[0], 10);
+      const dueMin = parseInt(parts[1], 10);
+      if (isNaN(dueHour) || isNaN(dueMin)) return false;
+
+      // Has current time reached or passed due time?
+      const isDue = (currentHour > dueHour) || (currentHour === dueHour && currentMin >= dueMin);
+      return isDue;
+    });
+
+    if (habitsToNotify.length > 0) {
+      habitsToNotify.forEach(h => {
+        try {
+          new Notification("⏰ Habitude Importante !", {
+            body: `Il est temps d'effectuer : "${h.name}" (Heure limite : ${h.dueTime})`,
+            icon: "/favicon.ico",
+            tag: `habit-due-${h.id}-${todayStr}`,
+            requireInteraction: true
+          });
+
+          // Mark as notified
+          notifiedHabitsRef.current[h.id] = todayStr;
+          localStorage.setItem("mp_notified_habits", JSON.stringify(notifiedHabitsRef.current));
+        } catch (err) {
+          console.error("Erreur notification :", err);
+        }
+      });
+      // Sync state to trigger re-renders
+      setNotifiedHabits({ ...notifiedHabitsRef.current });
+      if (isManual) {
+        setManualCheckFeedback(`Succès ! ${habitsToNotify.length} rappel(s) envoyé(s).`);
+        setTimeout(() => setManualCheckFeedback(null), 3500);
+      }
+    } else {
+      if (isManual) {
+        setManualCheckFeedback("Aucune habitude importante en retard détectée.");
+        setTimeout(() => setManualCheckFeedback(null), 3000);
+      }
+    }
+  };
+
+  const triggerImmediateCheck = () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setManualCheckFeedback("Notifications non supportées par ce navigateur.");
+      setTimeout(() => setManualCheckFeedback(null), 3000);
+      return;
+    }
+
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+        if (permission === "granted") {
+          runNotificationCheck(true);
+        } else {
+          setManualCheckFeedback("Veuillez d'abord autoriser les notifications.");
+          setTimeout(() => setManualCheckFeedback(null), 3000);
+        }
+      });
+      return;
+    }
+
+    runNotificationCheck(true);
+  };
+
+  useEffect(() => {
+    // Run an initial check shortly after mounting / interval changes
+    const initialTimeout = setTimeout(() => {
+      runNotificationCheck(false);
+    }, 1000);
+
+    const intervalId = setInterval(() => {
+      runNotificationCheck(false);
+    }, notificationInterval * 1000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(intervalId);
+    };
+  }, [notificationInterval]);
 
   const [weeklyObjectives, setWeeklyObjectives] = useState<WeeklyObjective[]>(() => {
     const saved = localStorage.getItem("mp_weekly_objectives_v2");
@@ -700,6 +878,49 @@ export default function App() {
 
 
   // --- UTILITY ACTION HANDLERS ---
+
+  const forceManualBackup = () => {
+    try {
+      localStorage.setItem("mp_habits_v2", JSON.stringify(dailyHabits));
+      localStorage.setItem("mp_habit_history_v2", JSON.stringify(habitHistory));
+      localStorage.setItem("mp_weekly_objectives_v2", JSON.stringify(weeklyObjectives));
+      localStorage.setItem("mp_transactions_v2", JSON.stringify(transactions));
+      localStorage.setItem("mp_virements_v2", JSON.stringify(virements));
+      localStorage.setItem("mp_stocks_v2", JSON.stringify(stocks));
+      localStorage.setItem("mp_budgets_v2", JSON.stringify(budgets));
+      localStorage.setItem("mp_salaires_v2", JSON.stringify(salaires));
+      localStorage.setItem("mp_epargnes_v2", JSON.stringify(epargnes));
+      localStorage.setItem("mp_actions30_v2", JSON.stringify(actions30Jours));
+      localStorage.setItem("mp_profil_v2", JSON.stringify(profilAmeliorations));
+      localStorage.setItem("mp_possibilites_v2", JSON.stringify(possibilitesGoals));
+      localStorage.setItem("mp_skin_v2", JSON.stringify(skinTrackers));
+      localStorage.setItem("mp_sport_exercises", JSON.stringify(sportExercises));
+      localStorage.setItem("mp_sport_history", JSON.stringify(sportHistory));
+      localStorage.setItem("mp_meal_v2", JSON.stringify(mealPlanners));
+      localStorage.setItem("la_focus_mode", String(focusMode));
+      localStorage.setItem("mp_achats_v2", JSON.stringify(achatsMensuels));
+      localStorage.setItem("mp_abonnements_v2", JSON.stringify(abonnements));
+      localStorage.setItem("mp_formations_v2", JSON.stringify(formations));
+      localStorage.setItem("mp_books_v3", JSON.stringify(books));
+      localStorage.setItem("mp_screenmedia_v3", JSON.stringify(screenMedia));
+      localStorage.setItem("mp_accounts_v2", JSON.stringify(accounts));
+      localStorage.setItem("mp_links_v2", JSON.stringify(links));
+      localStorage.setItem("mp_channels_v2", JSON.stringify(channels));
+      localStorage.setItem("mp_wishlist_v2", JSON.stringify(wishList));
+      localStorage.setItem("mp_achats_couteux_v2", JSON.stringify(achatsCouteux));
+      localStorage.setItem("mp_streak_count_v2", streakCount.toString());
+      localStorage.setItem("mp_monthly_goals_v2", JSON.stringify(monthlyGoals));
+      localStorage.setItem("mp_editorial_events_v2", JSON.stringify(editorialEvents));
+      localStorage.setItem("mp_project_folders_v1", JSON.stringify(folders));
+      localStorage.setItem("mp_notified_habits", JSON.stringify(notifiedHabitsRef.current));
+      localStorage.setItem("mp_notification_interval", notificationInterval.toString());
+      
+      triggerToast("📁 Toutes les données ont été synchronisées avec succès !", "success");
+    } catch (error) {
+      console.error("Manual backup failed:", error);
+      triggerToast("❌ Échec de la sauvegarde locale des données.", "error");
+    }
+  };
 
   // Habit toggling
   const toggleHabit = (id: string) => {
@@ -1291,14 +1512,24 @@ export default function App() {
     const activeEpargnes = epargnes.filter(e => e.status === "En cours").length;
     const activeSubscribers = abonnements.filter(a => a.status === "Actif").length;
 
+    // Notified habits stats
+    const todayStr = new Date().toISOString().split("T")[0];
+    const notifiedImportantHabits = dailyHabits.filter(h => h.isImportant && h.dueTime && notifiedHabits[h.id] === todayStr);
+    const notifiedImportantCompleted = notifiedImportantHabits.filter(h => h.completed).length;
+    const notifiedImportantTotal = notifiedImportantHabits.length;
+    const notifiedSuccessRate = notifiedImportantTotal > 0 ? (notifiedImportantCompleted / notifiedImportantTotal) * 100 : 0;
+
     return {
       netWorth,
       habitsRate,
       activeEpargnes,
       activeSubscribers,
-      habitsCompleted
+      habitsCompleted,
+      notifiedImportantCompleted,
+      notifiedImportantTotal,
+      notifiedSuccessRate
     };
-  }, [accounts, stocks, dailyHabits, epargnes, abonnements]);
+  }, [accounts, stocks, dailyHabits, epargnes, abonnements, notifiedHabits]);
 
   const activeCategoryObj = React.useMemo(() => {
     return categories.find(cat => cat.items.some(item => item.id === activeMenu));
@@ -1764,7 +1995,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-800 flex flex-col font-sans antialiased">
+    <div className="min-h-screen bg-neutral-50 text-neutral-800 flex flex-col font-sans antialiased overflow-x-hidden w-full max-w-full">
       
       {/* UNIFIED STICKY TOP NAVIGATION BAR */}
       <header className="sticky top-0 z-50 w-full bg-white border-b border-neutral-200/80 shadow-xs">
@@ -1778,14 +2009,14 @@ export default function App() {
             <div className="w-9 h-9 bg-neutral-900 rounded-xl flex items-center justify-center shadow-sm shrink-0 border border-neutral-800">
               <Logo className="w-5 h-5 text-white" />
             </div>
-            <div className="hidden 2xl:block">
+            <div className="hidden min-[1650px]:block">
               <span className="text-[8px] font-bold text-neutral-400 block tracking-widest uppercase font-mono leading-none">SYSTEM INTEGRATION</span>
               <span className="text-xs font-black text-neutral-900 block leading-tight mt-0.5">LIFE ARCHITECT</span>
             </div>
           </div>
 
           {/* Horizontal Navigation Menus (Center - Desktop only) */}
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 h-full overflow-visible">
+          <nav className="hidden xl:flex items-center gap-0.5 xl:gap-1 h-full overflow-visible">
             
             {/* Dashboard Link */}
             <button
@@ -1797,8 +2028,8 @@ export default function App() {
               }`}
             >
               <LayoutDashboard className={`w-3.5 h-3.5 shrink-0 ${activeMenu === "dashboard" ? "text-white" : "text-neutral-400"}`} />
-              <span className="hidden 2xl:inline">Tableau de Bord</span>
-              <span className="2xl:hidden">Dashboard</span>
+              <span className="hidden min-[1650px]:inline">Tableau de Bord</span>
+              <span className="min-[1650px]:hidden">Dashboard</span>
             </button>
 
             {/* Categories Hover Dropdowns */}
@@ -1810,28 +2041,28 @@ export default function App() {
               const displayLabel = 
                 cat.label === "Projets & Académie" ? (
                   <>
-                    <span className="hidden 2xl:inline">Projets & Académie</span>
-                    <span className="2xl:hidden">Projets</span>
+                    <span className="hidden min-[1650px]:inline">Projets & Académie</span>
+                    <span className="min-[1650px]:hidden">Projets</span>
                   </>
                 ) : cat.label === "Lectures & Écrans" ? (
                   <>
-                    <span className="hidden 2xl:inline">Lectures & Écrans</span>
-                    <span className="2xl:hidden">Lectures</span>
+                    <span className="hidden min-[1650px]:inline">Lectures & Écrans</span>
+                    <span className="min-[1650px]:hidden">Lectures</span>
                   </>
                 ) : cat.label === "Banque" ? (
                   <>
-                    <span className="hidden 2xl:inline">Banque</span>
-                    <span className="2xl:hidden">Banque</span>
+                    <span className="hidden min-[1650px]:inline">Banque</span>
+                    <span className="min-[1650px]:hidden">Banque</span>
                   </>
                 ) : cat.label === "Santé & Soins" ? (
                   <>
-                    <span className="hidden 2xl:inline">Santé & Soins</span>
-                    <span className="2xl:hidden">Santé</span>
+                    <span className="hidden min-[1650px]:inline">Santé & Soins</span>
+                    <span className="min-[1650px]:hidden">Santé</span>
                   </>
                 ) : cat.label === "Productivité" ? (
                   <>
-                    <span className="hidden 2xl:inline">Productivité</span>
-                    <span className="2xl:hidden">Prod.</span>
+                    <span className="hidden min-[1650px]:inline">Productivité</span>
+                    <span className="min-[1650px]:hidden">Prod.</span>
                   </>
                 ) : (
                   cat.label
@@ -1932,7 +2163,17 @@ export default function App() {
               title="Réinitialiser les routines quotidiennes pour un nouveau jour"
             >
               <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden 2xl:inline">Nouveau Jour</span>
+              <span className="hidden min-[1650px]:inline">Nouveau Jour</span>
+            </button>
+
+            {/* Manual Save Button */}
+            <button
+              onClick={forceManualBackup}
+              className="text-[9.5px] 2xl:text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white px-2 xl:px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1"
+              title="Forcer la sauvegarde manuelle et la synchronisation locale de toutes les données"
+            >
+              <Save className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden min-[1650px]:inline">Sauvegarder</span>
             </button>
 
             {/* Theme Toggle Button */}
@@ -1963,7 +2204,7 @@ export default function App() {
             {/* Responsive Mobile Menu Button */}
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 bg-neutral-50 hover:bg-neutral-100 rounded-xl border border-neutral-200 text-neutral-800 focus:outline-none cursor-pointer"
+              className="xl:hidden p-2 bg-neutral-50 hover:bg-neutral-100 rounded-xl border border-neutral-200 text-neutral-800 focus:outline-none cursor-pointer"
             >
               {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
@@ -1973,7 +2214,7 @@ export default function App() {
 
         {/* MOBILE DROPDOWN DRAWER OVERLAY */}
         {sidebarOpen && (
-          <div className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-45 bg-white border-t border-neutral-200 overflow-y-auto animate-in slide-in-from-top duration-300">
+          <div className="xl:hidden fixed inset-x-0 top-16 bottom-0 z-45 bg-white border-t border-neutral-200 overflow-y-auto animate-in slide-in-from-top duration-300">
             <div className="p-6 space-y-6">
               
               {/* Quick Mobile Indicators */}
@@ -2185,7 +2426,7 @@ export default function App() {
               {/* General Statistics Cards */}
               {!focusMode ? (
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                     {/* Net Worth */}
                     <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
                       <div className="space-y-1">
@@ -2213,6 +2454,28 @@ export default function App() {
                       </div>
                       <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
                         <Flame className="w-5 h-5" />
+                      </div>
+                    </div>
+
+                    {/* Notified Habits Success Rate */}
+                    <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Habitudes Notifiées</span>
+                        <h4 className="text-xl font-bold font-mono text-neutral-900">
+                          {dashboardStats.notifiedImportantTotal > 0 ? `${dashboardStats.notifiedSuccessRate.toFixed(0)}%` : "--"}
+                        </h4>
+                        <span className="text-[10px] text-neutral-400 font-medium">
+                          {dashboardStats.notifiedImportantTotal > 0 
+                            ? `${dashboardStats.notifiedImportantCompleted} / ${dashboardStats.notifiedImportantTotal} faites à temps`
+                            : "Aucun rappel aujourd'hui"}
+                        </span>
+                      </div>
+                      <div className={`p-3 rounded-xl border transition-all ${
+                        dashboardStats.notifiedImportantTotal > 0 && dashboardStats.notifiedSuccessRate === 100
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                          : "bg-neutral-100 border-neutral-200 text-neutral-900"
+                      }`}>
+                        <ClipboardCheck className="w-5 h-5" />
                       </div>
                     </div>
 
@@ -2512,14 +2775,95 @@ export default function App() {
                           <Flame className="w-4.5 h-4.5 text-neutral-900 animate-pulse" />
                           <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Discipline Quotidienne</h3>
                         </div>
-                        <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-800 px-2.5 py-1 rounded-full font-mono font-bold">
-                          {dailyHabits.filter(h => h.completed).length} / {dailyHabits.length} terminées
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {/* Browser Notifications status/action */}
+                          {typeof window !== "undefined" && "Notification" in window && (
+                            <button
+                              onClick={requestNotificationPermission}
+                              className={`text-[9px] font-black px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                                notificationPermission === "granted"
+                                  ? "bg-emerald-50 border-emerald-200/60 text-emerald-700 hover:bg-emerald-100/80"
+                                  : notificationPermission === "denied"
+                                  ? "bg-neutral-100 border-neutral-200 text-neutral-400 cursor-not-allowed"
+                                  : "bg-indigo-50 border-indigo-200/60 text-indigo-700 hover:bg-indigo-100"
+                              }`}
+                              title={
+                                notificationPermission === "granted"
+                                  ? "Notifications activées avec succès"
+                                  : notificationPermission === "denied"
+                                  ? "Notifications bloquées par votre navigateur. Veuillez les autoriser dans les paramètres du site."
+                                  : "Cliquer pour autoriser et activer les rappels d'habitude importants"
+                              }
+                            >
+                              <Bell className={`w-3 h-3 ${notificationPermission === "granted" ? "fill-emerald-500 text-emerald-600 animate-bounce" : "text-indigo-600"}`} />
+                              <span>
+                                {notificationPermission === "granted"
+                                  ? "Alertes Actives"
+                                  : notificationPermission === "denied"
+                                  ? "Bloqué"
+                                  : "Activer les alertes"}
+                              </span>
+                            </button>
+                          )}
+
+                          <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-800 px-2.5 py-1 rounded-full font-mono font-bold shrink-0">
+                            {dailyHabits.filter(h => h.completed).length} / {dailyHabits.length} terminées
+                          </span>
+                        </div>
                       </div>
 
                       <p className="text-xs text-neutral-400">
                         Cochez vos disciplines quotidiennes d'hygiène de vie, de sport et d'apprentissage pour renforcer votre série.
                       </p>
+
+                      {/* Controls for verification frequency & manual check */}
+                      {typeof window !== "undefined" && "Notification" in window && (
+                        <div className="bg-neutral-50/70 dark:bg-neutral-900/50 rounded-xl p-3 border border-neutral-200/50 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-wider font-sans">
+                              ⚙️ Rappels & Alertes
+                            </span>
+                            <AnimatePresence mode="wait">
+                              {manualCheckFeedback && (
+                                <motion.span
+                                  initial={{ opacity: 0, y: -4 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0 }}
+                                  className="text-[9px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100/50 px-2 py-0.5 rounded-md font-sans"
+                                >
+                                  {manualCheckFeedback}
+                                </motion.span>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                            <div className="flex items-center gap-1.5 text-[11px] text-neutral-600 dark:text-neutral-400 font-medium font-sans">
+                              <span>Vérifier toutes les :</span>
+                              <select
+                                value={notificationInterval}
+                                onChange={(e) => setNotificationInterval(Number(e.target.value))}
+                                className="bg-white dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[11px] font-bold text-neutral-800 dark:text-neutral-200 focus:outline-hidden cursor-pointer"
+                              >
+                                <option value="10">10 secondes</option>
+                                <option value="15">15 secondes</option>
+                                <option value="30">30 secondes</option>
+                                <option value="60">1 minute</option>
+                                <option value="300">5 minutes</option>
+                                <option value="600">10 minutes</option>
+                              </select>
+                            </div>
+
+                            <button
+                              onClick={triggerImmediateCheck}
+                              className="bg-white hover:bg-neutral-50 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer select-none"
+                              title="Déclencher une vérification manuelle immédiate"
+                            >
+                              <RefreshCw className="w-3 h-3 text-neutral-500" />
+                              <span>Vérifier</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
                         {dailyHabits.map(habit => (
@@ -3116,6 +3460,33 @@ export default function App() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* GLOBAL TOAST NOTIFICATION CONTAINER */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            className="fixed bottom-6 right-6 z-[200] max-w-sm bg-neutral-900 text-white border border-neutral-800 shadow-2xl rounded-2xl overflow-hidden p-4 flex items-center gap-3.5"
+          >
+            <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 shrink-0">
+              <ClipboardCheck className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-black text-white font-sans uppercase tracking-wide">Système de Planification</p>
+              <p className="text-[11px] text-neutral-300 font-medium leading-normal mt-0.5">{toast.message}</p>
+            </div>
+            <button 
+              onClick={() => setToast(null)}
+              className="p-1 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-all cursor-pointer shrink-0"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
 
