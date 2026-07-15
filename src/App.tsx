@@ -4,7 +4,6 @@ import {
   DailyHabit, 
   WeeklyObjective,
   FinanceTransaction, 
-  FinanceVirement, 
   StockEntry, 
   FinanceBudget, 
   FinanceSalaire, 
@@ -35,7 +34,6 @@ import {
   INITIAL_HABITS, 
   INITIAL_WEEKLY_OBJECTIVES,
   INITIAL_TRANSACTIONS, 
-  INITIAL_VIREMENTS, 
   INITIAL_STOCKS, 
   INITIAL_BUDGETS, 
   INITIAL_SALAIRES, 
@@ -77,6 +75,7 @@ import MonthlyGoalsSection from "./components/MonthlyGoalsSection";
 import EditorialCalendarSection from "./components/EditorialCalendarSection";
 import WeatherWidget from "./components/WeatherWidget";
 import DisciplineHeatmap from "./components/DisciplineHeatmap";
+import Actions30JoursSection from "./components/Actions30JoursSection";
 import FireCalculator from "./components/FireCalculator";
 
 
@@ -224,7 +223,6 @@ export default function App() {
     finance: true,
     productivity: true,
     health: false,
-    purchases: false,
     projets: true,
     formation: false,
     accounts: false
@@ -426,11 +424,6 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
   });
 
-  const [virements, setVirements] = useState<FinanceVirement[]>(() => {
-    const saved = localStorage.getItem("mp_virements_v2");
-    return saved ? JSON.parse(saved) : INITIAL_VIREMENTS;
-  });
-
   const [stocks, setStocks] = useState<StockEntry[]>(() => {
     const saved = localStorage.getItem("mp_stocks_v2");
     return saved ? JSON.parse(saved) : INITIAL_STOCKS;
@@ -558,7 +551,20 @@ export default function App() {
 
   const [wishList, setWishList] = useState<WishListItem[]>(() => {
     const saved = localStorage.getItem("mp_wishlist_v2");
-    return saved ? JSON.parse(saved) : INITIAL_WISHLIST;
+    if (saved) {
+      const parsed: WishListItem[] = JSON.parse(saved);
+      const merged = [...parsed];
+      INITIAL_WISHLIST.forEach(initItem => {
+        const alreadyExists = parsed.some(
+          x => x.id === initItem.id || x.itemName.toLowerCase() === initItem.itemName.toLowerCase()
+        );
+        if (!alreadyExists) {
+          merged.push(initItem);
+        }
+      });
+      return merged;
+    }
+    return INITIAL_WISHLIST;
   });
 
   const [achatsCouteux, setAchatsCouteux] = useState<AchatCouteuxItem[]>(() => {
@@ -668,10 +674,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("mp_transactions_v2", JSON.stringify(transactions));
   }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem("mp_virements_v2", JSON.stringify(virements));
-  }, [virements]);
 
   useEffect(() => {
     localStorage.setItem("mp_stocks_v2", JSON.stringify(stocks));
@@ -885,7 +887,6 @@ export default function App() {
       localStorage.setItem("mp_habit_history_v2", JSON.stringify(habitHistory));
       localStorage.setItem("mp_weekly_objectives_v2", JSON.stringify(weeklyObjectives));
       localStorage.setItem("mp_transactions_v2", JSON.stringify(transactions));
-      localStorage.setItem("mp_virements_v2", JSON.stringify(virements));
       localStorage.setItem("mp_stocks_v2", JSON.stringify(stocks));
       localStorage.setItem("mp_budgets_v2", JSON.stringify(budgets));
       localStorage.setItem("mp_salaires_v2", JSON.stringify(salaires));
@@ -970,7 +971,7 @@ export default function App() {
     if (nextVal) {
       setDashboardTab("routines");
       const distractingMenuIds = [
-        "comptes", "transactions", "virements", "stocks", "budgets", "salaires", "epargnes", "charts",
+        "comptes", "transactions", "stocks", "budgets", "salaires", "epargnes", "charts",
         "achats", "abonnements", "wishlist", "achats_couteux",
         "books", "screenmedia"
       ];
@@ -998,13 +999,16 @@ export default function App() {
       icon: Coins,
       items: [
         { id: "comptes", label: "Comptes Bancaires", icon: Landmark, desc: "Gestion des comptes pro, perso et liquidités." },
-        { id: "transactions", label: "Transactions", icon: Briefcase, desc: "Historique complet de vos entrées d'argent et dépenses." },
-        { id: "virements", label: "Virements", icon: RefreshCw, desc: "Planification et suivi des virements inter-comptes." },
+        { id: "transactions", label: "Transactions", icon: Briefcase, desc: "Historique complet de vos entrées d'argent et d'une rigueur absolue de vos charges." },
         { id: "stocks", label: "Portefeuille Bourse", icon: Wallet, desc: "Suivi de vos investissements en BVC." },
         { id: "budgets", label: "Budgets Mensuels", icon: Landmark, desc: "Gestion de vos plafonds de dépenses par enveloppe." },
         { id: "salaires", label: "Salaires & Revenus", icon: TrendingUp, desc: "Suivi de vos rentrées professionnelles et AdSense." },
         { id: "epargnes", label: "Objectifs Épargne", icon: PiggyBank, desc: "Progression vers vos projets immobiliers ou d'équipements." },
-        { id: "charts", label: "Graphiques & Analyses", icon: BarChart3, desc: "Visualisation complète de votre santé financière." }
+        { id: "charts", label: "Graphiques & Analyses", icon: BarChart3, desc: "Visualisation complète de votre santé financière." },
+        { id: "achats", label: "Achats Mensuels", icon: ShoppingCart, desc: "Liste de shopping, matériel pro et fournitures." },
+        { id: "abonnements", label: "Abonnements & Charges", icon: Bell, desc: "Contrôle de vos dépenses récurrentes et hébergement." },
+        { id: "wishlist", label: "Wish List", icon: Gift, desc: "Objets de désir et grands projets d'achat à long terme." },
+        { id: "achats_couteux", label: "Achats Coûteux", icon: Hourglass, desc: "Achats importants de moyenne échelle prévus à moyen terme." }
       ]
     },
     {
@@ -1012,11 +1016,11 @@ export default function App() {
       label: "Productivité",
       icon: CheckSquare,
       items: [
-        { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines créatives." },
-        { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour projets créateurs." },
+        { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." },
+        { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour vos projets pro et perso." },
         { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." },
         { id: "goals", label: "Possibilités & Goals", icon: Award, desc: "Planification de vos buts de vie majeurs." },
-        { id: "monthly_goals", label: "Objectifs Mensuels", icon: Target, desc: "Cibles de revenus et de progression pour chaque chaîne de contenu." }
+        { id: "monthly_goals", label: "Objectifs Mensuels", icon: Target, desc: "Cibles de progression mensuelle pour vos finances, projets et vie pro/perso." }
       ]
     },
     {
@@ -1030,26 +1034,14 @@ export default function App() {
       ]
     },
     {
-      id: "purchases",
-      label: "Achats",
-      icon: ShoppingCart,
-      items: [
-        { id: "achats", label: "Achats Mensuels", icon: ShoppingCart, desc: "Liste de shopping, matériel pro et fournitures." },
-        { id: "abonnements", label: "Abonnements & Charges", icon: Bell, desc: "Contrôle de vos dépenses récurrentes et hébergement." },
-        { id: "wishlist", label: "Wish List", icon: Gift, desc: "Objets de désir et grands projets d'achat à long terme." },
-        { id: "achats_couteux", label: "Achats Coûteux", icon: Hourglass, desc: "Achats importants de moyenne échelle prévus à moyen terme." }
-      ]
-    },
-    {
       id: "projets",
       label: "Projets & Académie",
       icon: FolderKanban,
       items: [
-        { id: "project_folders", label: "Dossiers de Projets", icon: FolderOpen, desc: "Organisez vos formations, objectifs de croissance et ressources par projet créateur ou d'académie." },
-        { id: "formations", label: "Carrière & Formations", icon: GraduationCap, desc: "Suivi complet de vos formations, compétences ciblées et opportunités de recrutement." },
-        { id: "macircle", label: "Académie \"The MA Circle\"", icon: Globe, desc: "Monétisation de vos canaux YouTube, formations produites et ventes de produits digitaux." },
-        { id: "channels", label: "Chaînes & Médias", icon: Tv, desc: "Abonnés et fréquence de publication de vos chaînes." },
-        { id: "editorial_calendar", label: "Calendrier Éditorial", icon: Calendar, desc: "Visualisez sous forme de calendrier les dates de publication prévues pour vos 3 chaînes YouTube et autres plateformes." },
+        { id: "project_folders", label: "Dossiers de Projets", icon: FolderOpen, desc: "Organisez vos projets professionnels, personnels et académiques en un seul endroit." },
+        { id: "formations", label: "Carrière & Académie", icon: GraduationCap, desc: "Suivi de votre apprentissage, compétences et opportunités professionnelles." },
+        { id: "channels", label: "Projets Médias & Canaux", icon: Tv, desc: "Statistiques et fréquences de publication de vos canaux de communication." },
+        { id: "editorial_calendar", label: "Calendrier de Projets", icon: Calendar, desc: "Calendrier de vos événements, projets de communication et publications." },
         { id: "links", label: "Liens Favoris", icon: Link2, desc: "Signets rapides vers vos ressources de marché bourse." }
       ]
     },
@@ -1066,8 +1058,8 @@ export default function App() {
 
   const visibleCategories = useMemo(() => {
     if (!focusMode) return categories;
-    // Masquer les flux financiers et de divertissement (Finance, Achats, Lectures & Écrans)
-    return categories.filter(cat => cat.id !== "finance" && cat.id !== "purchases" && cat.id !== "formation");
+    // Masquer les flux financiers (Finance & Achats) et de divertissement (Lectures & Écrans)
+    return categories.filter(cat => cat.id !== "finance" && cat.id !== "formation");
   }, [focusMode, categories]);
 
   const getModuleConfig = (moduleId: string) => {
@@ -1093,25 +1085,6 @@ export default function App() {
             { key: "type", label: "Type", type: "select", options: ["Revenue", "Dépense"] },
             { key: "amount", label: "Montant (MAD)", type: "number", required: true },
             { key: "account", label: "Compte", type: "text" }
-          ] as TableColumn[]
-        };
-
-      case "virements":
-        return {
-          title: "Virements & Transferts",
-          description: "Planification et suivi des virements de compte à compte ou d'épargne.",
-          data: virements,
-          onAdd: (item: any) => setVirements(prev => [item, ...prev]),
-          onEdit: (id: string, updated: any) => setVirements(prev => prev.map(x => x.id === id ? updated : x)),
-          onDelete: (id: string) => setVirements(prev => prev.filter(x => x.id !== id)),
-          onImport: (items: any[]) => setVirements(prev => [...items, ...prev]),
-          columns: [
-            { key: "date", label: "Date", type: "date", required: true },
-            { key: "description", label: "Description", type: "text", required: true },
-            { key: "sourceAccount", label: "Compte Source", type: "text", required: true },
-            { key: "targetAccount", label: "Compte Cible", type: "text", required: true },
-            { key: "amount", label: "Montant (MAD)", type: "number", required: true },
-            { key: "status", label: "Statut", type: "select", options: ["Planifié", "Exécuté", "Annulé"] }
           ] as TableColumn[]
         };
 
@@ -1214,7 +1187,7 @@ export default function App() {
       case "actions30":
         return {
           title: "Actions 30 Jours (Sprint)",
-          description: "Plan d'attaque quotidien intensif de 30 jours pour lancer un projet créateur.",
+          description: "Plan d'attaque quotidien intensif de 30 jours pour lancer un projet professionnel ou personnel majeur.",
           data: actions30Jours,
           onAdd: (item: any) => setActions30Jours(prev => [...prev, item]),
           onEdit: (id: string, updated: any) => setActions30Jours(prev => prev.map(x => x.id === id ? updated : x)),
@@ -1473,7 +1446,7 @@ export default function App() {
 
       case "channels":
         return {
-          title: "Suivi des Chaînes & Médias du Créateur",
+          title: "Suivi des Canaux de Communication & Médias",
           description: "Mesurez vos statistiques de croissance et fréquences de publication.",
           data: channels,
           onAdd: (item: any) => setChannels(prev => [...prev, item]),
@@ -1677,6 +1650,40 @@ export default function App() {
 
     switch (catId) {
       case "finance":
+        if (["achats", "abonnements", "wishlist", "achats_couteux"].includes(activeMenu)) {
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+              <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Achats Mensuels</span>
+                  <span className="text-base font-extrabold font-mono text-neutral-900 block">{achatsMensuels.length} Commandes</span>
+                </div>
+                <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><ShoppingCart className="w-4 h-4" /></div>
+              </div>
+              <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Abonnements Actifs</span>
+                  <span className="text-base font-extrabold font-mono text-neutral-900 block">{abonnements.filter(a => a.status === "Actif").length} Services</span>
+                </div>
+                <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Bell className="w-4 h-4" /></div>
+              </div>
+              <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Frais Récurrents</span>
+                  <span className="text-base font-extrabold font-mono text-neutral-800 block">-{totalMonthlyAbonnements.toLocaleString("fr-FR")} MAD / m</span>
+                </div>
+                <div className="p-2 bg-neutral-100 rounded-lg text-neutral-700 border border-neutral-200"><TrendingDown className="w-4 h-4" /></div>
+              </div>
+              <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Frais Annuels</span>
+                  <span className="text-base font-extrabold font-mono text-neutral-900 block">{(totalMonthlyAbonnements * 12).toLocaleString("fr-FR")} MAD / an</span>
+                </div>
+                <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Coins className="w-4 h-4" /></div>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
             <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
@@ -1774,40 +1781,6 @@ export default function App() {
                 <span className="text-base font-extrabold font-mono text-neutral-900 block font-semibold text-neutral-700">2.5 Litres / jour</span>
               </div>
               <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Heart className="w-4 h-4" /></div>
-            </div>
-          </div>
-        );
-
-      case "purchases":
-        return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
-            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Achats Mensuels</span>
-                <span className="text-base font-extrabold font-mono text-neutral-900 block">{achatsMensuels.length} Commandes</span>
-              </div>
-              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><ShoppingCart className="w-4 h-4" /></div>
-            </div>
-            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Abonnements Actifs</span>
-                <span className="text-base font-extrabold font-mono text-neutral-900 block">{abonnements.filter(a => a.status === "Actif").length} Services</span>
-              </div>
-              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Bell className="w-4 h-4" /></div>
-            </div>
-            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Frais Récurrents</span>
-                <span className="text-base font-extrabold font-mono text-neutral-800 block">-{totalMonthlyAbonnements.toLocaleString("fr-FR")} MAD / m</span>
-              </div>
-              <div className="p-2 bg-neutral-100 rounded-lg text-neutral-700 border border-neutral-200"><TrendingDown className="w-4 h-4" /></div>
-            </div>
-            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Frais Annuels</span>
-                <span className="text-base font-extrabold font-mono text-neutral-900 block">{(totalMonthlyAbonnements * 12).toLocaleString("fr-FR")} MAD / an</span>
-              </div>
-              <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Coins className="w-4 h-4" /></div>
             </div>
           </div>
         );
@@ -2346,7 +2319,7 @@ export default function App() {
                       </span>
                     ) : (
                       <>
-                        Suivi de vos 3 chaînes de contenu (<span className="font-semibold">The Moroccan Analyst</span>, <span className="font-semibold">The Moroccan CFO</span>, <span className="font-semibold">The Moroccan Economist</span>) et de votre santé financière.
+                        Pilotage global de vos projets personnels & professionnels, de votre discipline de vie, et de votre santé financière d'élite.
                       </>
                     )}
                   </p>
@@ -2509,7 +2482,7 @@ export default function App() {
                   </div>
 
                   {/* Interactive Monthly Net Performance Card */}
-                  <MonthlyPerformanceCard transactions={transactions} />
+                  <MonthlyPerformanceCard transactions={transactions} abonnements={abonnements} />
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3115,7 +3088,7 @@ export default function App() {
                       abonnements={abonnements}
                     />
                     
-                    <NetSavingsChart transactions={transactions} />
+                    <NetSavingsChart transactions={transactions} abonnements={abonnements} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -3146,7 +3119,7 @@ export default function App() {
                   </button>
 
                   <div className="text-xs font-bold text-neutral-400 font-mono flex items-center gap-1.5 flex-wrap">
-                    <span>ESPACE CRÉATEUR</span>
+                    <span>LIFE OS & PRO</span>
                     <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
                     <span className="text-neutral-500 uppercase">{activeCategoryObj.label}</span>
                     <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
@@ -3171,7 +3144,7 @@ export default function App() {
                     {activeCategoryObj.label}
                   </h1>
                   <p className="text-xs text-neutral-500 max-w-2xl leading-relaxed">
-                    Naviguez à travers les différents modules du secteur {activeCategoryObj.label.toLowerCase()} pour piloter vos activités de création de contenu et d'organisation personnelle.
+                    Naviguez à travers les différents modules du secteur {activeCategoryObj.label.toLowerCase()} pour piloter vos projets professionnels, personnels et votre organisation quotidienne.
                   </p>
                 </div>
 
@@ -3256,7 +3229,7 @@ export default function App() {
                             epargnes={epargnes}
                             abonnements={abonnements}
                           />
-                          <NetSavingsChart transactions={transactions} />
+                          <NetSavingsChart transactions={transactions} abonnements={abonnements} />
                         </div>
                       ) : activeChartsSubTab === "correlations" ? (
                         <PerformanceCorrelations
@@ -3295,9 +3268,7 @@ export default function App() {
                       setEvents={setEditorialEvents}
                     />
                   ) : activeMenu === "formations" ? (
-                    <FormationsSection formations={formations} setFormations={setFormations} folders={folders} setFolders={setFolders} activeTab="carriere_pro" hideTabs={true} />
-                  ) : activeMenu === "macircle" ? (
-                    <FormationsSection formations={formations} setFormations={setFormations} folders={folders} setFolders={setFolders} activeTab="ma_circle" hideTabs={true} />
+                    <FormationsSection formations={formations} setFormations={setFormations} folders={folders} setFolders={setFolders} hideTabs={false} />
                   ) : activeMenu === "monthly_goals" ? (
                     <MonthlyGoalsSection 
                       goals={monthlyGoals} 
@@ -3321,13 +3292,18 @@ export default function App() {
                       dailyHabitsList={dailyHabits}
                       streakCount={streakCount}
                     />
+                  ) : activeMenu === "actions30" ? (
+                    <Actions30JoursSection
+                      actions30Jours={actions30Jours}
+                      setActions30Jours={setActions30Jours}
+                    />
                   ) : (
                     <div>
                       {(() => {
                         const config = getModuleConfig(activeMenu);
                         if (!config) return (
                           <div className="text-center py-20 text-neutral-400 italic">
-                            Module "{activeMenu}" en cours de déploiement dans l'espace créateur.
+                            Module "{activeMenu}" en cours de déploiement dans votre espace personnel & professionnel.
                           </div>
                         );
 

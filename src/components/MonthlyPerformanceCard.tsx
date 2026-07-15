@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { FinanceTransaction } from "../types";
+import { FinanceTransaction, Abonnement } from "../types";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -16,9 +16,10 @@ import {
 
 interface MonthlyPerformanceCardProps {
   transactions: FinanceTransaction[];
+  abonnements?: Abonnement[];
 }
 
-export default function MonthlyPerformanceCard({ transactions = [] }: MonthlyPerformanceCardProps) {
+export default function MonthlyPerformanceCard({ transactions = [], abonnements = [] }: MonthlyPerformanceCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   
   // Find all unique months available in transactions
@@ -59,6 +60,10 @@ export default function MonthlyPerformanceCard({ transactions = [] }: MonthlyPer
     let totalExpense = 0;
     const categoryBreakdown: { [cat: string]: { revenue: number; expense: number } } = {};
 
+    const activeSubCost = abonnements
+      .filter(a => a.status === "Actif")
+      .reduce((sum, a) => sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
+
     const monthTransactions = transactions.filter(t => t.date && t.date.startsWith(selectedMonth));
 
     if (monthTransactions.length > 0) {
@@ -89,6 +94,14 @@ export default function MonthlyPerformanceCard({ transactions = [] }: MonthlyPer
       categoryBreakdown["Logement & Serveurs"] = { revenue: 0, expense: totalExpense * 0.4 };
       categoryBreakdown["Équipement"] = { revenue: 0, expense: totalExpense * 0.3 };
       categoryBreakdown["Marketing & Loisirs"] = { revenue: 0, expense: totalExpense * 0.3 };
+    }
+
+    if (activeSubCost > 0) {
+      totalExpense += activeSubCost;
+      if (!categoryBreakdown["Abonnements & Charges"]) {
+        categoryBreakdown["Abonnements & Charges"] = { revenue: 0, expense: 0 };
+      }
+      categoryBreakdown["Abonnements & Charges"].expense += activeSubCost;
     }
 
     const netSavings = totalRevenue - totalExpense;

@@ -2,7 +2,6 @@ import {
   DailyHabit, 
   WeeklyObjective,
   FinanceTransaction, 
-  FinanceVirement, 
   StockEntry, 
   FinanceBudget, 
   FinanceSalaire, 
@@ -53,12 +52,6 @@ export const INITIAL_TRANSACTIONS: FinanceTransaction[] = [
   { id: "t5", date: "2026-07-08", description: "Abonnement Canva Pro & Adobe Creative", category: "Logiciels", type: "Dépense", amount: 650, account: "Carte CIH" },
   { id: "t6", date: "2026-07-10", description: "Rémunération Google AdSense YouTube", category: "AdSense", type: "Revenue", amount: 4200, account: "Carte CIH" },
   { id: "t7", date: "2026-07-11", description: "Courses hebdomadaires Carrefour", category: "Alimentation", type: "Dépense", amount: 850, account: "Carte CIH" }
-];
-
-export const INITIAL_VIREMENTS: FinanceVirement[] = [
-  { id: "v1", date: "2026-07-01", description: "Provision d'épargne mensuelle", sourceAccount: "Attijariwafa Pro", targetAccount: "BMCE Épargne", amount: 5000, status: "Exécuté" },
-  { id: "v2", date: "2026-07-05", description: "Alimentation compte CIH pour abonnements", sourceAccount: "Attijariwafa Pro", targetAccount: "Carte CIH", amount: 1500, status: "Exécuté" },
-  { id: "v3", date: "2026-07-15", description: "Ajustement de trésorerie trimestriel", sourceAccount: "Attijariwafa Pro", targetAccount: "Espèces Dirhams", amount: 3000, status: "Planifié" }
 ];
 
 export const INITIAL_STOCKS: StockEntry[] = [
@@ -189,7 +182,16 @@ export const INITIAL_CHANNELS: ChannelInfo[] = [
 export const INITIAL_WISHLIST: WishListItem[] = [
   { id: "wl1", itemName: "Villa Éco-conçue à Bouskoura", store: "Immobilier Prestige", estimatedPrice: 4500000, priority: "Rêve", link: "https://www.prestige.ma", note: "Grand jardin et piscine solaire." },
   { id: "wl2", itemName: "Porsche Taycan Électrique", store: "Centre Porsche Casablanca", estimatedPrice: 1200000, priority: "Rêve", link: "https://www.porsche.com/pap/_morocco_/", note: "Le summum de la technologie et de l'élégance." },
-  { id: "wl3", itemName: "Studio de Production Complet", store: "Casablanca Sound", estimatedPrice: 150000, priority: "Peut-être", link: "", note: "Pour des podcasts de qualité broadcast internationale." }
+  { id: "wl3", itemName: "Studio de Production Complet", store: "Casablanca Sound", estimatedPrice: 150000, priority: "Peut-être", link: "", note: "Pour des podcasts de qualité broadcast internationale." },
+  { id: "wl4", itemName: "Tenue professionnelle / Costumes d'entretiens", store: "Zara / Massimo Dutti", estimatedPrice: 3500, priority: "Bientôt", link: "", note: "Costumes élégants de qualité pour réunions stratégiques et entretiens." },
+  { id: "wl5", itemName: "Pack Microphone Shure SM7B & Wave XLR", store: "GrosBill Casablanca", estimatedPrice: 6200, priority: "Bientôt", link: "", note: "Le micro de référence des podcasters pour un son d'une netteté absolue." },
+  { id: "wl6", itemName: "Console de jeu Nintendo Switch OLED", store: "Virgin Megastore", estimatedPrice: 4200, priority: "Peut-être", link: "", note: "Pour la détente saine après des sessions d'analyse intenses." },
+  { id: "wl7", itemName: "Moto de ville (Yamaha MT-07)", store: "Yamaha Maroc", estimatedPrice: 85000, priority: "Rêve", link: "", note: "Idéal pour naviguer rapidement en milieu urbain dense." },
+  { id: "wl8", itemName: "Caravane de Voyage Aménagée", store: "Maroc Caravanes", estimatedPrice: 180000, priority: "Rêve", link: "", note: "Pour des voyages et sessions de travail en digital nomad." },
+  { id: "wl9", itemName: "Drone DJI Air 3S Fly More Combo", store: "DJI Store Casablanca", estimatedPrice: 16500, priority: "Peut-être", link: "", note: "Pour capturer des plans aériens épiques pour les productions vidéo." },
+  { id: "wl10", itemName: "Voiture Hybride Moderne", store: "Toyota Casablanca", estimatedPrice: 290000, priority: "Rêve", link: "", note: "Économe, fiable et confortable pour les déplacements interurbains." },
+  { id: "wl11", itemName: "Montre Classique Automatique", store: "Krone Casablanca", estimatedPrice: 14000, priority: "Peut-être", link: "", note: "Accessoire de distinction intemporel." },
+  { id: "wl12", itemName: "Parfum d'Exception (Bleu de Chanel)", store: "Beauty Success", estimatedPrice: 1600, priority: "Bientôt", link: "", note: "Signature olfactive professionnelle mémorable." }
 ];
 
 export const INITIAL_ACHATS_COUTEUX: AchatCouteuxItem[] = [

@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { FinanceTransaction } from "../types";
+import { FinanceTransaction, Abonnement } from "../types";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -16,6 +16,7 @@ import { PiggyBank, TrendingUp, ArrowUpRight, Coins, Percent, Landmark } from "l
 
 interface NetSavingsChartProps {
   transactions: FinanceTransaction[];
+  abonnements?: Abonnement[];
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -72,7 +73,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function NetSavingsChart({ transactions = [] }: NetSavingsChartProps) {
+export default function NetSavingsChart({ transactions = [], abonnements = [] }: NetSavingsChartProps) {
   // Find the latest transaction date to align the timeline
   const referenceDate = useMemo(() => {
     if (transactions.length === 0) {
@@ -112,6 +113,10 @@ export default function NetSavingsChart({ transactions = [] }: NetSavingsChartPr
       "2026-07": { income: 0, expenses: 0 }
     };
 
+    const activeSubCost = abonnements
+      .filter(a => a.status === "Actif")
+      .reduce((sum, a) => sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
+
     return last6Months.map(({ key, label }) => {
       let income = 0;
       let expenses = 0;
@@ -128,7 +133,13 @@ export default function NetSavingsChart({ transactions = [] }: NetSavingsChartPr
 
       const baseVal = baselineDefaults[key] || { income: 25000, expenses: 18000 };
       const finalIncome = income > 0 ? income : baseVal.income;
-      const finalExpenses = expenses > 0 ? expenses : baseVal.expenses;
+      let finalExpenses = expenses > 0 ? expenses : baseVal.expenses;
+      
+      // Auto-add active subscriptions/charges
+      if (activeSubCost > 0) {
+        finalExpenses += activeSubCost;
+      }
+
       const netSavings = finalIncome - finalExpenses;
       const savingsRate = finalIncome > 0 ? (netSavings / finalIncome) * 100 : 0;
 
@@ -140,7 +151,7 @@ export default function NetSavingsChart({ transactions = [] }: NetSavingsChartPr
         "Taux d'Épargne (%)": Math.round(savingsRate),
       };
     });
-  }, [last6Months, transactions]);
+  }, [last6Months, transactions, abonnements]);
 
   // General Statistics based on the 6 months
   const stats = useMemo(() => {

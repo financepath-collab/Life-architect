@@ -92,16 +92,6 @@ export interface FinanceTransaction {
   account: string;
 }
 
-export interface FinanceVirement {
-  id: string;
-  date: string;
-  description: string;
-  sourceAccount: string;
-  targetAccount: string;
-  amount: number; // MAD
-  status: "Planifié" | "Exécuté" | "Annulé";
-}
-
 export interface FinanceBudget {
   id: string;
   category: string;
@@ -135,6 +125,15 @@ export interface Action30Jours {
   taskDescription: string;
   completed: boolean;
   note: string;
+}
+
+export interface Sprint {
+  id: string;
+  name: string;
+  month: string; // "2026-01" to "2026-12"
+  status: "active" | "completed" | "planned";
+  tasks: Action30Jours[];
+  description?: string;
 }
 
 export interface ProfilAmelioration {
