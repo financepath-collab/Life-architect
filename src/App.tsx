@@ -77,6 +77,8 @@ import WeatherWidget from "./components/WeatherWidget";
 import DisciplineHeatmap from "./components/DisciplineHeatmap";
 import Actions30JoursSection from "./components/Actions30JoursSection";
 import FireCalculator from "./components/FireCalculator";
+import JournalSection from "./components/JournalSection";
+
 
 
 
@@ -1020,7 +1022,8 @@ export default function App() {
         { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour vos projets pro et perso." },
         { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." },
         { id: "goals", label: "Possibilités & Goals", icon: Award, desc: "Planification de vos buts de vie majeurs." },
-        { id: "monthly_goals", label: "Objectifs Mensuels", icon: Target, desc: "Cibles de progression mensuelle pour vos finances, projets et vie pro/perso." }
+        { id: "monthly_goals", label: "Objectifs Mensuels", icon: Target, desc: "Cibles de progression mensuelle pour vos finances, projets et vie pro/perso." },
+        { id: "journal", label: "Journal de Bord", icon: BookOpen, desc: "Réflexions quotidiennes, pensées et notes de progrès." }
       ]
     },
     {
@@ -3297,6 +3300,8 @@ export default function App() {
                       actions30Jours={actions30Jours}
                       setActions30Jours={setActions30Jours}
                     />
+                  ) : activeMenu === "journal" ? (
+                    <JournalSection />
                   ) : (
                     <div>
                       {(() => {

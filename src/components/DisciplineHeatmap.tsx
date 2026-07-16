@@ -10,9 +10,43 @@ import {
   ChevronRight, 
   ChevronLeft,
   CheckCircle,
-  Square
+  Square,
+  BarChart3,
+  LineChart
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip
+} from "recharts";
+
+const CustomTrendTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const dateObj = new Date(data.date);
+    const formattedDate = dateObj.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+    return (
+      <div className="bg-neutral-950 dark:bg-zinc-950 border border-neutral-800 p-3.5 rounded-2xl shadow-xl">
+        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{formattedDate}</p>
+        <p className="text-xs font-extrabold text-white mt-1">
+          {data.score} / {data.totalHabits} habitudes validées
+        </p>
+        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-neutral-800/60">
+          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <p className="text-[10px] text-neutral-300 font-bold uppercase tracking-wider font-mono">
+            Taux : {data.completionRate}%
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 interface DisciplineHeatmapProps {
   habitHistory: Record<string, string[]>;
@@ -131,6 +165,44 @@ export default function DisciplineHeatmap({
 
     return columns;
   }, [yearDays]);
+
+  // Generate trend data for the last 30 days
+  const last30DaysTrend = useMemo(() => {
+    const trendData = [];
+    const today = new Date();
+    
+    // Let's go backward from today to 30 days ago
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const completedList = habitHistory[dateStr] || [];
+      const score = completedList.length;
+      const totalHabits = dailyHabitsList.length || 1;
+      const completionRate = Math.round((score / totalHabits) * 100);
+      
+      const dayLabel = d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+      
+      trendData.push({
+        date: dateStr,
+        label: dayLabel,
+        score,
+        totalHabits,
+        completionRate
+      });
+    }
+    return trendData;
+  }, [habitHistory, dailyHabitsList]);
+
+  // Compute average completion rate and active days for the last 30 days
+  const last30DaysStats = useMemo(() => {
+    if (last30DaysTrend.length === 0) return { avgRate: 0, activeDays: 0, perfectDays: 0 };
+    const totalRates = last30DaysTrend.reduce((sum, d) => sum + d.completionRate, 0);
+    const activeDays = last30DaysTrend.filter(d => d.score > 0).length;
+    const perfectDays = last30DaysTrend.filter(d => d.score >= d.totalHabits).length;
+    const avgRate = Math.round(totalRates / last30DaysTrend.length);
+    return { avgRate, activeDays, perfectDays };
+  }, [last30DaysTrend]);
 
   // Color mapper based on the score (number of completed habits)
   const getCellColor = (dateStr: string) => {
@@ -339,6 +411,81 @@ export default function DisciplineHeatmap({
             </div>
 
           </div>
+        </div>
+      </div>
+
+      {/* 30-DAY DISCIPLINE TREND CHART */}
+      <div className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-neutral-800 rounded-3xl p-6 shadow-3xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-neutral-100 dark:border-neutral-800/60">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
+              <TrendingUp className="w-4.5 h-4.5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-neutral-900 dark:text-neutral-50 uppercase tracking-tight">
+                Tendance de Discipline (30 Derniers Jours)
+              </h4>
+              <p className="text-[11px] text-neutral-400 mt-0.5">
+                Suivi de la complétion et taux d'activité glissant pour consolider l'élan.
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Metrics */}
+          <div className="flex items-center gap-3 self-start sm:self-center">
+            <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-150 dark:border-neutral-800/80 px-3 py-1.5 rounded-xl text-center">
+              <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider block">Taux Moyen</span>
+              <span className="text-xs font-black font-mono text-indigo-600 dark:text-indigo-400">{last30DaysStats.avgRate}%</span>
+            </div>
+            <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-150 dark:border-neutral-800/80 px-3 py-1.5 rounded-xl text-center">
+              <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider block">Jours Actifs</span>
+              <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">{last30DaysStats.activeDays} / 30</span>
+            </div>
+            <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-150 dark:border-neutral-800/80 px-3 py-1.5 rounded-xl text-center">
+              <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider block">Jours Parfaits</span>
+              <span className="text-xs font-black font-mono text-amber-500">{last30DaysStats.perfectDays} / 30</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={last30DaysTrend}
+              margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" className="opacity-30 dark:opacity-10" />
+              <XAxis 
+                dataKey="label" 
+                tick={{ fill: '#a3a3a3', fontSize: 10, fontWeight: 500 }}
+                axisLine={false}
+                tickLine={false}
+                dy={8}
+              />
+              <YAxis 
+                domain={[0, 100]}
+                tickFormatter={(tick) => `${tick}%`}
+                tick={{ fill: '#a3a3a3', fontSize: 10, fontWeight: 500 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip content={<CustomTrendTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Area 
+                type="monotone" 
+                dataKey="completionRate" 
+                stroke="#6366f1" 
+                strokeWidth={2.5}
+                fillOpacity={1} 
+                fill="url(#colorTrend)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

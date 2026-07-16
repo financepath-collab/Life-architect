@@ -11,8 +11,48 @@ import {
   DollarSign, 
   Wallet,
   ArrowRightLeft,
-  PieChart
+  PieChart,
+  BarChart3,
+  List
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Cell
+} from "recharts";
+
+const CHART_COLORS = [
+  "#4f46e5", // Indigo
+  "#0f766e", // Teal
+  "#ea580c", // Saffron / Orange
+  "#e11d48", // Rose / Crimson
+  "#2563eb", // Royal Blue
+  "#7c3aed", // Violet
+  "#d97706", // Amber
+  "#059669", // Emerald
+  "#b91c1c", // Red
+];
+
+const CustomChartTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-neutral-900 dark:bg-zinc-950 border border-neutral-800 p-3 rounded-xl shadow-xl">
+        <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Catégorie</p>
+        <p className="text-xs font-bold text-white mt-0.5">{payload[0].payload.name}</p>
+        <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mt-2">Dépenses</p>
+        <p className="text-sm font-black font-mono text-indigo-400 mt-0.5">
+          {payload[0].value.toLocaleString("fr-FR")} MAD
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 interface MonthlyPerformanceCardProps {
   transactions: FinanceTransaction[];
@@ -21,6 +61,7 @@ interface MonthlyPerformanceCardProps {
 
 export default function MonthlyPerformanceCard({ transactions = [], abonnements = [] }: MonthlyPerformanceCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [breakdownView, setBreakdownView] = useState<"chart" | "list">("chart");
   
   // Find all unique months available in transactions
   const availableMonths = useMemo(() => {
@@ -259,39 +300,132 @@ export default function MonthlyPerformanceCard({ transactions = [], abonnements 
         </button>
 
         {isOpen && (
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3.5 animate-in slide-in-from-top-2 duration-200">
-            {stats.categoryBreakdown.map((cat, idx) => {
-              const maxAmt = Math.max(cat.revenue, cat.expense);
-              return (
-                <div 
-                  key={idx} 
-                  className="bg-neutral-50/50 dark:bg-zinc-950 border border-neutral-200/50 dark:border-neutral-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-indigo-500/30 transition-colors"
+          <div className="space-y-4 animate-in slide-in-from-top-2 duration-200 mt-4">
+            {/* View Selector Controls */}
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block font-mono">
+                Visualisation {selectedMonth}
+              </span>
+              <div className="flex bg-neutral-100 dark:bg-zinc-950 p-1 rounded-xl border border-neutral-200/50 dark:border-neutral-800/80">
+                <button
+                  onClick={() => setBreakdownView("chart")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
+                    breakdownView === "chart"
+                      ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-2xs"
+                      : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200"
+                  }`}
                 >
-                  <div className="flex justify-between items-start gap-2">
-                    <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">{cat.name}</span>
-                    <span className="text-[10px] font-mono font-semibold text-neutral-400 shrink-0">
-                      {((maxAmt / (stats.totalRevenue || 1)) * 100).toFixed(0)}% du total
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-dashed border-neutral-200/50 dark:border-neutral-800">
-                    <div className="space-y-0.5">
-                      <span className="text-[9px] text-neutral-400 font-semibold uppercase block">Encaissement</span>
-                      <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">
-                        {cat.revenue > 0 ? `+${cat.revenue.toLocaleString()} MAD` : "—"}
-                      </span>
-                    </div>
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>Graphique</span>
+                </button>
+                <button
+                  onClick={() => setBreakdownView("list")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none ${
+                    breakdownView === "list"
+                      ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-2xs"
+                      : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200"
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>Détails</span>
+                </button>
+              </div>
+            </div>
 
-                    <div className="space-y-0.5 text-right">
-                      <span className="text-[9px] text-neutral-400 font-semibold uppercase block">Décaissement</span>
-                      <span className="text-xs font-black font-mono text-neutral-500 dark:text-neutral-400">
-                        {cat.expense > 0 ? `-${cat.expense.toLocaleString()} MAD` : "—"}
-                      </span>
+            {breakdownView === "chart" ? (
+              (() => {
+                const expenseChartData = stats.categoryBreakdown
+                  .filter(cat => cat.expense > 0)
+                  .map(cat => ({
+                    name: cat.name,
+                    value: cat.expense
+                  }));
+
+                if (expenseChartData.length === 0) {
+                  return (
+                    <div className="text-center py-12 text-neutral-400 dark:text-neutral-500 italic text-xs">
+                      Aucune dépense enregistrée pour ce mois-ci.
+                    </div>
+                  );
+                }
+
+                // Calculate dynamic height based on the number of categories to avoid squishing
+                const chartHeight = Math.max(180, expenseChartData.length * 40);
+
+                return (
+                  <div className="w-full bg-neutral-50/50 dark:bg-zinc-950/30 border border-neutral-200/50 dark:border-neutral-800/50 rounded-2xl p-4">
+                    <div className="text-center mb-3">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Répartition des Dépenses (MAD)</span>
+                    </div>
+                    <div style={{ height: `${chartHeight}px` }} className="w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={expenseChartData}
+                          layout="vertical"
+                          margin={{ top: 5, right: 15, left: 5, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e5e5" className="opacity-30 dark:opacity-10" />
+                          <XAxis type="number" hide />
+                          <YAxis 
+                            dataKey="name" 
+                            type="category" 
+                            tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                            width={130}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.02)' }} />
+                          <Bar 
+                            dataKey="value" 
+                            radius={[0, 4, 4, 0]}
+                            barSize={12}
+                          >
+                            {expenseChartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })()
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {stats.categoryBreakdown.map((cat, idx) => {
+                  const maxAmt = Math.max(cat.revenue, cat.expense);
+                  return (
+                    <div 
+                      key={idx} 
+                      className="bg-neutral-50/50 dark:bg-zinc-950 border border-neutral-200/50 dark:border-neutral-800 rounded-2xl p-3.5 flex flex-col justify-between hover:border-indigo-500/30 transition-colors"
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 truncate">{cat.name}</span>
+                        <span className="text-[10px] font-mono font-semibold text-neutral-400 shrink-0">
+                          {((maxAmt / (stats.totalRevenue || 1)) * 100).toFixed(0)}% du total
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-dashed border-neutral-200/50 dark:border-neutral-800">
+                        <div className="space-y-0.5">
+                          <span className="text-[9px] text-neutral-400 font-semibold uppercase block">Encaissement</span>
+                          <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">
+                            {cat.revenue > 0 ? `+${cat.revenue.toLocaleString()} MAD` : "—"}
+                          </span>
+                        </div>
+
+                        <div className="space-y-0.5 text-right">
+                          <span className="text-[9px] text-neutral-400 font-semibold uppercase block">Décaissement</span>
+                          <span className="text-xs font-black font-mono text-neutral-500 dark:text-neutral-400">
+                            {cat.expense > 0 ? `-${cat.expense.toLocaleString()} MAD` : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
