@@ -25,7 +25,8 @@ import {
   AchatCouteuxItem,
   MonthlyGoal,
   EditorialEvent,
-  ProjectFolder
+  ProjectFolder,
+  JournalEntry
 } from "./types";
 
 
@@ -78,6 +79,7 @@ import DisciplineHeatmap from "./components/DisciplineHeatmap";
 import Actions30JoursSection from "./components/Actions30JoursSection";
 import FireCalculator from "./components/FireCalculator";
 import JournalSection from "./components/JournalSection";
+import ExcelSyncToolbar from "./components/ExcelSyncToolbar";
 
 
 
@@ -593,6 +595,36 @@ export default function App() {
     localStorage.setItem("mp_project_folders_v1", JSON.stringify(folders));
   }, [folders]);
 
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem("life_architect_journal");
+      return saved ? JSON.parse(saved) : [
+        {
+          id: "j_1",
+          date: "2026-07-16",
+          title: "Lancement de la nouvelle structure de vie",
+          content: "Aujourd'hui, j'ai optimisé mes trackers de discipline et de projets. Je me sens motivé à bloc. Les finances sont sous contrôle, j'ai budgétisé toutes les charges du mois. L'objectif de la semaine est d'être hyper constant sur ma routine de sport.",
+          mood: "Excellent",
+          tags: "Discipline, Finances, Organisation"
+        },
+        {
+          id: "j_2",
+          date: "2026-07-15",
+          title: "Session de révisions & Analyse de marché",
+          content: "Excellente progression sur la formation en production cinématographique. J'ai aussi analysé le comportement du cours de bourse sur la BVC. Patience et rigueur sont les maîtres mots de cette transition.",
+          mood: "Bon",
+          tags: "Apprentissage, Bourse"
+        }
+      ];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("life_architect_journal", JSON.stringify(journalEntries));
+  }, [journalEntries]);
+
 
 
   // Stats / Streaks
@@ -600,6 +632,182 @@ export default function App() {
     const saved = localStorage.getItem("mp_streak_count_v2");
     return saved ? parseInt(saved) : 7;
   });
+
+  // --- EXCEL DATA SYNCHRONIZATION UTILITIES ---
+  const getSyncDataAndHandler = (moduleId: string) => {
+    switch (moduleId) {
+      case "comptes":
+        return {
+          data: accounts,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setAccounts(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "transactions":
+        return {
+          data: transactions,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setTransactions(prev => mode === "replace" ? parsedData : [...parsedData, ...prev]);
+          }
+        };
+      case "stocks":
+        return {
+          data: stocks,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setStocks(prev => mode === "replace" ? parsedData : [...parsedData, ...prev]);
+          }
+        };
+      case "budgets":
+        return {
+          data: budgets,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setBudgets(prev => mode === "replace" ? parsedData : [...parsedData, ...prev]);
+          }
+        };
+      case "salaires":
+        return {
+          data: salaires,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setSalaires(prev => mode === "replace" ? parsedData : [...parsedData, ...prev]);
+          }
+        };
+      case "epargnes":
+        return {
+          data: epargnes,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setEpargnes(prev => mode === "replace" ? parsedData : [...parsedData, ...prev]);
+          }
+        };
+      case "achats":
+        return {
+          data: achatsMensuels,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setAchatsMensuels(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "abonnements":
+        return {
+          data: abonnements,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setAbonnements(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "wishlist":
+        return {
+          data: wishList,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setWishList(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "achats_couteux":
+        return {
+          data: achatsCouteux,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setAchatsCouteux(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "habits":
+        return {
+          data: dailyHabits,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setDailyHabits(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "actions30":
+        return {
+          data: actions30Jours,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setActions30Jours(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "profil":
+        return {
+          data: profilAmeliorations,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setProfilAmeliorations(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "goals":
+        return {
+          data: possibilitesGoals,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setPossibilitesGoals(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "monthly_goals":
+        return {
+          data: monthlyGoals,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setMonthlyGoals(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "journal":
+        return {
+          data: journalEntries,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setJournalEntries(prev => mode === "replace" ? parsedData : [...parsedData, ...prev]);
+          }
+        };
+      case "skin":
+        return {
+          data: skinTrackers,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setSkinTrackers(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "meal":
+        return {
+          data: mealPlanners,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setMealPlanners(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "sport":
+        return {
+          data: sportExercises,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setSportExercises(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "project_folders":
+        return {
+          data: folders,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setFolders(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "formations":
+        return {
+          data: formations,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setFormations(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "channels":
+        return {
+          data: channels,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setChannels(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "editorial_calendar":
+        return {
+          data: editorialEvents,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setEditorialEvents(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      case "links":
+        return {
+          data: links,
+          onImport: (parsedData: any[], mode: "append" | "replace") => {
+            setLinks(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
+          }
+        };
+      default:
+        return null;
+    }
+  };
 
   // --- VERIFICATION DES HABITUDES EN RETARD AU CHARGEMENT ---
   useEffect(() => {
@@ -3178,6 +3386,22 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Excel Sync Toolbar (Renders conditionally for pages configured in MODULE_SCHEMAS) */}
+                {(() => {
+                  const sync = getSyncDataAndHandler(activeMenu);
+                  if (sync) {
+                    return (
+                      <ExcelSyncToolbar
+                        activeMenu={activeMenu}
+                        data={sync.data}
+                        onImport={sync.onImport}
+                        triggerToast={triggerToast}
+                      />
+                    );
+                  }
+                  return null;
+                })()}
+
                 {/* Interactive Content Card */}
                 <div className="bg-white border border-neutral-200 rounded-3xl p-6 shadow-xs min-h-[420px]">
                   {activeMenu === "charts" ? (
@@ -3301,7 +3525,7 @@ export default function App() {
                       setActions30Jours={setActions30Jours}
                     />
                   ) : activeMenu === "journal" ? (
-                    <JournalSection />
+                    <JournalSection entries={journalEntries} setEntries={setJournalEntries} />
                   ) : (
                     <div>
                       {(() => {

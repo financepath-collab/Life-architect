@@ -16,7 +16,8 @@ import {
   X, 
   Check, 
   FileText,
-  AlertCircle
+  AlertCircle,
+  Target
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -28,8 +29,13 @@ const MOODS = [
   { value: "Stressé", label: "Stressé", color: "text-rose-500 bg-rose-500/10 border-rose-500/20", icon: Frown }
 ] as const;
 
-export default function JournalSection() {
-  const [entries, setEntries] = useState<JournalEntry[]>(() => {
+interface JournalSectionProps {
+  entries?: JournalEntry[];
+  setEntries?: React.Dispatch<React.SetStateAction<JournalEntry[]>>;
+}
+
+export default function JournalSection({ entries: propEntries, setEntries: propSetEntries }: JournalSectionProps = {}) {
+  const [internalEntries, setInternalEntries] = useState<JournalEntry[]>(() => {
     try {
       const saved = localStorage.getItem("life_architect_journal");
       if (saved) {
@@ -59,10 +65,56 @@ export default function JournalSection() {
     ];
   });
 
+  const entries = propEntries !== undefined ? propEntries : internalEntries;
+  const setEntries = propSetEntries !== undefined ? propSetEntries : setInternalEntries;
+
+  // Daily Priority Goal State
+  const [dailyGoal, setDailyGoal] = useState<string>(() => {
+    return localStorage.getItem("life_architect_daily_goal_text") || "";
+  });
+  const [dailyGoalCompleted, setDailyGoalCompleted] = useState<boolean>(() => {
+    return localStorage.getItem("life_architect_daily_goal_completed") === "true";
+  });
+  const [dailyGoalInput, setDailyGoalInput] = useState("");
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem("life_architect_daily_goal_text", dailyGoal);
+  }, [dailyGoal]);
+
+  useEffect(() => {
+    localStorage.setItem("life_architect_daily_goal_completed", String(dailyGoalCompleted));
+  }, [dailyGoalCompleted]);
+
+  const handleAddGoal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dailyGoalInput.trim()) return;
+    setDailyGoal(dailyGoalInput.trim());
+    setDailyGoalCompleted(false);
+    setDailyGoalInput("");
+    setIsEditingGoal(false);
+  };
+
+  const handleClearGoal = () => {
+    if (window.confirm("Voulez-vous vraiment supprimer cet objectif prioritaire ?")) {
+      setDailyGoal("");
+      setDailyGoalCompleted(false);
+      setDailyGoalInput("");
+      setIsEditingGoal(false);
+    }
+  };
+
+  const handleStartEditGoal = () => {
+    setDailyGoalInput(dailyGoal);
+    setIsEditingGoal(true);
+  };
+
   // Save entries to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem("life_architect_journal", JSON.stringify(entries));
-  }, [entries]);
+    if (propEntries === undefined) {
+      localStorage.setItem("life_architect_journal", JSON.stringify(entries));
+    }
+  }, [entries, propEntries]);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -196,6 +248,97 @@ export default function JournalSection() {
           <Plus className="w-4 h-4" />
           <span>Nouvelle Réflexion</span>
         </button>
+      </div>
+
+      {/* Daily Priority Goal Section */}
+      <div id="daily-priority-goal" className="bg-gradient-to-r from-amber-500/5 to-indigo-500/5 dark:from-amber-500/10 dark:to-indigo-500/10 border border-neutral-200/60 dark:border-neutral-800/80 rounded-3xl p-4 md:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          
+          <div className="flex items-start gap-3 flex-1">
+            <div className={`p-2 rounded-2xl shrink-0 ${dailyGoalCompleted ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
+              <Target className="w-5 h-5" />
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider font-mono block">
+                Objectif Prioritaire du Jour
+              </span>
+              
+              {!dailyGoal || isEditingGoal ? (
+                <form onSubmit={handleAddGoal} className="flex gap-2 mt-1.5 max-w-xl">
+                  <input
+                    type="text"
+                    value={dailyGoalInput}
+                    onChange={(e) => setDailyGoalInput(e.target.value)}
+                    placeholder="Écrivez votre priorité absolue pour aujourd'hui..."
+                    required
+                    maxLength={100}
+                    className="flex-1 px-3 py-2 bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-xs font-medium text-neutral-800 dark:text-neutral-100 placeholder-neutral-400 focus:outline-hidden focus:border-amber-500"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl cursor-pointer shadow-3xs transition-all flex items-center gap-1 shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Ajouter</span>
+                  </button>
+                  {isEditingGoal && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingGoal(false)}
+                      className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-neutral-600 dark:text-neutral-400 text-xs font-bold rounded-xl cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                  )}
+                </form>
+              ) : (
+                <div className="flex items-center gap-2.5 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setDailyGoalCompleted(!dailyGoalCompleted)}
+                    className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer ${
+                      dailyGoalCompleted 
+                        ? 'bg-emerald-500 border-emerald-500 text-white' 
+                        : 'border-neutral-300 dark:border-neutral-700 bg-white dark:bg-zinc-900 hover:border-amber-500'
+                    }`}
+                  >
+                    {dailyGoalCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  </button>
+                  <p className={`text-xs font-bold truncate ${
+                    dailyGoalCompleted 
+                      ? 'text-neutral-400 line-through decoration-neutral-400/60 font-medium' 
+                      : 'text-neutral-800 dark:text-neutral-100'
+                  }`}>
+                    {dailyGoal}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {dailyGoal && !isEditingGoal && (
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <button
+                type="button"
+                onClick={handleStartEditGoal}
+                className="p-2 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-500/10 rounded-xl transition-colors cursor-pointer"
+                title="Modifier l'objectif"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleClearGoal}
+                className="p-2 text-neutral-400 hover:text-rose-600 hover:bg-rose-500/10 rounded-xl transition-colors cursor-pointer"
+                title="Supprimer l'objectif"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+          
+        </div>
       </div>
 
       {/* Add / Edit Form Modal-like inline section */}

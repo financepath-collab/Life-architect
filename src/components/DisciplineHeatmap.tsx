@@ -22,7 +22,13 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip
+  Tooltip,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Legend
 } from "recharts";
 
 const CustomTrendTooltip = ({ active, payload }: any) => {
@@ -203,6 +209,139 @@ export default function DisciplineHeatmap({
     const avgRate = Math.round(totalRates / last30DaysTrend.length);
     return { avgRate, activeDays, perfectDays };
   }, [last30DaysTrend]);
+
+  // Generate radar chart data comparing "personal" vs "professional" over last 30 days
+  const radarData = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    
+    const personalHabits = dailyHabitsList.filter(h => h.category === "personal");
+    const professionalHabits = dailyHabitsList.filter(h => h.category === "professional");
+    
+    const personalCount = personalHabits.length;
+    const professionalCount = professionalHabits.length;
+    
+    const personalIds = new Set(personalHabits.map(h => h.id));
+    const professionalIds = new Set(professionalHabits.map(h => h.id));
+    
+    const importantPersonalIds = new Set(personalHabits.filter(h => h.isImportant).map(h => h.id));
+    const importantProfessionalIds = new Set(professionalHabits.filter(h => h.isImportant).map(h => h.id));
+    
+    let totalPersonalCompletions = 0;
+    let totalProfessionalCompletions = 0;
+    
+    let activePersonalDays = 0;
+    let activeProfessionalDays = 0;
+    
+    let perfectPersonalDays = 0;
+    let perfectProfessionalDays = 0;
+    
+    let totalImportantPersonalCompletions = 0;
+    let totalImportantProfessionalCompletions = 0;
+    
+    const today = new Date();
+    
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const completedIds = habitHistory[dateStr] || [];
+      
+      let pCompletedCount = 0;
+      let proCompletedCount = 0;
+      
+      let pImportantCompletedCount = 0;
+      let proImportantCompletedCount = 0;
+      
+      completedIds.forEach(id => {
+        if (personalIds.has(id)) {
+          pCompletedCount++;
+          if (importantPersonalIds.has(id)) {
+            pImportantCompletedCount++;
+          }
+        } else if (professionalIds.has(id)) {
+          proCompletedCount++;
+          if (importantProfessionalIds.has(id)) {
+            proImportantCompletedCount++;
+          }
+        }
+      });
+      
+      totalPersonalCompletions += pCompletedCount;
+      totalProfessionalCompletions += proCompletedCount;
+      
+      if (pCompletedCount > 0) activePersonalDays++;
+      if (proCompletedCount > 0) activeProfessionalDays++;
+      
+      if (personalCount > 0 && pCompletedCount >= personalCount) perfectPersonalDays++;
+      if (professionalCount > 0 && proCompletedCount >= professionalCount) perfectProfessionalDays++;
+      
+      totalImportantPersonalCompletions += pImportantCompletedCount;
+      totalImportantProfessionalCompletions += proImportantCompletedCount;
+    }
+    
+    const personalCompletionRate = personalCount > 0 ? Math.round((totalPersonalCompletions / (personalCount * 30)) * 100) : 0;
+    const professionalCompletionRate = professionalCount > 0 ? Math.round((totalProfessionalCompletions / (professionalCount * 30)) * 100) : 0;
+    
+    const personalActiveRate = Math.round((activePersonalDays / 30) * 100);
+    const professionalActiveRate = Math.round((activeProfessionalDays / 30) * 100);
+    
+    const personalPerfectRate = Math.round((perfectPersonalDays / 30) * 100);
+    const professionalPerfectRate = Math.round((perfectProfessionalDays / 30) * 100);
+    
+    const totalImportantPersonalPossible = importantPersonalIds.size * 30;
+    const personalImportantRate = totalImportantPersonalPossible > 0 
+      ? Math.round((totalImportantPersonalCompletions / totalImportantPersonalPossible) * 100) 
+      : personalCompletionRate;
+      
+    const totalImportantProfessionalPossible = importantProfessionalIds.size * 30;
+    const professionalImportantRate = totalImportantProfessionalPossible > 0 
+      ? Math.round((totalImportantProfessionalCompletions / totalImportantProfessionalPossible) * 100) 
+      : professionalCompletionRate;
+      
+    const todayCompletedIds = habitHistory[todayStr] || [];
+    let todayPersonalCompleted = 0;
+    let todayProfessionalCompleted = 0;
+    todayCompletedIds.forEach(id => {
+      if (personalIds.has(id)) todayPersonalCompleted++;
+      if (professionalIds.has(id)) todayProfessionalCompleted++;
+    });
+    
+    const personalTodayRate = personalCount > 0 ? Math.round((todayPersonalCompleted / personalCount) * 100) : 0;
+    const professionalTodayRate = professionalCount > 0 ? Math.round((todayProfessionalCompleted / professionalCount) * 100) : 0;
+    
+    return [
+      {
+        subject: "Complétion Globale",
+        Personnel: personalCompletionRate,
+        Professionnel: professionalCompletionRate,
+        fullMark: 100,
+      },
+      {
+        subject: "Jours Actifs",
+        Personnel: personalActiveRate,
+        Professionnel: professionalActiveRate,
+        fullMark: 100,
+      },
+      {
+        subject: "Jours Parfaits",
+        Personnel: personalPerfectRate,
+        Professionnel: professionalPerfectRate,
+        fullMark: 100,
+      },
+      {
+        subject: "Habitudes Clés",
+        Personnel: personalImportantRate,
+        Professionnel: professionalImportantRate,
+        fullMark: 100,
+      },
+      {
+        subject: "Aujourd'hui",
+        Personnel: personalTodayRate,
+        Professionnel: professionalTodayRate,
+        fullMark: 100,
+      },
+    ];
+  }, [habitHistory, dailyHabitsList]);
 
   // Color mapper based on the score (number of completed habits)
   const getCellColor = (dateStr: string) => {
@@ -414,79 +553,170 @@ export default function DisciplineHeatmap({
         </div>
       </div>
 
-      {/* 30-DAY DISCIPLINE TREND CHART */}
-      <div className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-neutral-800 rounded-3xl p-6 shadow-3xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-neutral-100 dark:border-neutral-800/60">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
-              <TrendingUp className="w-4.5 h-4.5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-black text-neutral-900 dark:text-neutral-50 uppercase tracking-tight">
-                Tendance de Discipline (30 Derniers Jours)
-              </h4>
-              <p className="text-[11px] text-neutral-400 mt-0.5">
-                Suivi de la complétion et taux d'activité glissant pour consolider l'élan.
-              </p>
-            </div>
-          </div>
+      {/* CHARTS CONTAINER GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* 30-DAY DISCIPLINE TREND CHART */}
+        <div className="lg:col-span-7 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-neutral-800 rounded-3xl p-6 shadow-3xs flex flex-col justify-between">
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-neutral-100 dark:border-neutral-800/60">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                  <TrendingUp className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-neutral-900 dark:text-neutral-50 uppercase tracking-tight">
+                    Tendance de Discipline (30 Derniers Jours)
+                  </h4>
+                  <p className="text-[11px] text-neutral-400 mt-0.5">
+                    Suivi de la complétion et taux d'activité glissant pour consolider l'élan.
+                  </p>
+                </div>
+              </div>
 
-          {/* Quick Metrics */}
-          <div className="flex items-center gap-3 self-start sm:self-center">
-            <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-150 dark:border-neutral-800/80 px-3 py-1.5 rounded-xl text-center">
-              <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider block">Taux Moyen</span>
-              <span className="text-xs font-black font-mono text-indigo-600 dark:text-indigo-400">{last30DaysStats.avgRate}%</span>
+              {/* Quick Metrics */}
+              <div className="flex items-center gap-3 self-start sm:self-center">
+                <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-150 dark:border-neutral-800/80 px-3 py-1.5 rounded-xl text-center">
+                  <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider block">Taux Moyen</span>
+                  <span className="text-xs font-black font-mono text-indigo-600 dark:text-indigo-400">{last30DaysStats.avgRate}%</span>
+                </div>
+                <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-150 dark:border-neutral-800/80 px-3 py-1.5 rounded-xl text-center">
+                  <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider block">Jours Actifs</span>
+                  <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">{last30DaysStats.activeDays} / 30</span>
+                </div>
+                <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-150 dark:border-neutral-800/80 px-3 py-1.5 rounded-xl text-center">
+                  <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider block">Jours Parfaits</span>
+                  <span className="text-xs font-black font-mono text-amber-500">{last30DaysStats.perfectDays} / 30</span>
+                </div>
+              </div>
             </div>
-            <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-150 dark:border-neutral-800/80 px-3 py-1.5 rounded-xl text-center">
-              <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider block">Jours Actifs</span>
-              <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">{last30DaysStats.activeDays} / 30</span>
-            </div>
-            <div className="bg-neutral-50 dark:bg-neutral-950 border border-neutral-150 dark:border-neutral-800/80 px-3 py-1.5 rounded-xl text-center">
-              <span className="text-[9px] font-black uppercase text-neutral-400 tracking-wider block">Jours Parfaits</span>
-              <span className="text-xs font-black font-mono text-amber-500">{last30DaysStats.perfectDays} / 30</span>
+
+            <div className="h-60 w-full mt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={last30DaysTrend}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" className="opacity-30 dark:opacity-10" />
+                  <XAxis 
+                    dataKey="label" 
+                    tick={{ fill: '#a3a3a3', fontSize: 10, fontWeight: 500 }}
+                    axisLine={false}
+                    tickLine={false}
+                    dy={8}
+                  />
+                  <YAxis 
+                    domain={[0, 100]}
+                    tickFormatter={(tick) => `${tick}%`}
+                    tick={{ fill: '#a3a3a3', fontSize: 10, fontWeight: 500 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTrendTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="completionRate" 
+                    stroke="#6366f1" 
+                    strokeWidth={2.5}
+                    fillOpacity={1} 
+                    fill="url(#colorTrend)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
 
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={last30DaysTrend}
-              margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e5e5" className="opacity-30 dark:opacity-10" />
-              <XAxis 
-                dataKey="label" 
-                tick={{ fill: '#a3a3a3', fontSize: 10, fontWeight: 500 }}
-                axisLine={false}
-                tickLine={false}
-                dy={8}
-              />
-              <YAxis 
-                domain={[0, 100]}
-                tickFormatter={(tick) => `${tick}%`}
-                tick={{ fill: '#a3a3a3', fontSize: 10, fontWeight: 500 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={<CustomTrendTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />
-              <Area 
-                type="monotone" 
-                dataKey="completionRate" 
-                stroke="#6366f1" 
-                strokeWidth={2.5}
-                fillOpacity={1} 
-                fill="url(#colorTrend)" 
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        {/* RADAR CHART COMPARING PERSONAL VS PROFESSIONAL PROGRESS */}
+        <div className="lg:col-span-5 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-neutral-800 rounded-3xl p-6 shadow-3xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2.5 pb-4 mb-2 border-b border-neutral-100 dark:border-neutral-800/60">
+              <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                <BarChart3 className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-neutral-900 dark:text-neutral-50 uppercase tracking-tight">
+                  Équilibre de Vie & Routines
+                </h4>
+                <p className="text-[11px] text-neutral-400 mt-0.5">
+                  Comparatif radar entre vos habitudes Perso et Pro.
+                </p>
+              </div>
+            </div>
+
+            {/* Radar component container */}
+            <div className="h-60 w-full flex items-center justify-center mt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
+                  <PolarGrid stroke="#e5e5e5" className="opacity-30 dark:opacity-15" />
+                  <PolarAngleAxis 
+                    dataKey="subject" 
+                    tick={{ fill: '#888888', fontSize: 9, fontWeight: 600 }}
+                  />
+                  <PolarRadiusAxis 
+                    angle={30} 
+                    domain={[0, 100]} 
+                    tick={{ fill: '#a3a3a3', fontSize: 7 }}
+                    axisLine={false}
+                  />
+                  <Radar 
+                    name="Personnel" 
+                    dataKey="Personnel" 
+                    stroke="#6366f1" 
+                    fill="#6366f1" 
+                    fillOpacity={0.25} 
+                  />
+                  <Radar 
+                    name="Professionnel" 
+                    dataKey="Professionnel" 
+                    stroke="#10b981" 
+                    fill="#10b981" 
+                    fillOpacity={0.25} 
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#18181b', 
+                      borderColor: '#27272a', 
+                      borderRadius: '12px',
+                      color: '#ffffff',
+                      fontSize: '11px'
+                    }}
+                  />
+                  <Legend 
+                    iconSize={8} 
+                    wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '10px' }} 
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Dynamic feedback banner */}
+          <div className="mt-4 p-3 bg-neutral-50 dark:bg-zinc-950 border border-neutral-150 dark:border-neutral-850 rounded-2xl text-[10.5px] font-medium leading-relaxed text-neutral-500 dark:text-neutral-400">
+            {(() => {
+              const pVal = radarData[0].Personnel || 0;
+              const proVal = radarData[0].Professionnel || 0;
+              if (pVal === 0 && proVal === 0) {
+                return "Commencez à valider vos habitudes pour générer une analyse d'équilibre personnalisée.";
+              }
+              const diff = pVal - proVal;
+              if (Math.abs(diff) <= 10) {
+                return "🌟 Équilibre parfait ! Vous accordez la même discipline à votre bien-être personnel qu'à vos objectifs professionnels.";
+              } else if (diff > 10) {
+                return "🏡 Priorité à la vie personnelle : Votre routine personnelle est robuste. Veillez à maintenir l'élan sur vos habitudes professionnelles.";
+              } else {
+                return "💼 Focus professionnel intense : Vos routines pro sont prioritaires. Pensez à réintégrer des sas de décompression personnels.";
+              }
+            })()}
+          </div>
         </div>
+
       </div>
 
       {/* DETAIL RETROSPECTIVE DRAWER OR CARD */}
