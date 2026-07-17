@@ -84,6 +84,14 @@ import JournalSection from "./components/JournalSection";
 import ExcelSyncToolbar from "./components/ExcelSyncToolbar";
 import QuickCaptureInbox from "./components/QuickCaptureInbox";
 import CommandCenterModal from "./components/CommandCenterModal";
+import BudgetOptimizer from "./components/BudgetOptimizer";
+import { 
+  FinanceSectionDashboard, 
+  ProductivitySectionDashboard, 
+  HealthSectionDashboard, 
+  ProjetsSectionDashboard, 
+  LecturesSectionDashboard 
+} from "./components/SectionDashboards";
 
 
 
@@ -168,6 +176,10 @@ export default function App() {
     return localStorage.getItem("la_focus_mode") === "true";
   });
   const [showWeather, setShowWeather] = useState<boolean>(false);
+  const [dashboardViewMode, setDashboardViewMode] = useState<"minimal" | "complete">(() => {
+    const saved = localStorage.getItem("la_dashboard_view_mode");
+    return (saved as "minimal" | "complete") || "minimal";
+  });
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem("la_theme") === "dark";
   });
@@ -1258,6 +1270,47 @@ export default function App() {
     }));
   };
 
+  // Toggle project custom objectives from the main simplified dashboard
+  const handleToggleProjectObjective = (folderId: string, objId: string) => {
+    setFolders(prev => prev.map(f => {
+      if (f.id === folderId) {
+        return {
+          ...f,
+          customObjectives: f.customObjectives.map(o => o.id === objId ? { ...o, completed: !o.completed } : o)
+        };
+      }
+      return f;
+    }));
+    triggerToast("Tâche de projet mise à jour !", "success");
+  };
+
+  // Toggle today's skin routine from main dashboard
+  const handleToggleTodaySkinRoutine = (type: "morning" | "evening") => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    setSkinTrackers(prev => {
+      const existing = prev.find(s => s.date === todayStr);
+      if (existing) {
+        return prev.map(s => s.date === todayStr ? {
+          ...s,
+          morningRoutine: type === "morning" ? !s.morningRoutine : s.morningRoutine,
+          eveningRoutine: type === "evening" ? !s.eveningRoutine : s.eveningRoutine,
+        } : s);
+      } else {
+        const newRecord: SkinTracker = {
+          id: Math.random().toString(36).substr(2, 9),
+          date: todayStr,
+          morningRoutine: type === "morning",
+          eveningRoutine: type === "evening",
+          skinCondition: "Bonne",
+          productsUsed: "",
+          waterIntakeLiters: 1.5
+        };
+        return [newRecord, ...prev];
+      }
+    });
+    triggerToast("Routine de soin mise à jour !", "success");
+  };
+
 
   // --- DYNAMIC MODULE RENDERING SCHEMA & CONTROLLER MAP ---
 
@@ -1267,6 +1320,7 @@ export default function App() {
       label: "Finance",
       icon: Coins,
       items: [
+        { id: "finance_dash", label: "Dashboard Finance", icon: LayoutDashboard, desc: "Indicateurs financiers clés, budgets et analyses." },
         { id: "comptes", label: "Comptes Bancaires", icon: Landmark, desc: "Gestion des comptes pro, perso et liquidités." },
         { id: "transactions", label: "Transactions", icon: Briefcase, desc: "Historique complet de vos entrées d'argent et d'une rigueur absolue de vos charges." },
         { id: "stocks", label: "Portefeuille Bourse", icon: Wallet, desc: "Suivi de vos investissements en BVC." },
@@ -1285,6 +1339,7 @@ export default function App() {
       label: "Productivité",
       icon: CheckSquare,
       items: [
+        { id: "productivity_dash", label: "Dashboard Productivité", icon: LayoutDashboard, desc: "État de vos habitudes, sprints de combat et objectifs stratégiques." },
         { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." },
         { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour vos projets pro et perso." },
         { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." },
@@ -1298,6 +1353,7 @@ export default function App() {
       label: "Santé & Soins",
       icon: Heart,
       items: [
+        { id: "health_dash", label: "Dashboard Santé & Soins", icon: LayoutDashboard, desc: "Planificateur de repas, routine beauté et sport." },
         { id: "skin", label: "Skin Tracker", icon: Sparkles, desc: "Consistance beauté, SPF et routine cutanée journalière." },
         { id: "meal", label: "Meal Planner", icon: Layers, desc: "Planification des menus, calories et dîners de demain." },
         { id: "sport", label: "Focus Sport", icon: Dumbbell, desc: "Minuterie de 30 min, exercices de sport et playlist d'entraînement." }
@@ -1308,6 +1364,7 @@ export default function App() {
       label: "Projets & Académie",
       icon: FolderKanban,
       items: [
+        { id: "projets_dash", label: "Dashboard Projets & Académie", icon: LayoutDashboard, desc: "Dossiers de projets actifs, formations et calendrier." },
         { id: "project_folders", label: "Dossiers de Projets", icon: FolderOpen, desc: "Organisez vos projets professionnels, personnels et académiques en un seul endroit." },
         { id: "formations", label: "Carrière & Académie", icon: GraduationCap, desc: "Suivi de votre apprentissage, compétences et opportunités professionnelles." },
         { id: "channels", label: "Projets Médias & Canaux", icon: Tv, desc: "Statistiques et fréquences de publication de vos canaux de communication." },
@@ -1320,6 +1377,7 @@ export default function App() {
       label: "Lectures & Écrans",
       icon: BookOpen,
       items: [
+        { id: "formation_dash", label: "Dashboard Lectures & Écrans", icon: LayoutDashboard, desc: "Vos lectures en cours et files multimédias." },
         { id: "books", label: "Lectures & Livres", icon: BookOpen, desc: "Suivi détaillé de vos lectures en cours, terminées et wishlist." },
         { id: "screenmedia", label: "Séries, Animes & Films", icon: Film, desc: "File de visionnage et progression d'épisodes de vos écrans." }
       ]
@@ -2570,819 +2628,360 @@ export default function App() {
         {/* WORKSPACE CONTENT SCROLL */}
         <main className="flex-1 p-8 overflow-y-auto space-y-8 max-w-7xl w-full mx-auto">
 
-          
-          {/* TAB 1: TABLEAU DE BORD (MAIN HOME CONTROLLER) */}
+          {/* TAB 1: TABLEAU DE BORD (MAIN HOME CONTROLLER) - SIMPLIFIED RAPPELS & TACHES */}
           {activeMenu === "dashboard" && (
             <div className="space-y-8 animate-in fade-in duration-300">
-              
-              {/* Minimalist Intro Header */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-neutral-200/60">
+              {/* Elegant Minimalist Header */}
+              <div className="pb-5 border-b border-neutral-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <h1 className="text-2xl font-black text-neutral-900 tracking-tight font-sans">
-                    Bonjour ! Prêt à créer aujourd'hui ?
+                    Rappels & Actions Prioritaires
                   </h1>
                   <p className="text-xs text-neutral-500 max-w-2xl">
-                    {focusMode ? (
-                      <span className="inline-flex items-center gap-1.5 font-semibold text-neutral-800 bg-neutral-100 py-1 px-2.5 rounded-lg border border-neutral-200/50">
-                        <Flame className="w-3.5 h-3.5 text-neutral-800 fill-neutral-400 animate-pulse shrink-0" />
-                        Mode Concentration activé. Vos statistiques financières sont masquées pour vous focaliser sur vos disciplines et objectifs.
-                      </span>
-                    ) : (
-                      <>
-                        Pilotage global de vos projets personnels & professionnels, de votre discipline de vie, et de votre santé financière d'élite.
-                      </>
-                    )}
+                    Votre centre de contrôle et d'action directe : suivi de vos tâches de projets, routines beauté et alertes budgétaires.
                   </p>
                 </div>
+                <div className="text-xs font-bold text-neutral-500 bg-neutral-100 border border-neutral-200/50 px-3.5 py-1.5 rounded-xl shadow-3xs self-start sm:self-auto font-mono">
+                  {new Date().toLocaleDateString("fr-FR", { weekday: 'long', day: 'numeric', month: 'long' })}
+                </div>
+              </div>
+
+              {/* 3-Column Responsive Bento-style Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
-                {/* Actions Group */}
-                <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center">
-                  {/* Weather Toggle */}
-                  <button
-                    onClick={() => setShowWeather(!showWeather)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer select-none font-sans text-xs font-bold ${
-                      showWeather
-                        ? "bg-neutral-900 border-neutral-900 text-white shadow-xs hover:bg-neutral-800"
-                        : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
-                    }`}
-                    title="Afficher la météo inspirante du Maroc"
-                  >
-                    <span className="text-sm">⛅</span>
-                    <span className="whitespace-nowrap uppercase tracking-wider text-[10px]">
-                      {showWeather ? "Masquer Météo" : "Météo Inspirante"}
-                    </span>
-                  </button>
-
-                  {/* Focus Mode Toggle */}
-                  <button
-                    onClick={() => {
-                      setFocusMode(!focusMode);
-                      if (!focusMode) {
-                        setDashboardTab("routines");
-                      }
-                    }}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer select-none font-sans text-xs font-bold ${
-                      focusMode
-                        ? "bg-neutral-900 border-neutral-900 text-white shadow-xs hover:bg-neutral-800"
-                        : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
-                    }`}
-                    title="Masquer le financier et se concentrer sur les disciplines quotidiennes"
-                  >
-                    <div className="relative w-7 h-4 rounded-full bg-neutral-200 transition-colors shrink-0">
-                      <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-xs transition-transform duration-205 ${
-                        focusMode ? "translate-x-3 bg-neutral-900" : "bg-neutral-400"
-                      }`} />
-                    </div>
-                    <span className="whitespace-nowrap uppercase tracking-wider text-[10px]">
-                      {focusMode ? "Concentration Active" : "Mode Concentration"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Weather Widget (Collapsible) */}
-              {showWeather && (
-                <div className="animate-in slide-in-from-top duration-250">
-                  <WeatherWidget />
-                </div>
-              )}
-
-              {/* Critical Subscriptions Alert (Prélèvements imminents < 3 jours) */}
-              {!focusMode && (
-                <CriticalSubscriptionsAlert
-                  abonnements={abonnements}
-                  onNavigateToModule={handleNavigateToModule}
-                />
-              )}
-
-              {/* Notifications & Visual Alerts Center */}
-              {!focusMode && (
-                <AlertsBanner
-                  abonnements={abonnements}
-                  profilAmeliorations={profilAmeliorations}
-                  epargnes={epargnes}
-                  dailyHabits={dailyHabits}
-                  onNavigateToModule={handleNavigateToModule}
-                />
-              )}
-
-              {/* Quick Capture Inbox (Le cœur du Second Brain) */}
-              <div className="mt-4">
-                <QuickCaptureInbox
-                  onAddWeeklyObjective={handleQuickAddWeeklyObjective}
-                  onAddTransaction={handleQuickAddTransaction}
-                  onAddJournalEntry={handleQuickAddJournalEntry}
-                  onShowToast={triggerToast}
-                />
-              </div>
-
-              {/* General Statistics Cards */}
-              {!focusMode ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                    {/* Net Worth */}
-                    <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Patrimoine Est.</span>
-                        <h4 className="text-xl font-bold font-mono text-neutral-900">
-                          {dashboardStats.netWorth.toLocaleString("fr-FR")} MAD
-                        </h4>
-                        <span className="text-[10px] text-neutral-400 font-medium">BVC + Soldes bancaires</span>
-                      </div>
-                      <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                        <Coins className="w-5 h-5" />
-                      </div>
-                    </div>
-
-                    {/* Habits Completion */}
-                    <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Discipline du jour</span>
-                        <h4 className="text-xl font-bold font-mono text-neutral-900">
-                          {dashboardStats.habitsRate.toFixed(0)}%
-                        </h4>
-                        <span className="text-[10px] text-neutral-400 font-medium">
-                          {dashboardStats.habitsCompleted} / {dailyHabits.length} habitudes validées
+                {/* COLUMN 1: TACHES DE PROJETS */}
+                <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-6 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
+                          <FolderKanban className="w-4 h-4" />
                         </span>
+                        <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
+                          Objectifs de Projets
+                        </h3>
                       </div>
-                      <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                        <Flame className="w-5 h-5" />
-                      </div>
+                      <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
+                        {folders.reduce((acc, f) => acc + f.customObjectives.filter(o => !o.completed).length, 0)} en attente
+                      </span>
                     </div>
 
-                    {/* Notified Habits Success Rate */}
-                    <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Habitudes Notifiées</span>
-                        <h4 className="text-xl font-bold font-mono text-neutral-900">
-                          {dashboardStats.notifiedImportantTotal > 0 ? `${dashboardStats.notifiedSuccessRate.toFixed(0)}%` : "--"}
-                        </h4>
-                        <span className="text-[10px] text-neutral-400 font-medium">
-                          {dashboardStats.notifiedImportantTotal > 0 
-                            ? `${dashboardStats.notifiedImportantCompleted} / ${dashboardStats.notifiedImportantTotal} faites à temps`
-                            : "Aucun rappel aujourd'hui"}
-                        </span>
-                      </div>
-                      <div className={`p-3 rounded-xl border transition-all ${
-                        dashboardStats.notifiedImportantTotal > 0 && dashboardStats.notifiedSuccessRate === 100
-                          ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                          : "bg-neutral-100 border-neutral-200 text-neutral-900"
-                      }`}>
-                        <ClipboardCheck className="w-5 h-5" />
-                      </div>
-                    </div>
+                    {/* Task checklist */}
+                    <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
+                      {(() => {
+                        const pendingTasks = folders.flatMap(f => 
+                          f.customObjectives.filter(o => !o.completed).map(o => ({
+                            folderId: f.id,
+                            folderName: f.name,
+                            folderCategory: f.category,
+                            ...o
+                          }))
+                        );
 
-                    {/* Savings goals */}
-                    <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Objectifs Épargne</span>
-                        <h4 className="text-xl font-bold font-mono text-neutral-900">
-                          {dashboardStats.activeEpargnes} En cours
-                        </h4>
-                        <span className="text-[10px] text-neutral-400 font-medium">Projets immobiliers & tech</span>
-                      </div>
-                      <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                        <PiggyBank className="w-5 h-5" />
-                      </div>
-                    </div>
-
-                    {/* Active SaaS Subscriptions */}
-                    <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 flex items-center justify-between shadow-2xs">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">SaaS & Abonnements</span>
-                        <h4 className="text-xl font-bold font-mono text-neutral-900">
-                          {dashboardStats.activeSubscribers} Actifs
-                        </h4>
-                        <span className="text-[10px] text-neutral-400 font-medium">Logiciels pro & serveurs</span>
-                      </div>
-                      <div className="p-3 bg-neutral-100 rounded-xl text-neutral-900 border border-neutral-200">
-                        <Bell className="w-5 h-5" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Interactive Performance & Expense Analysis Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Interactive Monthly Net Performance Card */}
-                    <MonthlyPerformanceCard transactions={transactions} abonnements={abonnements} />
-                    
-                    {/* Interactive Monthly Expense Category Analysis Card */}
-                    <MonthlyExpenseAnalysisCard transactions={transactions} abonnements={abonnements} />
-                  </div>
-
-                  {/* Monthly Comparison and Progression Card */}
-                  <div className="mt-6">
-                    <MonthlyComparisonCard transactions={transactions} abonnements={abonnements} />
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Habits Completion (Discipline) - Expanded and stylized */}
-                  <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 flex items-center justify-between shadow-md text-white">
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest block">Discipline du Jour</span>
-                      <h4 className="text-3xl font-black font-mono">
-                        {dashboardStats.habitsRate.toFixed(0)}%
-                      </h4>
-                      <p className="text-xs text-neutral-400 font-medium leading-relaxed">
-                        {dashboardStats.habitsCompleted} de vos {dailyHabits.length} habitudes quotidiennes validées. Continuez ainsi !
-                      </p>
-                    </div>
-                    <div className="p-4 bg-neutral-800 rounded-2xl text-neutral-300 border border-neutral-700 shrink-0">
-                      <Flame className="w-8 h-8 animate-pulse fill-neutral-300" />
-                    </div>
-                  </div>
-
-                  {/* Active 30-Day Sprint Stats Card */}
-                  <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 flex items-center justify-between shadow-2xs">
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest block">Sprints de Combat Actifs</span>
-                      <h4 className="text-3xl font-black font-mono text-neutral-900">
-                        {actions30Jours.length} Sprints
-                      </h4>
-                      <p className="text-xs text-neutral-500 font-medium leading-relaxed">
-                        Vos plans d'action à 30 jours pour rester focalisé sur le long terme de vos projets.
-                      </p>
-                    </div>
-                    <div className="p-4 bg-neutral-100 rounded-2xl text-neutral-800 border border-neutral-200 shrink-0">
-                      <Award className="w-8 h-8 text-neutral-700" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* INTERACTIVE DASHBOARD SECTION TABS */}
-              {!focusMode && (
-                <div className="border-b border-neutral-200/80 pt-2">
-                  <div className="flex items-center gap-1 overflow-x-auto pb-px scrollbar-none">
-                    <button
-                      onClick={() => setDashboardTab("routines")}
-                      className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
-                        dashboardTab === "routines"
-                          ? "border-neutral-900 text-neutral-900 font-extrabold"
-                          : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
-                      }`}
-                    >
-                      <Flame className="w-4 h-4 text-neutral-800 fill-neutral-400 shrink-0" />
-                      <span>🎯 DISCIPLINES & OBJECTIFS</span>
-                    </button>
-
-                    <button
-                      onClick={() => setDashboardTab("charts")}
-                      className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
-                        dashboardTab === "charts"
-                          ? "border-neutral-900 text-neutral-900 font-extrabold"
-                          : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
-                      }`}
-                    >
-                      <BarChart3 className="w-4 h-4 text-neutral-400" />
-                      <span>📊 RAPPORT FINANCIER SYNTHÉTIQUE</span>
-                    </button>
-
-                    <button
-                      onClick={() => setDashboardTab("launchpad")}
-                      className={`flex items-center gap-2 px-5 py-3 text-xs font-bold whitespace-nowrap transition-all border-b-2 -mb-px cursor-pointer select-none ${
-                        dashboardTab === "launchpad"
-                          ? "border-neutral-900 text-neutral-900 font-extrabold"
-                          : "border-transparent text-neutral-400 hover:text-neutral-950 hover:border-neutral-200"
-                      }`}
-                    >
-                      <Layers className="w-4 h-4 text-neutral-400" />
-                      <span>🔌 CONSOLE DE LANCEMENT (MODULES)</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB CONTENT RENDERING */}
-              <AnimatePresence mode="wait">
-                {(dashboardTab === "routines" || focusMode) && (
-                  <motion.div
-                    key="routines"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-6"
-                  >
-                    {/* Bilan des Performances de la Semaine */}
-                    {(() => {
-                      const metrics = getWeeklyPerformanceMetrics();
-                      return (
-                        <div className="bg-neutral-50/60 border border-neutral-200/80 rounded-2xl p-5 shadow-3xs space-y-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
-                                <TrendingUp className="w-4 h-4" />
-                              </span>
-                              <div>
-                                <h3 className="text-xs font-black text-neutral-950 uppercase tracking-tight block">
-                                  Bilan des Performances de la Semaine
-                                </h3>
-                                <p className="text-[10px] text-neutral-400 font-medium">
-                                  Suivi de votre discipline quotidienne et objectifs de la semaine
-                                </p>
-                              </div>
+                        if (pendingTasks.length === 0) {
+                          return (
+                            <div className="text-center py-8 space-y-2">
+                              <span className="text-2xl">🎉</span>
+                              <p className="text-xs font-bold text-neutral-500">Aucun objectif de projet en attente !</p>
+                              <p className="text-[10px] text-neutral-400">Ajoutez-en dans vos dossiers de projets.</p>
                             </div>
-                            <span className="text-[10px] font-bold text-neutral-500 bg-white border border-neutral-200 px-2.5 py-1 rounded-full font-mono shadow-3xs self-start sm:self-center">
-                              Semaine du {getWeekRangeLabel()}
-                            </span>
+                          );
+                        }
+
+                        return pendingTasks.map(task => (
+                          <div 
+                            key={task.id} 
+                            onClick={() => handleToggleProjectObjective(task.folderId, task.id)}
+                            className="flex items-start gap-3 p-3 bg-neutral-50 hover:bg-neutral-100/75 border border-neutral-200/50 rounded-xl transition-all cursor-pointer group"
+                          >
+                            <button className="mt-0.5 text-neutral-400 group-hover:text-neutral-900 transition-colors">
+                              <Square className="w-4 h-4" />
+                            </button>
+                            <div className="space-y-1">
+                              <span className="inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-white text-neutral-700 border border-neutral-200">
+                                {task.folderName}
+                              </span>
+                              <p className="text-xs font-semibold text-neutral-800 leading-tight">
+                                {task.text}
+                              </p>
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleNavigateToModule("project_folders")}
+                    className="w-full py-2.5 mt-4 text-center bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer"
+                  >
+                    Gérer mes dossiers de projets
+                  </button>
+                </div>
+
+                {/* COLUMN 2: SKIN CARE & ROUTINES */}
+                <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-6 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
+                          <Sparkles className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
+                          Routines Skin Care
+                        </h3>
+                      </div>
+                      <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
+                        Aujourd'hui
+                      </span>
+                    </div>
+
+                    {/* Skin Routine togglers */}
+                    {(() => {
+                      const todayStr = new Date().toISOString().split("T")[0];
+                      const todayLog = skinTrackers.find(s => s.date === todayStr);
+                      const isMorningDone = todayLog?.morningRoutine || false;
+                      const isEveningDone = todayLog?.eveningRoutine || false;
+
+                      return (
+                        <div className="space-y-4">
+                          <div className="p-4 bg-neutral-50 border border-neutral-200/50 rounded-2xl space-y-3">
+                            <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">État des routines</h4>
+                            
+                            {/* Morning */}
+                            <div 
+                              onClick={() => handleToggleTodaySkinRoutine("morning")}
+                              className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                                isMorningDone 
+                                  ? "bg-emerald-50/50 border-emerald-200 text-emerald-950" 
+                                  : "bg-white border-neutral-200 text-neutral-800 hover:border-neutral-300"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className="text-lg">☀️</span>
+                                <div className="space-y-0.5">
+                                  <span className="text-xs font-extrabold block">Routine Matin (SPF)</span>
+                                  <span className="text-[10px] text-neutral-400 font-medium">Protection solaire anti-UV</span>
+                                </div>
+                              </div>
+                              {isMorningDone ? (
+                                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                              ) : (
+                                <Square className="w-5 h-5 text-neutral-300 shrink-0" />
+                              )}
+                            </div>
+
+                            {/* Evening */}
+                            <div 
+                              onClick={() => handleToggleTodaySkinRoutine("evening")}
+                              className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                                isEveningDone 
+                                  ? "bg-emerald-50/50 border-emerald-200 text-emerald-950" 
+                                  : "bg-white border-neutral-200 text-neutral-800 hover:border-neutral-300"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className="text-lg">🌙</span>
+                                <div className="space-y-0.5">
+                                  <span className="text-xs font-extrabold block">Routine Soir (Sérum)</span>
+                                  <span className="text-[10px] text-neutral-400 font-medium">Hydratation profonde & soin</span>
+                                </div>
+                              </div>
+                              {isEveningDone ? (
+                                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                              ) : (
+                                <Square className="w-5 h-5 text-neutral-300 shrink-0" />
+                              )}
+                            </div>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {/* Card 1: Habits Completion vs Missed */}
-                            <div className="bg-white border border-neutral-200/60 rounded-xl p-4 shadow-3xs flex flex-col justify-between space-y-3">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
-                                  Discipline Quotidienne
-                                </span>
-                                <span className="p-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg">
-                                  <Flame className="w-3.5 h-3.5" />
-                                </span>
-                              </div>
-                              <div>
-                                <div className="flex items-baseline gap-1.5">
-                                  <span className="text-xl font-black font-mono text-neutral-950">
-                                    {metrics.completedHabits}
-                                  </span>
-                                  <span className="text-xs text-neutral-400 font-bold">
-                                    /{metrics.expectedHabits}
-                                  </span>
-                                  <span className="text-[10px] text-neutral-400 font-bold ml-1">
-                                    réalisées
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1 text-[10px] font-bold">
-                                  <span className="text-emerald-600 bg-emerald-50/50 border border-emerald-100 px-1.5 py-0.5 rounded">
-                                    {metrics.completionRate}% Assiduité
-                                  </span>
-                                  <span className="text-neutral-400">
-                                    • {metrics.missedHabits} manquée(s)
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-neutral-900 h-full rounded-full transition-all duration-500" 
-                                  style={{ width: `${metrics.completionRate}%` }}
-                                />
-                              </div>
+                          {/* Water intake shortcut */}
+                          <div className="p-4 bg-neutral-50 border border-neutral-200/50 rounded-2xl flex items-center justify-between">
+                            <div className="space-y-1">
+                              <span className="text-xs font-extrabold block text-neutral-800">Hydratation (L)</span>
+                              <span className="text-[10px] text-neutral-400 block font-medium">Objectif quotidien : 2.5 L</span>
                             </div>
-
-                            {/* Card 2: Priority Objectives Reached */}
-                            <div className="bg-white border border-neutral-200/60 rounded-xl p-4 shadow-3xs flex flex-col justify-between space-y-3">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
-                                  Objectifs Prioritaires
-                                </span>
-                                <span className="p-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg">
-                                  <Star className="w-3.5 h-3.5 fill-amber-500" />
-                                </span>
-                              </div>
-                              <div>
-                                {metrics.priorityTotal === 0 ? (
-                                  <div className="text-[11px] text-neutral-400 italic py-1 font-medium">
-                                    Aucun objectif prioritaire défini
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="flex items-baseline gap-1.5">
-                                      <span className="text-xl font-black font-mono text-neutral-950">
-                                        {metrics.priorityCompleted}
-                                      </span>
-                                      <span className="text-xs text-neutral-400 font-bold">
-                                        /{metrics.priorityTotal}
-                                      </span>
-                                      <span className="text-[10px] text-neutral-400 font-bold ml-1">
-                                        atteints
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1 text-[10px] font-bold">
-                                      <span className="text-amber-600 bg-amber-50/50 border border-amber-100 px-1.5 py-0.5 rounded">
-                                        {metrics.priorityTotal > 0 
-                                          ? `${Math.round((metrics.priorityCompleted / metrics.priorityTotal) * 100)}% Atteint`
-                                          : "À définir"
-                                        }
-                                      </span>
-                                      <span className="text-neutral-400">
-                                        • {metrics.priorityTotal - metrics.priorityCompleted} restants
-                                      </span>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-amber-500 h-full rounded-full transition-all duration-500" 
-                                  style={{ width: `${metrics.priorityTotal > 0 ? (metrics.priorityCompleted / metrics.priorityTotal) * 100 : 0}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Card 3: Overall Goal Progress */}
-                            <div className="bg-white border border-neutral-200/60 rounded-xl p-4 shadow-3xs flex flex-col justify-between space-y-3">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
-                                  Tous les Objectifs Hebdo
-                                </span>
-                                <span className="p-1 bg-neutral-100 text-neutral-800 border border-neutral-200 rounded-lg">
-                                  <Award className="w-3.5 h-3.5" />
-                                </span>
-                              </div>
-                              <div>
-                                {metrics.totalObjectives === 0 ? (
-                                  <div className="text-[11px] text-neutral-400 italic py-1 font-medium">
-                                    Aucun objectif défini
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div className="flex items-baseline gap-1.5">
-                                      <span className="text-xl font-black font-mono text-neutral-950">
-                                        {metrics.totalCompletedObjectives}
-                                      </span>
-                                      <span className="text-xs text-neutral-400 font-bold">
-                                        /{metrics.totalObjectives}
-                                      </span>
-                                      <span className="text-[10px] text-neutral-400 font-bold ml-1">
-                                        complétés
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1 text-[10px] font-bold">
-                                      <span className="text-neutral-700 bg-neutral-50 border border-neutral-200 px-1.5 py-0.5 rounded">
-                                        {metrics.totalObjectives > 0 ? Math.round((metrics.totalCompletedObjectives / metrics.totalObjectives) * 100) : 0}% Global
-                                      </span>
-                                      <span className="text-neutral-400">
-                                        • {metrics.totalObjectives - metrics.totalCompletedObjectives} restants
-                                      </span>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className="bg-neutral-950 h-full rounded-full transition-all duration-500" 
-                                  style={{ width: `${metrics.totalObjectives > 0 ? (metrics.totalCompletedObjectives / metrics.totalObjectives) * 100 : 0}%` }}
-                                />
-                              </div>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => {
+                                  setSkinTrackers(prev => {
+                                    const log = prev.find(s => s.date === todayStr);
+                                    if (log) {
+                                      return prev.map(s => s.date === todayStr ? { ...s, waterIntakeLiters: Math.max(0, (s.waterIntakeLiters || 0) - 0.25) } : s);
+                                    } else {
+                                      return [{ id: Math.random().toString(36).substr(2, 9), date: todayStr, morningRoutine: false, eveningRoutine: false, skinCondition: "Bonne", productsUsed: "", waterIntakeLiters: 0 }, ...prev];
+                                    }
+                                  });
+                                  triggerToast("Eau bue diminuée !", "info");
+                                }}
+                                className="w-8 h-8 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-50 flex items-center justify-center font-bold text-neutral-600 select-none cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="text-sm font-mono font-black text-neutral-900">
+                                {(todayLog?.waterIntakeLiters || 0).toFixed(2)}
+                              </span>
+                              <button 
+                                onClick={() => {
+                                  setSkinTrackers(prev => {
+                                    const log = prev.find(s => s.date === todayStr);
+                                    if (log) {
+                                      return prev.map(s => s.date === todayStr ? { ...s, waterIntakeLiters: (s.waterIntakeLiters || 0) + 0.25 } : s);
+                                    } else {
+                                      return [{ id: Math.random().toString(36).substr(2, 9), date: todayStr, morningRoutine: false, eveningRoutine: false, skinCondition: "Bonne", productsUsed: "", waterIntakeLiters: 0.25 }, ...prev];
+                                    }
+                                  });
+                                  triggerToast("Eau bue augmentée !", "success");
+                                }}
+                                className="w-8 h-8 rounded-lg bg-neutral-900 hover:bg-neutral-800 flex items-center justify-center font-bold text-white select-none cursor-pointer"
+                              >
+                                +
+                              </button>
                             </div>
                           </div>
                         </div>
                       );
                     })()}
+                  </div>
 
-                    {/* Active trackers columns */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* 1. Daily Habits discipline tracker */}
-                    <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Flame className="w-4.5 h-4.5 text-neutral-900 animate-pulse" />
-                          <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Discipline Quotidienne</h3>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {/* Browser Notifications status/action */}
-                          {typeof window !== "undefined" && "Notification" in window && (
-                            <button
-                              onClick={requestNotificationPermission}
-                              className={`text-[9px] font-black px-2.5 py-1 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer select-none ${
-                                notificationPermission === "granted"
-                                  ? "bg-emerald-50 border-emerald-200/60 text-emerald-700 hover:bg-emerald-100/80"
-                                  : notificationPermission === "denied"
-                                  ? "bg-neutral-100 border-neutral-200 text-neutral-400 cursor-not-allowed"
-                                  : "bg-indigo-50 border-indigo-200/60 text-indigo-700 hover:bg-indigo-100"
-                              }`}
-                              title={
-                                notificationPermission === "granted"
-                                  ? "Notifications activées avec succès"
-                                  : notificationPermission === "denied"
-                                  ? "Notifications bloquées par votre navigateur. Veuillez les autoriser dans les paramètres du site."
-                                  : "Cliquer pour autoriser et activer les rappels d'habitude importants"
-                              }
-                            >
-                              <Bell className={`w-3 h-3 ${notificationPermission === "granted" ? "fill-emerald-500 text-emerald-600 animate-bounce" : "text-indigo-600"}`} />
-                              <span>
-                                {notificationPermission === "granted"
-                                  ? "Alertes Actives"
-                                  : notificationPermission === "denied"
-                                  ? "Bloqué"
-                                  : "Activer les alertes"}
-                              </span>
-                            </button>
-                          )}
+                  <button
+                    onClick={() => handleNavigateToModule("skin")}
+                    className="w-full py-2.5 mt-4 text-center bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer"
+                  >
+                    Ouvrir le suivi de peau complet
+                  </button>
+                </div>
 
-                          <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-800 px-2.5 py-1 rounded-full font-mono font-bold shrink-0">
-                            {dailyHabits.filter(h => h.completed).length} / {dailyHabits.length} terminées
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-neutral-400">
-                        Cochez vos disciplines quotidiennes d'hygiène de vie, de sport et d'apprentissage pour renforcer votre série.
-                      </p>
-
-                      {/* Controls for verification frequency & manual check */}
-                      {typeof window !== "undefined" && "Notification" in window && (
-                        <div className="bg-neutral-50/70 dark:bg-neutral-900/50 rounded-xl p-3 border border-neutral-200/50 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-wider font-sans">
-                              ⚙️ Rappels & Alertes
-                            </span>
-                            <AnimatePresence mode="wait">
-                              {manualCheckFeedback && (
-                                <motion.span
-                                  initial={{ opacity: 0, y: -4 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0 }}
-                                  className="text-[9px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100/50 px-2 py-0.5 rounded-md font-sans"
-                                >
-                                  {manualCheckFeedback}
-                                </motion.span>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-                            <div className="flex items-center gap-1.5 text-[11px] text-neutral-600 dark:text-neutral-400 font-medium font-sans">
-                              <span>Vérifier toutes les :</span>
-                              <select
-                                value={notificationInterval}
-                                onChange={(e) => setNotificationInterval(Number(e.target.value))}
-                                className="bg-white dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-1 text-[11px] font-bold text-neutral-800 dark:text-neutral-200 focus:outline-hidden cursor-pointer"
-                              >
-                                <option value="10">10 secondes</option>
-                                <option value="15">15 secondes</option>
-                                <option value="30">30 secondes</option>
-                                <option value="60">1 minute</option>
-                                <option value="300">5 minutes</option>
-                                <option value="600">10 minutes</option>
-                              </select>
-                            </div>
-
-                            <button
-                              onClick={triggerImmediateCheck}
-                              className="bg-white hover:bg-neutral-50 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer select-none"
-                              title="Déclencher une vérification manuelle immédiate"
-                            >
-                              <RefreshCw className="w-3 h-3 text-neutral-500" />
-                              <span>Vérifier</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-                        {dailyHabits.map(habit => (
-                          <button
-                            key={habit.id}
-                            onClick={() => toggleHabit(habit.id)}
-                            className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer ${
-                              habit.completed
-                                ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
-                                : "bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-50"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="shrink-0">
-                                {habit.completed ? (
-                                  <CheckCircle className="w-4.5 h-4.5 text-neutral-900 fill-neutral-900 text-white" />
-                                ) : (
-                                  <Square className="w-4.5 h-4.5 text-neutral-300" />
-                                )}
-                              </div>
-                              <div>
-                                <span className={`text-xs font-semibold block ${habit.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
-                                  {habit.name}
-                                </span>
-                                {habit.description && (
-                                  <span className="text-[9px] text-neutral-400 block mt-0.5">{habit.description}</span>
-                                )}
-                              </div>
-                            </div>
-
-                            <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border font-mono shrink-0 ml-2 ${
-                              habit.category === "professional"
-                                ? "bg-neutral-100 border-neutral-200 text-neutral-700"
-                                : "bg-neutral-100 border-neutral-200 text-neutral-700"
-                            }`}>
-                              {habit.category === "professional" ? "Pro" : "Perso"}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 2. Weekly goals tracker */}
-                    <div className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Award className="w-4.5 h-4.5 text-neutral-900" />
-                          <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight">Objectifs de la Semaine</h3>
-                        </div>
-                        <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-800 px-2.5 py-1 rounded-full font-mono font-bold">
-                          {weeklyObjectives.filter(o => o.completed).length} / {weeklyObjectives.length} terminés
+                {/* COLUMN 3: ALERTES ET RAPPELS FINANCE */}
+                <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-6 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
+                          <Coins className="w-4 h-4" />
                         </span>
+                        <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
+                          Alertes de Finance
+                        </h3>
                       </div>
+                      <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
+                        Attention
+                      </span>
+                    </div>
 
-                      {/* Add weekly objective Form */}
-                      <form onSubmit={handleAddObjectiveSubmit} className="flex gap-2">
-                        <div className="relative flex-1">
-                          <input
-                            type="text"
-                            value={newObjectiveText}
-                            onChange={(e) => setNewObjectiveText(e.target.value)}
-                            placeholder="Ex: Écrire 3 articles LinkedIn, Préparer l'intro..."
-                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-3.5 pr-10 py-2 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white transition-all font-medium"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setNewObjectiveIsPriority(!newObjectiveIsPriority)}
-                            className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md transition-colors cursor-pointer ${
-                              newObjectiveIsPriority 
-                                ? "text-amber-500 hover:text-amber-600 bg-amber-50" 
-                                : "text-neutral-300 hover:text-neutral-500"
-                            }`}
-                            title={newObjectiveIsPriority ? "Prioritaire" : "Marquer comme prioritaire"}
-                          >
-                            <Star className={`w-4 h-4 ${newObjectiveIsPriority ? "fill-amber-500" : ""}`} />
-                          </button>
-                        </div>
-                        <button
-                          type="submit"
-                          className="bg-neutral-950 hover:bg-neutral-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center justify-center shadow-xs"
-                        >
-                          <Plus className="w-4.5 h-4.5" />
-                        </button>
-                      </form>
+                    {/* Real-time Alerts */}
+                    <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                      {(() => {
+                        const alerts: React.ReactNode[] = [];
 
-                      <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-                        {weeklyObjectives.length === 0 ? (
-                          <div className="text-xs text-neutral-400 italic py-8 text-center bg-neutral-50/50 rounded-xl border border-dashed border-neutral-200">
-                            Aucun objectif hebdomadaire pour l'instant. Saisissez-en un ci-dessus !
-                          </div>
-                        ) : (
-                          [...weeklyObjectives].sort((a, b) => {
-                            if (a.completed && !b.completed) return 1;
-                            if (!a.completed && b.completed) return -1;
-                            if (a.isPriority && !b.isPriority) return -1;
-                            if (!a.isPriority && b.isPriority) return 1;
-                            return 0;
-                          }).map((obj) => (
-                            <div
-                              key={obj.id}
-                              className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                                obj.completed
-                                  ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
-                                  : obj.isPriority
-                                    ? "bg-amber-50/30 border-amber-200 text-neutral-800 hover:bg-amber-50/50"
-                                    : "bg-white border-neutral-200 text-neutral-800 hover:bg-neutral-50"
-                              }`}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => toggleWeeklyObjective(obj.id)}
-                                className="flex-1 flex items-center gap-2.5 text-left cursor-pointer"
+                        // 1. Low balances
+                        accounts.forEach(acc => {
+                          if (acc.balance < 1000) {
+                            alerts.push(
+                              <div 
+                                key={`acc-alert-${acc.id}`}
+                                onClick={() => handleNavigateToModule("comptes")}
+                                className="p-3 bg-red-50 border border-red-100 rounded-xl flex gap-2.5 cursor-pointer hover:bg-red-50/80 transition-all"
                               >
-                                <div className="shrink-0">
-                                  {obj.completed ? (
-                                    <CheckCircle className="w-4 h-4 text-neutral-900 fill-neutral-900 text-white" />
-                                  ) : (
-                                    <Square className={`w-4 h-4 ${obj.isPriority ? "text-amber-400" : "text-neutral-300"}`} />
-                                  )}
+                                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                                <div className="space-y-0.5">
+                                  <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Trésorerie Basse</span>
+                                  <p className="text-xs font-bold text-neutral-850">
+                                    Compte {acc.name} est à {acc.balance.toLocaleString("fr-FR")} {acc.currency}.
+                                  </p>
                                 </div>
-                                <span className={`text-xs font-semibold leading-snug flex items-center gap-1.5 ${obj.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
-                                  {obj.isPriority && !obj.completed && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
-                                  {obj.text}
-                                </span>
-                              </button>
-                              
-                              <button
-                                type="button"
-                                onClick={() => toggleWeeklyObjectivePriority(obj.id)}
-                                className={`p-1 rounded-lg transition-colors shrink-0 ml-2 cursor-pointer ${
-                                  obj.isPriority
-                                    ? "text-amber-500 hover:text-amber-600 bg-amber-50/60"
-                                    : "text-neutral-300 hover:text-neutral-500 hover:bg-neutral-50"
-                                }`}
-                                title={obj.isPriority ? "Retirer la priorité" : "Marquer comme prioritaire"}
-                              >
-                                <Star className={`w-3.5 h-3.5 ${obj.isPriority ? "fill-amber-500" : ""}`} />
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => deleteWeeklyObjective(obj.id)}
-                                className="text-neutral-400 hover:text-red-500 p-1 rounded-lg hover:bg-neutral-100 transition-colors shrink-0 ml-2 cursor-pointer"
-                                title="Supprimer l'objectif"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {dashboardTab === "launchpad" && !focusMode && (
-                  <motion.div
-                    key="launchpad"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest font-mono">
-                        Console de Lancement : Modules Applicatifs
-                      </h3>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {visibleCategories.map(cat => {
-                        const CatIcon = cat.icon;
-                        return (
-                          <div 
-                            key={cat.id} 
-                            className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs"
-                          >
-                            <div className="flex items-center gap-2 pb-2.5 border-b border-neutral-100">
-                              <div className="p-1.5 bg-neutral-100 rounded-lg text-neutral-800">
-                                <CatIcon className="w-4 h-4" />
                               </div>
-                              <span className="text-xs font-extrabold uppercase tracking-widest text-neutral-900">
-                                {cat.label}
-                              </span>
-                            </div>
+                            );
+                          }
+                        });
 
-                            <div className="space-y-1.5">
-                              {cat.items.map(sub => {
-                                const SubIcon = sub.icon;
-                                return (
-                                  <button
-                                    key={sub.id}
-                                    onClick={() => handleMenuClick(sub.id)}
-                                    className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-neutral-50 transition-all text-left border border-transparent hover:border-neutral-200 cursor-pointer group"
-                                  >
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                      <SubIcon className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-900 shrink-0" />
-                                      <div className="min-w-0">
-                                        <span className="text-xs font-bold text-neutral-800 block leading-none">
-                                          {sub.label}
-                                        </span>
-                                        <span className="text-[10px] text-neutral-400 block truncate mt-1">
-                                          {sub.desc}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-900 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
-                                  </button>
-                                );
-                              })}
+                        // 2. Exceeded Budgets
+                        budgets.forEach((b, index) => {
+                          if (b.spentAmount > b.limitAmount) {
+                            alerts.push(
+                              <div 
+                                key={`budget-alert-${index}`}
+                                onClick={() => handleNavigateToModule("budgets")}
+                                className="p-3 bg-red-50 border border-red-100 rounded-xl flex gap-2.5 cursor-pointer hover:bg-red-50/80 transition-all"
+                              >
+                                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                                <div className="space-y-0.5">
+                                  <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Budget Dépassé</span>
+                                  <p className="text-xs font-bold text-neutral-850 leading-snug">
+                                    Enveloppe {b.category} : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          } else if (b.spentAmount >= b.limitAmount * 0.9) {
+                            alerts.push(
+                              <div 
+                                key={`budget-alert-warning-${index}`}
+                                onClick={() => handleNavigateToModule("budgets")}
+                                className="p-3 bg-amber-50 border border-amber-150 rounded-xl flex gap-2.5 cursor-pointer hover:bg-amber-50/80 transition-all"
+                              >
+                                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                <div className="space-y-0.5">
+                                  <span className="text-[10px] font-black text-amber-800 uppercase block tracking-wider font-mono">Budget Critique</span>
+                                  <p className="text-xs font-bold text-neutral-850 leading-snug">
+                                    Enveloppe {b.category} à 90%+ : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          }
+                        });
+
+                        // 3. Imminent Subscriptions
+                        const today = new Date();
+                        abonnements.forEach(ab => {
+                          if (ab.status === "Actif" && ab.nextBillingDate) {
+                            const bDate = new Date(ab.nextBillingDate);
+                            const diffDays = Math.ceil((bDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+                            if (diffDays >= 0 && diffDays <= 7) {
+                              alerts.push(
+                                <div 
+                                  key={`ab-alert-${ab.id}`}
+                                  onClick={() => handleNavigateToModule("abonnements")}
+                                  className="p-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl flex gap-2.5 cursor-pointer transition-all"
+                                >
+                                  <Bell className="w-4 h-4 text-neutral-600 shrink-0 mt-0.5" />
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] font-black text-neutral-500 uppercase block tracking-wider font-mono">Facture Imminente</span>
+                                    <p className="text-xs font-bold text-neutral-850 leading-snug">
+                                      {ab.serviceName} prélevé de {ab.costMonthly} MAD dans {diffDays} jours.
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            }
+                          }
+                        });
+
+                        if (alerts.length === 0) {
+                          return (
+                            <div className="text-center py-8 space-y-2 bg-emerald-50/25 border border-emerald-100 rounded-2xl">
+                              <span className="text-2xl">💚</span>
+                              <p className="text-xs font-bold text-emerald-900">Tout est au vert !</p>
+                              <p className="text-[10px] text-emerald-600 font-medium">Aucun budget dépassé ou facture urgente détectée.</p>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        }
+
+                        return alerts;
+                      })()}
                     </div>
-                  </motion.div>
-                )}
+                  </div>
 
-                {dashboardTab === "charts" && !focusMode && (
-                  <motion.div
-                    key="charts"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="bg-white border border-neutral-200 rounded-2xl p-6 space-y-4 shadow-2xs"
+                  <button
+                    onClick={() => handleNavigateToModule("finance_dash")}
+                    className="w-full py-2.5 mt-4 text-center bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer"
                   >
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-tight flex items-center gap-2">
-                        <BarChart3 className="w-4.5 h-4.5 text-neutral-800" />
-                        <span>Rapport Financier Synthétique</span>
-                      </h3>
-                      <button
-                        onClick={() => handleMenuClick("charts")}
-                        className="text-xs text-neutral-900 hover:text-neutral-700 font-bold flex items-center gap-1 cursor-pointer"
-                      >
-                        <span>Ouvrir l'Analyse Avancée</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    
-                    <FinanceCharts
-                      transactions={transactions}
-                      budgets={budgets}
-                      stocks={stocks}
-                      epargnes={epargnes}
-                      abonnements={abonnements}
-                    />
-                    
-                    <NetSavingsChart transactions={transactions} abonnements={abonnements} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    Ouvrir le Tableau de bord Financier
+                  </button>
+                </div>
+
+              </div>
 
             </div>
           )}
@@ -3484,7 +3083,47 @@ export default function App() {
 
                 {/* Interactive Content Card */}
                 <div className="bg-white border border-neutral-200 rounded-3xl p-6 shadow-xs min-h-[420px]">
-                  {activeMenu === "charts" ? (
+                  {activeMenu === "finance_dash" ? (
+                    <FinanceSectionDashboard
+                      accounts={accounts}
+                      budgets={budgets}
+                      epargnes={epargnes}
+                      abonnements={abonnements}
+                      stocks={stocks}
+                      transactions={transactions}
+                      onNavigate={handleMenuClick}
+                    />
+                  ) : activeMenu === "productivity_dash" ? (
+                    <ProductivitySectionDashboard
+                      dailyHabits={dailyHabits}
+                      actions30Jours={actions30Jours}
+                      weeklyObjectives={weeklyObjectives}
+                      profilAmeliorations={profilAmeliorations}
+                      possibilitesGoals={possibilitesGoals}
+                      journalEntries={journalEntries}
+                      streakCount={streakCount}
+                      onNavigate={handleMenuClick}
+                      onToggleHabit={toggleHabit}
+                    />
+                  ) : activeMenu === "health_dash" ? (
+                    <HealthSectionDashboard
+                      skinTrackers={skinTrackers}
+                      mealPlanners={mealPlanners}
+                      onNavigate={handleMenuClick}
+                    />
+                  ) : activeMenu === "projets_dash" ? (
+                    <ProjetsSectionDashboard
+                      folders={folders}
+                      formations={formations}
+                      onNavigate={handleMenuClick}
+                    />
+                  ) : activeMenu === "formation_dash" ? (
+                    <LecturesSectionDashboard
+                      books={books}
+                      screenMedia={screenMedia}
+                      onNavigate={handleMenuClick}
+                    />
+                  ) : activeMenu === "charts" ? (
                     <div className="space-y-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
                         <div className="space-y-1">
@@ -3606,6 +3245,39 @@ export default function App() {
                     />
                   ) : activeMenu === "journal" ? (
                     <JournalSection entries={journalEntries} setEntries={setJournalEntries} />
+                  ) : activeMenu === "budgets" ? (
+                    <div className="space-y-6">
+                      <BudgetOptimizer
+                        transactions={transactions}
+                        budgets={budgets}
+                        onUpdateBudgetLimit={(category, newLimit) => {
+                          setBudgets(prev => prev.map(b => b.category === category ? { ...b, limitAmount: newLimit } : b));
+                        }}
+                        onUpdateAllBudgets={(updatedBudgets) => {
+                          setBudgets(updatedBudgets);
+                        }}
+                        triggerToast={triggerToast}
+                      />
+                      
+                      {(() => {
+                        const config = getModuleConfig("budgets");
+                        if (!config) return null;
+                        return (
+                          <InteractiveModuleTable
+                            title={config.title}
+                            description={config.description}
+                            columns={config.columns}
+                            data={config.data}
+                            onAdd={config.onAdd}
+                            onEdit={config.onEdit}
+                            onDelete={config.onDelete}
+                            onImport={config.onImport}
+                            currencySymbol="MAD"
+                            placeholderText="Rechercher dans les budgets par catégorie..."
+                          />
+                        );
+                      })()}
+                    </div>
                   ) : (
                     <div>
                       {(() => {
