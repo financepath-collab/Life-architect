@@ -94,6 +94,9 @@ export default function DisciplineHeatmap({
     let currentStreak = 0;
     let totalHabitsCompleted = 0;
 
+    let maxPerfectStreak = 0;
+    let currentPerfectStreak = 0;
+
     // Helper map of formatted dates to completed habits
     const daysWithCompletion = new Set<string>();
 
@@ -123,8 +126,19 @@ export default function DisciplineHeatmap({
         }
       }
 
-      if (score >= dailyHabitsList.length) {
+      const isPerfect = dailyHabitsList.length > 0 && score >= dailyHabitsList.length;
+      if (isPerfect) {
         perfectDaysCount++;
+        currentPerfectStreak++;
+        if (currentPerfectStreak > maxPerfectStreak) {
+          maxPerfectStreak = currentPerfectStreak;
+        }
+      } else {
+        if (dateStr <= todayStr) {
+          if (dateStr < todayStr) {
+            currentPerfectStreak = 0;
+          }
+        }
       }
     });
 
@@ -135,7 +149,9 @@ export default function DisciplineHeatmap({
       perfectDaysCount,
       maxStreak: Math.max(maxStreak, streakCount),
       totalHabitsCompleted,
-      completionRate
+      completionRate,
+      currentPerfectStreak,
+      maxPerfectStreak
     };
   }, [yearDays, habitHistory, dailyHabitsList.length, streakCount]);
 
@@ -416,6 +432,85 @@ export default function DisciplineHeatmap({
           <span>Plus</span>
         </div>
       </div>
+
+      {/* PERFECT DAY STREAK SUMMARY BANNER */}
+      {(() => {
+        const todayStr = new Date().toISOString().split("T")[0];
+        const todayCompletedList = habitHistory[todayStr] || [];
+        const todayScore = todayCompletedList.length;
+        const totalHabitsCount = dailyHabitsList.length;
+        const isTodayPerfect = totalHabitsCount > 0 && todayScore >= totalHabitsCount;
+        
+        const currentPerfectStreak = stats.currentPerfectStreak;
+        const maxPerfectStreak = stats.maxPerfectStreak;
+
+        return (
+          <div className="bg-gradient-to-r from-amber-500/[0.08] via-amber-500/[0.02] to-indigo-500/[0.05] dark:from-amber-500/[0.15] dark:via-amber-500/[0.03] dark:to-indigo-500/[0.1] border border-amber-500/20 dark:border-amber-500/30 rounded-3xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div className="flex items-start md:items-center gap-4">
+              <div className="p-3 bg-amber-500/10 text-amber-500 rounded-2xl border border-amber-500/25 shrink-0 shadow-sm relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/10 to-transparent animate-pulse" />
+                <Award className="w-6 h-6 text-amber-500" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest font-mono block">
+                  Chaîne de Rigueur Absolue (100% de Réussite)
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <h4 className="text-xl md:text-2xl font-black text-neutral-900 dark:text-neutral-50 flex items-center gap-1.5 leading-none">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-500 to-amber-600 font-mono text-2xl md:text-3xl">
+                      {currentPerfectStreak}
+                    </span>
+                    {currentPerfectStreak === 1 ? "jour parfait" : "jours parfaits"}
+                  </h4>
+                  <span className="text-[11px] text-neutral-400 font-semibold">
+                    (Record : <strong className="font-extrabold text-neutral-600 dark:text-neutral-300 font-mono">{maxPerfectStreak} j</strong>)
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-500 mt-1">
+                  {currentPerfectStreak > 0 
+                    ? `Une séquence impeccable de ${currentPerfectStreak} jours consécutifs avec l'intégralité de vos habitudes validées.`
+                    : "Aucune chaîne de rigueur absolue active. Validez toutes vos habitudes d'aujourd'hui pour lancer l'élan !"
+                  }
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white/60 dark:bg-zinc-950/40 border border-neutral-200/50 dark:border-neutral-800 px-4 py-3 rounded-2xl md:max-w-xs w-full shrink-0 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
+                  Progression d'aujourd'hui
+                </span>
+                <span className="text-xs font-black font-mono text-amber-500">
+                  {todayScore} / {totalHabitsCount}
+                </span>
+              </div>
+              
+              {/* Simple elegant Progress bar */}
+              <div className="w-full bg-neutral-100 dark:bg-neutral-800 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-amber-500 h-full rounded-full transition-all duration-500" 
+                  style={{ width: `${totalHabitsCount > 0 ? (todayScore / totalHabitsCount) * 100 : 0}%` }}
+                />
+              </div>
+
+              <div className="text-[10px] font-bold text-neutral-400 leading-snug">
+                {isTodayPerfect ? (
+                  <span className="text-emerald-500 flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                    Journée parfaite validée ! Chaîne en sécurité.
+                  </span>
+                ) : totalHabitsCount > 0 ? (
+                  <span>
+                    Plus que <strong className="text-neutral-700 dark:text-neutral-200">{totalHabitsCount - todayScore}</strong> habitudes pour valider votre journée à 100% !
+                  </span>
+                ) : (
+                  "Aucune habitude active pour le moment."
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* METRIC CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

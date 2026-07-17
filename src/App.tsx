@@ -72,6 +72,8 @@ import ProjectFoldersSection from "./components/ProjectFoldersSection";
 import AlertsBanner from "./components/AlertsBanner";
 import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
 import MonthlyPerformanceCard from "./components/MonthlyPerformanceCard";
+import MonthlyExpenseAnalysisCard from "./components/MonthlyExpenseAnalysisCard";
+import MonthlyComparisonCard from "./components/MonthlyComparisonCard";
 import MonthlyGoalsSection from "./components/MonthlyGoalsSection";
 import EditorialCalendarSection from "./components/EditorialCalendarSection";
 import WeatherWidget from "./components/WeatherWidget";
@@ -917,77 +919,105 @@ export default function App() {
     localStorage.setItem("mp_skin_v2", JSON.stringify(skinTrackers));
   }, [skinTrackers]);
 
-  // Synchronisation bidirectionnelle : Skin Tracker -> Habit Tracker
-  useEffect(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayEntry = skinTrackers.find(entry => entry.date === todayStr);
-    const isDoneToday = todayEntry ? (todayEntry.morningRoutine || todayEntry.eveningRoutine) : false;
-    
-    setDailyHabits(prev => {
-      const targetHabit = prev.find(h => h.id === "h5" || h.name.toLowerCase().includes("skin care") || h.name.toLowerCase().includes("routine de soins"));
-      if (targetHabit && targetHabit.completed !== isDoneToday) {
-        return prev.map(h => (h.id === targetHabit.id) ? { ...h, completed: isDoneToday } : h);
-      }
-      return prev;
-    });
-  }, [skinTrackers]);
+  // Refs for tracking previous states to prevent bidirectional sync infinite loops
+  const prevSportExercisesRef = useRef(sportExercises);
+  const prevSportDailyHabitsRef = useRef(dailyHabits);
+  const prevSkinTrackersRef = useRef(skinTrackers);
+  const prevSkinDailyHabitsRef = useRef(dailyHabits);
 
-  // Synchronisation bidirectionnelle : Habit Tracker -> Skin Tracker
+  // Synchronisation bidirectionnelle : Skin Tracker <-> Habit Tracker
   useEffect(() => {
     const todayStr = new Date().toISOString().split('T')[0];
+    
     const skinHabit = dailyHabits.find(h => h.id === "h5" || h.name.toLowerCase().includes("skin care") || h.name.toLowerCase().includes("routine de soins"));
-    if (!skinHabit) return;
-    
-    const isHabitCompleted = skinHabit.completed;
+    const prevSkinHabit = prevSkinDailyHabitsRef.current.find(h => h.id === "h5" || h.name.toLowerCase().includes("skin care") || h.name.toLowerCase().includes("routine de soins"));
+
+    const isHabitCompleted = skinHabit?.completed ?? false;
+    const wasHabitCompleted = prevSkinHabit?.completed ?? false;
+
     const todayEntry = skinTrackers.find(entry => entry.date === todayStr);
+    const prevTodayEntry = prevSkinTrackersRef.current.find(entry => entry.date === todayStr);
+
     const isSkinCompleted = todayEntry ? (todayEntry.morningRoutine || todayEntry.eveningRoutine) : false;
-    
-    if (isHabitCompleted !== isSkinCompleted) {
-      if (isHabitCompleted) {
-        setSkinTrackers(prev => {
-          const existing = prev.find(e => e.date === todayStr);
-          if (existing) {
-            if (!existing.morningRoutine && !existing.eveningRoutine) {
-              return prev.map(e => e.date === todayStr ? { ...e, morningRoutine: true } : e);
+    const wasSkinCompleted = prevTodayEntry ? (prevTodayEntry.morningRoutine || prevTodayEntry.eveningRoutine) : false;
+
+    const skinTrackersChanged = JSON.stringify(skinTrackers) !== JSON.stringify(prevSkinTrackersRef.current);
+    const habitChanged = isHabitCompleted !== wasHabitCompleted;
+
+    if (skinTrackersChanged && !habitChanged) {
+      // User interacted with skin tracker, sync to habit
+      if (skinHabit && isHabitCompleted !== isSkinCompleted) {
+        setDailyHabits(prev => prev.map(h => h.id === skinHabit.id ? { ...h, completed: isSkinCompleted } : h));
+      }
+    } else if (habitChanged && !skinTrackersChanged) {
+      // User interacted with habit, sync to skin tracker
+      if (isHabitCompleted !== isSkinCompleted) {
+        if (isHabitCompleted) {
+          setSkinTrackers(prev => {
+            const existing = prev.find(e => e.date === todayStr);
+            if (existing) {
+              if (!existing.morningRoutine && !existing.eveningRoutine) {
+                return prev.map(e => e.date === todayStr ? { ...e, morningRoutine: true } : e);
+              }
+              return prev;
+            } else {
+              const newEntry = {
+                id: "sk_" + Date.now(),
+                date: todayStr,
+                morningRoutine: true,
+                eveningRoutine: false,
+                skinCondition: "Bonne" as const,
+                productsUsed: "Routine soins (Auto-sync)",
+                waterIntakeLiters: 1.5
+              };
+              return [newEntry, ...prev];
+            }
+          });
+        } else {
+          setSkinTrackers(prev => {
+            const existing = prev.find(e => e.date === todayStr);
+            if (existing && (existing.morningRoutine || existing.eveningRoutine)) {
+              return prev.map(e => e.date === todayStr ? { ...e, morningRoutine: false, eveningRoutine: false } : e);
             }
             return prev;
-          } else {
-            const newEntry = {
-              id: "sk_" + Date.now(),
-              date: todayStr,
-              morningRoutine: true,
-              eveningRoutine: false,
-              skinCondition: "Bonne" as const,
-              productsUsed: "Routine soins (Auto-sync)",
-              waterIntakeLiters: 1.5
-            };
-            return [newEntry, ...prev];
-          }
-        });
-      } else {
-        setSkinTrackers(prev => {
-          const existing = prev.find(e => e.date === todayStr);
-          if (existing && (existing.morningRoutine || existing.eveningRoutine)) {
-            return prev.map(e => e.date === todayStr ? { ...e, morningRoutine: false, eveningRoutine: false } : e);
-          }
-          return prev;
-        });
+          });
+        }
       }
     }
-  }, [dailyHabits]);
 
-  // Synchronisation bidirectionnelle : Sport Exercises -> Habit Tracker
+    prevSkinTrackersRef.current = skinTrackers;
+    prevSkinDailyHabitsRef.current = dailyHabits;
+  }, [skinTrackers, dailyHabits]);
+
+  // Synchronisation bidirectionnelle : Sport Exercises <-> Habit Tracker
   useEffect(() => {
+    const sportHabit = dailyHabits.find(h => h.id === "h3" || h.name.toLowerCase().includes("sport"));
+    const prevSportHabit = prevSportDailyHabitsRef.current.find(h => h.id === "h3" || h.name.toLowerCase().includes("sport"));
+
+    const isHabitCompleted = sportHabit?.completed ?? false;
+    const wasHabitCompleted = prevSportHabit?.completed ?? false;
+
     const isAnyExerciseDone = sportExercises.some(ex => ex.completed);
-    
-    setDailyHabits(prev => {
-      const targetHabit = prev.find(h => h.id === "h3" || h.name.toLowerCase().includes("sport"));
-      if (targetHabit && targetHabit.completed !== isAnyExerciseDone) {
-        return prev.map(h => (h.id === targetHabit.id) ? { ...h, completed: isAnyExerciseDone } : h);
+    const wasAnyExerciseDone = prevSportExercisesRef.current.some(ex => ex.completed);
+
+    const exercisesChanged = JSON.stringify(sportExercises) !== JSON.stringify(prevSportExercisesRef.current);
+    const habitChanged = isHabitCompleted !== wasHabitCompleted;
+
+    if (exercisesChanged && !habitChanged) {
+      // User interacted with exercises, sync to habit
+      if (sportHabit && isHabitCompleted !== isAnyExerciseDone) {
+        setDailyHabits(prev => prev.map(h => h.id === sportHabit.id ? { ...h, completed: isAnyExerciseDone } : h));
       }
-      return prev;
-    });
-  }, [sportExercises]);
+    } else if (habitChanged && !exercisesChanged) {
+      // User interacted with habit, sync to exercises
+      if (isHabitCompleted !== isAnyExerciseDone) {
+        setSportExercises(prev => prev.map(ex => ({ ...ex, completed: isHabitCompleted })));
+      }
+    }
+
+    prevSportExercisesRef.current = sportExercises;
+    prevSportDailyHabitsRef.current = dailyHabits;
+  }, [sportExercises, dailyHabits]);
 
   // Synchronisation : Sport Exercises -> Sport History pour aujourd'hui
   useEffect(() => {
@@ -1004,23 +1034,6 @@ export default function App() {
       return prev;
     });
   }, [sportExercises]);
-
-  // Synchronisation bidirectionnelle : Habit Tracker -> Sport Exercises
-  useEffect(() => {
-    const sportHabit = dailyHabits.find(h => h.id === "h3" || h.name.toLowerCase().includes("sport"));
-    if (!sportHabit) return;
-    
-    const isHabitCompleted = sportHabit.completed;
-    const isAnyExerciseDone = sportExercises.some(ex => ex.completed);
-    
-    if (isHabitCompleted !== isAnyExerciseDone) {
-      if (isHabitCompleted) {
-        setSportExercises(prev => prev.map(ex => ({ ...ex, completed: true })));
-      } else {
-        setSportExercises(prev => prev.map(ex => ({ ...ex, completed: false })));
-      }
-    }
-  }, [dailyHabits]);
 
   useEffect(() => {
     localStorage.setItem("mp_sport_exercises", JSON.stringify(sportExercises));
@@ -2692,8 +2705,19 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Interactive Monthly Net Performance Card */}
-                  <MonthlyPerformanceCard transactions={transactions} abonnements={abonnements} />
+                  {/* Interactive Performance & Expense Analysis Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Interactive Monthly Net Performance Card */}
+                    <MonthlyPerformanceCard transactions={transactions} abonnements={abonnements} />
+                    
+                    {/* Interactive Monthly Expense Category Analysis Card */}
+                    <MonthlyExpenseAnalysisCard transactions={transactions} abonnements={abonnements} />
+                  </div>
+
+                  {/* Monthly Comparison and Progression Card */}
+                  <div className="mt-6">
+                    <MonthlyComparisonCard transactions={transactions} abonnements={abonnements} />
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
