@@ -82,6 +82,8 @@ import Actions30JoursSection from "./components/Actions30JoursSection";
 import FireCalculator from "./components/FireCalculator";
 import JournalSection from "./components/JournalSection";
 import ExcelSyncToolbar from "./components/ExcelSyncToolbar";
+import QuickCaptureInbox from "./components/QuickCaptureInbox";
+import CommandCenterModal from "./components/CommandCenterModal";
 
 
 
@@ -172,6 +174,50 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem("la_is_unlocked") === "true";
   });
+
+  // --- SECOND BRAIN COMMAND CENTER SHORTCUTS ---
+  const [commandCenterOpen, setCommandCenterOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandCenterOpen(prev => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleQuickAddWeeklyObjective = (text: string, isPriority = false) => {
+    const newObj = {
+      id: "obj_" + Date.now(),
+      text,
+      completed: false,
+      isPriority
+    };
+    setWeeklyObjectives(prev => [...prev, newObj]);
+  };
+
+  const handleQuickAddTransaction = (tx: any) => {
+    const newTx = {
+      ...tx,
+      id: "tr_" + Date.now()
+    };
+    setTransactions(prev => [newTx, ...prev]);
+  };
+
+  const handleQuickAddJournalEntry = (title: string, content: string, mood: any) => {
+    const newEntry = {
+      id: "jr_" + Date.now(),
+      date: new Date().toISOString().split("T")[0],
+      title,
+      content,
+      mood,
+      tags: "quick-capture"
+    };
+    setJournalEntries(prev => [newEntry, ...prev]);
+  };
 
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
 
@@ -2620,6 +2666,16 @@ export default function App() {
                 />
               )}
 
+              {/* Quick Capture Inbox (Le cœur du Second Brain) */}
+              <div className="mt-4">
+                <QuickCaptureInbox
+                  onAddWeeklyObjective={handleQuickAddWeeklyObjective}
+                  onAddTransaction={handleQuickAddTransaction}
+                  onAddJournalEntry={handleQuickAddJournalEntry}
+                  onShowToast={triggerToast}
+                />
+              </div>
+
               {/* General Statistics Cards */}
               {!focusMode ? (
                 <div className="space-y-6">
@@ -3599,13 +3655,15 @@ export default function App() {
         {/* Global Footer info banner */}
         <footer className="border-t border-neutral-200 bg-white py-6 text-center text-xs text-neutral-400 shrink-0 mt-12">
           <div className="max-w-7xl mx-auto px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p>© 2026 Moroccan Content Creator Planner. Tous droits réservés.</p>
+            <p>© 2026 LIFE ARCHITECT • Second Brain Personnel & Professionnel. Tous droits réservés.</p>
             <div className="flex gap-4 text-neutral-500 font-semibold font-mono text-[9px]">
-              <span>THE MOROCCAN ANALYST</span>
+              <span>FINANCES</span>
               <span>•</span>
-              <span>THE MOROCCAN CFO</span>
+              <span>JOB & CARRIÈRE</span>
               <span>•</span>
-              <span>THE MOROCCAN ECONOMIST</span>
+              <span>CRÉATIONS</span>
+              <span>•</span>
+              <span>HABITUDE & DISCIPLINE</span>
             </div>
           </div>
         </footer>
@@ -3691,6 +3749,20 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* SECOND BRAIN COMMAND CENTER MODAL */}
+      <CommandCenterModal
+        isOpen={commandCenterOpen}
+        onClose={() => setCommandCenterOpen(false)}
+        setActiveMenu={setActiveMenu}
+        categories={categories}
+        focusMode={focusMode}
+        toggleFocusMode={handleToggleFocusMode}
+        resetRoutines={resetDailyRoutines}
+        forceBackup={() => triggerToast("Données du Second Brain sauvegardées localement avec succès !", "success")}
+        isDarkMode={isDarkMode}
+        setIsDarkMode={setIsDarkMode}
+      />
 
       {/* GLOBAL TOAST NOTIFICATION CONTAINER */}
       <AnimatePresence>

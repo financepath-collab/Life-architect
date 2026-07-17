@@ -34,11 +34,11 @@ const DEFAULT_EXERCISES = [
 
 // Suggested playlist tracks
 const SUGGESTED_PLAYLIST = [
-  { id: "track_1", title: "Moroccan Power Cardio", artist: "Atlas Beats", duration: "3:45", tempo: "128 BPM", coverColor: "from-amber-500 to-red-500" },
+  { id: "track_1", title: "Second Brain Power Cardio", artist: "Atlas Beats", duration: "3:45", tempo: "128 BPM", coverColor: "from-amber-500 to-red-500" },
   { id: "track_2", title: "Gnawa Electro Fusion", artist: "Maâlem Synth", duration: "4:12", tempo: "130 BPM", coverColor: "from-purple-500 to-indigo-500" },
   { id: "track_3", title: "Desert Run Up-tempo", artist: "Sahara Groove", duration: "3:58", tempo: "125 BPM", coverColor: "from-emerald-500 to-teal-500" },
   { id: "track_4", title: "BVC Bull Market Energy", artist: "CFO Chillout", duration: "4:30", tempo: "120 BPM", coverColor: "from-blue-500 to-cyan-500" },
-  { id: "track_5", title: "Creativity Flow Workout", artist: "The Moroccan Analyst Project", duration: "3:15", tempo: "135 BPM", coverColor: "from-rose-500 to-orange-500" },
+  { id: "track_5", title: "Creativity Flow Workout", artist: "The Analyst Project", duration: "3:15", tempo: "135 BPM", coverColor: "from-rose-500 to-orange-500" },
 ];
 
 export default function FocusSport({ 
@@ -659,7 +659,7 @@ export default function FocusSport({
             <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <h4 className="text-xs font-extrabold text-amber-900 uppercase tracking-wider font-mono">
-                Conseils du Moroccan Coach
+                Conseils du Coach d'Élite
               </h4>
               <p className="text-[11px] text-amber-800 leading-relaxed font-medium">
                 Pensez à bien vous hydrater tout au long de votre séance de 30 minutes. Un apport hydrique suffisant améliore la clarté d'esprit de 15% et élimine le stress créatif accumulé lors de l'analyse financière et du montage de vos vidéos pro.

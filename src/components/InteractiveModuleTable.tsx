@@ -836,7 +836,7 @@ export default function InteractiveModuleTable({
       {/* Row summary count footer */}
       <div className="text-[11px] text-neutral-400 flex items-center justify-between font-sans">
         <span>Affichage de {processedData.length} sur {data.length} lignes</span>
-        <span>Moroccan Creator Workspace • Import/Export Actifs</span>
+        <span>Life Architect Second Brain • Import/Export Actifs</span>
       </div>
 
       {/* ADD / EDIT LINE MODAL DIALOG (Light theme popup) */}
