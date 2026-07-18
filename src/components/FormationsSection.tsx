@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Formation, ProjectFolder } from "../types";
+import { DEFAULT_RECRUITMENT_SITES } from "../data/recruitmentSitesData";
 import { 
   GraduationCap, 
   Plus, 
@@ -82,6 +83,8 @@ export interface RecruitmentSite {
   keywords?: string[];
   visited?: boolean;
   discoveredOpportunities?: string;
+  country?: string;
+  identifiant?: string;
 }
 
 export interface TargetCompany {
@@ -214,12 +217,25 @@ export default function FormationsSection({
 
   const [recruitmentSites, setRecruitmentSites] = useState<RecruitmentSite[]>(() => {
     const saved = localStorage.getItem("mp_recruitment_sites");
-    if (saved) return JSON.parse(saved);
-    return [
-      { id: "site_1", name: "LinkedIn", url: "https://www.linkedin.com", notes: "Réseautage pro actif et contact direct avec les CFO et HR managers.", keywords: ["Financial Modeling", "Corporate Finance", "Networking", "AI Audit"] },
-      { id: "site_2", name: "ReKrute", url: "https://www.rekrute.com", notes: "Idéal pour les cadres et postes financiers intermédiaires/seniors au Maroc.", keywords: ["Contrôle de gestion", "Finance d'entreprise", "Maroc", "CFO"] },
-      { id: "site_3", name: "Anapec", url: "https://www.anapec.org", notes: "Suivi des contrats aidés, d'insertion ou d'offres institutionnelles marocaines.", keywords: ["Audit", "Trésorerie", "Jeune diplômé"] }
-    ];
+    let existing: RecruitmentSite[] = [];
+    if (saved) {
+      try {
+        existing = JSON.parse(saved);
+      } catch (e) {
+        existing = [];
+      }
+    }
+    if (existing.length <= 3) {
+      return DEFAULT_RECRUITMENT_SITES;
+    }
+    const merged = [...existing];
+    DEFAULT_RECRUITMENT_SITES.forEach(d => {
+      const exists = merged.some(m => m.url.toLowerCase() === d.url.toLowerCase() || m.name.toLowerCase() === d.name.toLowerCase());
+      if (!exists) {
+        merged.push(d);
+      }
+    });
+    return merged;
   });
 
   const [targetCompanies, setTargetCompanies] = useState<TargetCompany[]>(() => {
@@ -304,6 +320,10 @@ export default function FormationsSection({
   const [siteUrl, setSiteUrl] = useState("");
   const [siteNotes, setSiteNotes] = useState("");
   const [siteKeywords, setSiteKeywords] = useState("");
+  const [siteCountry, setSiteCountry] = useState("Maroc");
+  const [siteIdentifiant, setSiteIdentifiant] = useState("");
+  const [siteSearch, setSiteSearch] = useState("");
+  const [siteCountryFilter, setSiteCountryFilter] = useState("Tous");
 
   const [compName, setCompName] = useState("");
   const [compWebsite, setCompWebsite] = useState("");
@@ -420,9 +440,11 @@ export default function FormationsSection({
       notes: siteNotes.trim(),
       keywords: kwArray,
       visited: false,
-      discoveredOpportunities: ""
+      discoveredOpportunities: "",
+      country: siteCountry,
+      identifiant: siteIdentifiant.trim() || "N/A"
     }, ...prev]);
-    setSiteName(""); setSiteUrl(""); setSiteNotes(""); setSiteKeywords(""); setShowSiteForm(false);
+    setSiteName(""); setSiteUrl(""); setSiteNotes(""); setSiteKeywords(""); setSiteCountry("Maroc"); setSiteIdentifiant(""); setShowSiteForm(false);
   };
 
   const handleAddCompany = (e: React.FormEvent) => {
@@ -1063,6 +1085,13 @@ export default function FormationsSection({
                       </h4>
                       <p className="text-[10px] text-neutral-400 font-bold mt-0.5 font-mono">
                         Visites régulières : {recruitmentSites.filter(s => s.visited).length}/{recruitmentSites.length} visités
+                        {siteCountryFilter !== "Tous" || siteSearch ? ` (${recruitmentSites.filter(site => {
+                          const matchesSearch = site.name.toLowerCase().includes(siteSearch.toLowerCase()) || 
+                                                (site.notes || "").toLowerCase().includes(siteSearch.toLowerCase()) ||
+                                                (site.keywords || []).some(kw => kw.toLowerCase().includes(siteSearch.toLowerCase()));
+                          const matchesCountry = siteCountryFilter === "Tous" || site.country === siteCountryFilter;
+                          return matchesSearch && matchesCountry;
+                        }).length} filtrés)` : ""}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1084,8 +1113,48 @@ export default function FormationsSection({
                     </div>
                   </div>
 
+                  {/* Barre de recherche & Filtre par pays */}
+                  <div className="grid grid-cols-2 gap-2 pb-1">
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-neutral-400">
+                        <Search className="w-3.5 h-3.5" />
+                      </span>
+                      <input 
+                        type="text"
+                        placeholder="Rechercher un site..."
+                        value={siteSearch}
+                        onChange={(e) => setSiteSearch(e.target.value)}
+                        className="w-full bg-neutral-50 border border-neutral-200/60 rounded-xl pl-8 pr-2.5 py-1.5 text-[11px] font-sans focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <select
+                        value={siteCountryFilter}
+                        onChange={(e) => setSiteCountryFilter(e.target.value)}
+                        className="w-full bg-neutral-50 border border-neutral-200/60 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-neutral-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                      >
+                        <option value="Tous">Tous les Pays</option>
+                        <option value="Maroc">Maroc</option>
+                        <option value="France">France</option>
+                        <option value="Canada">Canada</option>
+                        <option value="Suisse">Suisse</option>
+                        <option value="Germany">Allemagne</option>
+                        <option value="Luxembourg">Luxembourg</option>
+                        <option value="Netherlands">Pays-Bas</option>
+                        <option value="USA">USA</option>
+                        <option value="Worldwide">International</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="space-y-3.5 max-h-[550px] overflow-y-auto pr-1">
-                    {recruitmentSites.map(site => (
+                    {recruitmentSites.filter(site => {
+                      const matchesSearch = site.name.toLowerCase().includes(siteSearch.toLowerCase()) || 
+                                            (site.notes || "").toLowerCase().includes(siteSearch.toLowerCase()) ||
+                                            (site.keywords || []).some(kw => kw.toLowerCase().includes(siteSearch.toLowerCase()));
+                      const matchesCountry = siteCountryFilter === "Tous" || site.country === siteCountryFilter;
+                      return matchesSearch && matchesCountry;
+                    }).map(site => (
                       <div 
                         key={site.id} 
                         className={`p-4 rounded-xl border flex flex-col gap-3 transition-all ${
@@ -1109,7 +1178,7 @@ export default function FormationsSection({
                               id={`site-check-${site.id}`}
                             />
                             <div className="space-y-1 flex-1">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <label 
                                   htmlFor={`site-check-${site.id}`}
                                   className={`text-xs font-black cursor-pointer select-none transition-all ${
@@ -1125,8 +1194,29 @@ export default function FormationsSection({
                                 >
                                   <ExternalLink className="w-3 h-3 inline-block" />
                                 </a>
+                                {site.country && (
+                                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500 font-sans tracking-wide ml-auto">
+                                    {site.country === "Germany" ? "Allemagne" : site.country === "Netherlands" ? "Pays-Bas" : site.country}
+                                  </span>
+                                )}
                               </div>
                               <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">{site.notes}</p>
+                              
+                              {site.identifiant && site.identifiant !== "N/A" && (
+                                <div className="mt-1 flex items-center gap-1 text-[10px] text-neutral-500 font-mono bg-neutral-200/30 rounded-md px-2 py-0.5 w-fit">
+                                  <span className="font-bold text-neutral-400">ID:</span>
+                                  <span className="font-extrabold text-neutral-700">{site.identifiant}</span>
+                                  <button 
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(site.identifiant || "");
+                                    }}
+                                    className="text-[9px] text-indigo-600 hover:text-indigo-800 ml-1.5 cursor-pointer font-bold"
+                                    title="Copier l'identifiant"
+                                  >
+                                    Copier
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -1868,6 +1958,26 @@ export default function FormationsSection({
               <form onSubmit={handleAddSite} className="space-y-3 text-xs">
                 <input type="text" required placeholder="Nom du site (ex: ReKrute, LinkedIn)" value={siteName} onChange={e => setSiteName(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs" />
                 <input type="url" placeholder="URL (ex: https://...)" value={siteUrl} onChange={e => setSiteUrl(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs font-mono" />
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Pays</label>
+                    <select value={siteCountry} onChange={e => setSiteCountry(e.target.value)} className="w-full bg-neutral-50 border p-2 rounded-xl font-bold cursor-pointer">
+                      <option value="Maroc">Maroc</option>
+                      <option value="France">France</option>
+                      <option value="Canada">Canada</option>
+                      <option value="Suisse">Suisse</option>
+                      <option value="Germany">Allemagne</option>
+                      <option value="Luxembourg">Luxembourg</option>
+                      <option value="Netherlands">Pays-Bas</option>
+                      <option value="USA">USA</option>
+                      <option value="Worldwide">International</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Identifiant / Username</label>
+                    <input type="text" placeholder="Ex: 10527056152 ou N/A" value={siteIdentifiant} onChange={e => setSiteIdentifiant(e.target.value)} className="w-full bg-neutral-50 border p-2 rounded-xl text-xs font-mono" />
+                  </div>
+                </div>
                 <input type="text" placeholder="Mots-clés / compétences cibles (ex: CFO, Finance, Audit - séparés par des virgules)" value={siteKeywords} onChange={e => setSiteKeywords(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs" />
                 <textarea placeholder="Notes, mots de passe de recherche ou alertes planifiées..." value={siteNotes} onChange={e => setSiteNotes(e.target.value)} className="w-full bg-neutral-50 border p-2.5 rounded-xl text-xs h-16" />
                 <button type="submit" className="w-full bg-neutral-900 hover:bg-neutral-800 text-white p-2.5 rounded-xl text-xs font-bold cursor-pointer">Enregistrer le site</button>
