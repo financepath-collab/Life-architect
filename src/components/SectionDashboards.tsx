@@ -206,10 +206,22 @@ interface ProductivityDashProps {
   streakCount: number;
   onNavigate: (moduleId: string) => void;
   onToggleHabit: (id: string) => void;
+  // Morning Reminder state & handlers
+  morningReminderEnabled: boolean;
+  setMorningReminderEnabled: (val: boolean) => void;
+  morningReminderTime: string;
+  setMorningReminderTime: (val: string) => void;
+  morningReminderText: string;
+  setMorningReminderText: (val: string) => void;
+  onTriggerImmediateCheck: () => void;
+  notificationPermission: string;
+  requestNotificationPermission: () => void;
 }
 
 export function ProductivitySectionDashboard({ 
-  dailyHabits, actions30Jours, weeklyObjectives, profilAmeliorations, possibilitesGoals, journalEntries, streakCount, onNavigate, onToggleHabit 
+  dailyHabits, actions30Jours, weeklyObjectives, profilAmeliorations, possibilitesGoals, journalEntries, streakCount, onNavigate, onToggleHabit,
+  morningReminderEnabled, setMorningReminderEnabled, morningReminderTime, setMorningReminderTime, morningReminderText, setMorningReminderText,
+  onTriggerImmediateCheck, notificationPermission, requestNotificationPermission
 }: ProductivityDashProps) {
   // Stats
   const completedHabitsToday = dailyHabits.filter(h => h.completed).length;
@@ -269,54 +281,56 @@ export function ProductivitySectionDashboard({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Todays Habits Fast Panel */}
-        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs">
-          <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-            <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
-              <Flame className="w-4 h-4 text-neutral-700" />
-              <span>Suivi Rapide de mes Disciplines</span>
-            </h3>
-            <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full font-mono">
-              {completedHabitsToday} validées
-            </span>
-          </div>
+        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
+                <Flame className="w-4 h-4 text-neutral-700" />
+                <span>Suivi Rapide de mes disciplines</span>
+              </h3>
+              <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full font-mono">
+                {completedHabitsToday} validées
+              </span>
+            </div>
 
-          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-            {dailyHabits.map((habit) => (
-              <button
-                key={habit.id}
-                onClick={() => onToggleHabit(habit.id)}
-                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer ${
-                  habit.completed
-                    ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
-                    : "bg-white border-neutral-200 text-neutral-850 hover:bg-neutral-50"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="shrink-0">
-                    {habit.completed ? (
-                      <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-900 text-white" />
-                    ) : (
-                      <div className="w-4 h-4 border-2 border-neutral-300 rounded" />
-                    )}
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {dailyHabits.map((habit) => (
+                <button
+                  key={habit.id}
+                  onClick={() => onToggleHabit(habit.id)}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer ${
+                    habit.completed
+                      ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
+                      : "bg-white border-neutral-200 text-neutral-850 hover:bg-neutral-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="shrink-0">
+                      {habit.completed ? (
+                        <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-900 text-white" />
+                      ) : (
+                        <div className="w-4 h-4 border-2 border-neutral-300 rounded" />
+                      )}
+                    </div>
+                    <div>
+                      <span className={`text-xs font-semibold block ${habit.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
+                        {habit.name}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className={`text-xs font-semibold block ${habit.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
-                      {habit.name}
-                    </span>
-                  </div>
-                </div>
-                <span className="text-[8px] font-bold uppercase border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 rounded">
-                  {habit.category === "professional" ? "Pro" : "Perso"}
-                </span>
-              </button>
-            ))}
+                  <span className="text-[8px] font-bold uppercase border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 rounded">
+                    {habit.category === "professional" ? "Pro" : "Perso"}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <button 
             onClick={() => onNavigate("habits")}
-            className="w-full py-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full py-2.5 mt-4 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>Voir l'historique complet et heatmap</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -329,7 +343,7 @@ export function ProductivitySectionDashboard({
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
                 <Target className="w-4 h-4 text-neutral-700" />
-                <span>Objectifs Prioritaires de la Semaine</span>
+                <span>Objectifs de la Semaine</span>
               </h3>
               <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 px-2 py-0.5 rounded-full font-mono">
                 {weeklyObjectives.filter(o => o.isPriority).length} Starred
@@ -361,6 +375,92 @@ export function ProductivitySectionDashboard({
             <span>Gérer mes objectifs sur la page d'accueil</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
+        </div>
+
+        {/* Customizable Morning Push Notification Reminder */}
+        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
+                <Bell className="w-4 h-4 text-neutral-700 animate-bounce" />
+                <span>Rappel Matinal de Discipline</span>
+              </h3>
+              <div className="flex items-center gap-1.5">
+                {notificationPermission === "granted" ? (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                    <span>Actif</span>
+                  </span>
+                ) : (
+                  <button 
+                    onClick={requestNotificationPermission}
+                    className="text-[9px] font-extrabold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200 transition-colors cursor-pointer"
+                  >
+                    Demander l'accès
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-[11px] text-neutral-500 leading-normal">
+                Configurez une notification push quotidienne pour vous rappeler d'exécuter vos objectifs prioritaires du matin.
+              </p>
+
+              {/* Toggle Enable */}
+              <div className="flex items-center justify-between p-2.5 bg-neutral-50 border border-neutral-200/50 rounded-xl">
+                <span className="text-xs font-bold text-neutral-800">Activer le rappel</span>
+                <label className="relative inline-flex items-center cursor-pointer select-none">
+                  <input 
+                    type="checkbox" 
+                    checked={morningReminderEnabled}
+                    onChange={(e) => setMorningReminderEnabled(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-neutral-900"></div>
+                </label>
+              </div>
+
+              {morningReminderEnabled && (
+                <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-250">
+                  {/* Time picker */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider block">Heure du rappel (chaque matin)</label>
+                    <div className="relative">
+                      <input 
+                        type="time" 
+                        value={morningReminderTime}
+                        onChange={(e) => setMorningReminderTime(e.target.value)}
+                        className="w-full bg-white border border-neutral-200 text-neutral-900 rounded-xl px-3 py-2 text-xs font-bold font-mono focus:outline-none focus:ring-1 focus:ring-neutral-900 transition-all cursor-pointer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Notification text */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider block">Message personnalisé</label>
+                    <textarea 
+                      value={morningReminderText}
+                      onChange={(e) => setMorningReminderText(e.target.value)}
+                      rows={2}
+                      placeholder="Votre message d'encouragement..."
+                      className="w-full bg-white border border-neutral-200 text-neutral-800 rounded-xl p-2.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-neutral-900 transition-all resize-none leading-snug"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={onTriggerImmediateCheck}
+              className="w-full py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-3xs cursor-pointer select-none"
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>Tester la notification push</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

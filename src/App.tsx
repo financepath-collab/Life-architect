@@ -316,9 +316,48 @@ export default function App() {
   const [overdueHabitsAlert, setOverdueHabitsAlert] = useState<DailyHabit[]>([]);
   const [showOverdueModal, setShowOverdueModal] = useState<boolean>(false);
 
-  // --- BROWSER NOTIFICATIONS FOR IMPORTANT HABITS ---
+  // --- BROWSER NOTIFICATIONS FOR IMPORTANT HABITS & WEEKLY REMINDER ---
   const notifiedHabitsRef = useRef<Record<string, string>>({});
   const [notifiedHabits, setNotifiedHabits] = useState<Record<string, string>>({});
+
+  const [morningReminderEnabled, setMorningReminderEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem("mp_morning_reminder_enabled");
+      return saved !== null ? saved === "true" : true;
+    } catch (e) {
+      return true;
+    }
+  });
+
+  const [morningReminderTime, setMorningReminderTime] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem("mp_morning_reminder_time");
+      return saved || "09:00";
+    } catch (e) {
+      return "09:00";
+    }
+  });
+
+  const [morningReminderText, setMorningReminderText] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem("mp_morning_reminder_text");
+      return saved || "C'est l'heure de consulter vos objectifs hebdomadaires prioritaires pour démarrer votre journée en force !";
+    } catch (e) {
+      return "C'est l'heure de consulter vos objectifs hebdomadaires prioritaires pour démarrer votre journée en force !";
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("mp_morning_reminder_enabled", morningReminderEnabled.toString());
+  }, [morningReminderEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_morning_reminder_time", morningReminderTime);
+  }, [morningReminderTime]);
+
+  useEffect(() => {
+    localStorage.setItem("mp_morning_reminder_text", morningReminderText);
+  }, [morningReminderText]);
 
   useEffect(() => {
     try {
@@ -389,6 +428,7 @@ export default function App() {
     const currentHour = now.getHours();
     const currentMin = now.getMinutes();
 
+    // 1. Habits Check
     const habitsToNotify = dailyHabitsRef.current.filter(h => {
       if (!h.isImportant || h.completed || !h.dueTime) return false;
 
@@ -437,6 +477,73 @@ export default function App() {
         setTimeout(() => setManualCheckFeedback(null), 3000);
       }
     }
+
+    // 2. Morning Reminder for Priority Weekly Objectives Check
+    if (morningReminderEnabled) {
+      try {
+        const lastReminderDate = localStorage.getItem("mp_morning_reminder_last_date") || "";
+        if (lastReminderDate !== todayStr) {
+          const timeParts = morningReminderTime.split(":");
+          if (timeParts.length === 2) {
+            const targetHour = parseInt(timeParts[0], 10);
+            const targetMin = parseInt(timeParts[1], 10);
+            
+            if (!isNaN(targetHour) && !isNaN(targetMin)) {
+              const isTimeReached = (currentHour > targetHour) || (currentHour === targetHour && currentMin >= targetMin);
+              
+              if (isTimeReached) {
+                const priorityObjectives = weeklyObjectivesRef.current.filter(o => o.isPriority && !o.completed);
+                if (priorityObjectives.length > 0) {
+                  new Notification("⏰ Objectifs Prioritaires", {
+                    body: morningReminderText || `Vous avez ${priorityObjectives.length} objectif(s) prioritaire(s) à accomplir aujourd'hui. Démarrons la journée en force !`,
+                    icon: "/favicon.ico",
+                    tag: `morning-reminder-${todayStr}`,
+                    requireInteraction: true
+                  });
+                  localStorage.setItem("mp_morning_reminder_last_date", todayStr);
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Erreur notification matinale :", err);
+      }
+    }
+  };
+
+  const testMorningReminder = () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      triggerToast("Les notifications ne sont pas prises en charge par votre navigateur.", "error");
+      return;
+    }
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission().then(permission => {
+        setNotificationPermission(permission);
+        if (permission === "granted") {
+          triggerMorningNotificationDirectly();
+        } else {
+          triggerToast("Veuillez autoriser les notifications dans votre navigateur.", "error");
+        }
+      });
+      return;
+    }
+    triggerMorningNotificationDirectly();
+  };
+
+  const triggerMorningNotificationDirectly = () => {
+    try {
+      const priorityCount = weeklyObjectives.filter(o => o.isPriority && !o.completed).length;
+      new Notification("⏰ Objectifs Prioritaires (Test) !", {
+        body: morningReminderText || `Rappel : Vous avez ${priorityCount} objectif(s) prioritaire(s) à consulter aujourd'hui.`,
+        icon: "/favicon.ico",
+        requireInteraction: true
+      });
+      triggerToast("🔔 Notification de test envoyée !", "success");
+    } catch (err) {
+      console.error(err);
+      triggerToast("Échec de l'envoi de la notification.", "error");
+    }
   };
 
   const triggerImmediateCheck = () => {
@@ -476,12 +583,17 @@ export default function App() {
       clearTimeout(initialTimeout);
       clearInterval(intervalId);
     };
-  }, [notificationInterval]);
+  }, [notificationInterval, morningReminderEnabled, morningReminderTime, morningReminderText]);
 
   const [weeklyObjectives, setWeeklyObjectives] = useState<WeeklyObjective[]>(() => {
     const saved = localStorage.getItem("mp_weekly_objectives_v2");
     return saved ? JSON.parse(saved) : INITIAL_WEEKLY_OBJECTIVES;
   });
+
+  const weeklyObjectivesRef = useRef(weeklyObjectives);
+  useEffect(() => {
+    weeklyObjectivesRef.current = weeklyObjectives;
+  }, [weeklyObjectives]);
 
   const [transactions, setTransactions] = useState<FinanceTransaction[]>(() => {
     const saved = localStorage.getItem("mp_transactions_v2");
@@ -3104,6 +3216,15 @@ export default function App() {
                       streakCount={streakCount}
                       onNavigate={handleMenuClick}
                       onToggleHabit={toggleHabit}
+                      morningReminderEnabled={morningReminderEnabled}
+                      setMorningReminderEnabled={setMorningReminderEnabled}
+                      morningReminderTime={morningReminderTime}
+                      setMorningReminderTime={setMorningReminderTime}
+                      morningReminderText={morningReminderText}
+                      setMorningReminderText={setMorningReminderText}
+                      onTriggerImmediateCheck={testMorningReminder}
+                      notificationPermission={notificationPermission}
+                      requestNotificationPermission={requestNotificationPermission}
                     />
                   ) : activeMenu === "health_dash" ? (
                     <HealthSectionDashboard
