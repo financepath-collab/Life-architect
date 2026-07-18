@@ -3,7 +3,7 @@ export interface DailyHabit {
   name: string;
   description: string;
   completed: boolean;
-  category: "personal" | "professional";
+  category: "Health" | "Career" | "Mental" | "Personal" | "Finance" | "personal" | "professional" | string;
   isImportant?: boolean;
   dueTime?: string;
 }

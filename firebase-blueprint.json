@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "UserSync": {
+      "title": "UserSync",
+      "description": "Synced user data representing the complete state of the Second Brain application",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Sanitized user email or unique identifier"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp when this record was last modified"
+        },
+        "payload": {
+          "type": "object",
+          "description": "Full JSON payload containing all Second Brain application states (habits, transactions, budgets, etc.)"
+        }
+      },
+      "required": ["userId", "updatedAt", "payload"]
+    }
+  },
+  "firestore": {
+    "/user_sync/{userId}": {
+      "schema": "UserSync",
+      "description": "Holds the synced Second Brain data for each individual user account"
+    }
+  }
+}

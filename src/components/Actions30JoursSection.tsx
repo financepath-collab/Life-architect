@@ -28,6 +28,15 @@ import {
   Award
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { 
+  ResponsiveContainer, 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip 
+} from "recharts";
 
 interface Actions30JoursSectionProps {
   actions30Jours: Action30Jours[];
@@ -421,6 +430,82 @@ export default function Actions30JoursSection({
       completed,
       total,
       pct: Math.round((completed / total) * 100)
+    };
+  }, [currentSprint]);
+
+  // Momentum chart data for the currently selected sprint
+  const momentumChartData = useMemo(() => {
+    if (!currentSprint) return [];
+    const data = [];
+    
+    // Determine active day limit based on system date 2026-07-18
+    const today = new Date("2026-07-18");
+    const [sprintYear, sprintMonth] = currentSprint.month.split("-").map(Number);
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth() + 1;
+
+    let activeDayLimit = 30;
+    if (sprintYear === todayYear && sprintMonth === todayMonth) {
+      activeDayLimit = Math.min(30, Math.max(1, today.getDate()));
+    } else if (sprintYear > todayYear || (sprintYear === todayYear && sprintMonth > todayMonth)) {
+      activeDayLimit = 0; // Future
+    }
+
+    for (let day = 1; day <= 30; day++) {
+      // Find how many tasks with dayNumber <= day are completed
+      const completedUpToDay = currentSprint.tasks.filter(
+        t => t.dayNumber <= day && t.completed
+      ).length;
+
+      data.push({
+        day,
+        name: `J${day}`,
+        "Tâches Complétées": day <= activeDayLimit ? completedUpToDay : undefined,
+        "Cadence Idéale": day,
+      });
+    }
+    return data;
+  }, [currentSprint]);
+
+  // Momentum Status Coaching Insight
+  const momentumStatus = useMemo(() => {
+    if (!currentSprint) return null;
+    const today = new Date("2026-07-18");
+    const [sprintYear, sprintMonth] = currentSprint.month.split("-").map(Number);
+    const todayYear = today.getFullYear();
+    const todayMonth = today.getMonth() + 1;
+
+    let activeDayLimit = 30;
+    if (sprintYear === todayYear && sprintMonth === todayMonth) {
+      activeDayLimit = Math.min(30, Math.max(1, today.getDate()));
+    } else if (sprintYear > todayYear || (sprintYear === todayYear && sprintMonth > todayMonth)) {
+      return { status: "not_started", text: "Sprint non démarré", diff: 0, completed: 0 };
+    }
+
+    const completedAtCurrentDay = currentSprint.tasks.filter(
+      t => t.dayNumber <= activeDayLimit && t.completed
+    ).length;
+
+    const diff = completedAtCurrentDay - activeDayLimit;
+
+    if (activeDayLimit === 30) {
+      return {
+        status: completedAtCurrentDay === 30 ? "perfect" : completedAtCurrentDay >= 25 ? "excellent" : "completed",
+        text: `Sprint complété à ${Math.round((completedAtCurrentDay / 30) * 100)}% (${completedAtCurrentDay} / 30 tâches)`,
+        diff,
+        completed: completedAtCurrentDay
+      };
+    }
+
+    return {
+      status: diff >= 0 ? "ahead" : diff >= -3 ? "on_track" : "behind",
+      text: diff >= 0 
+        ? `Élan Excellent (+${diff} tâches d'avance)` 
+        : diff >= -3 
+          ? "Sur la bonne voie (cadence maîtrisée)" 
+          : `Retard de cadence (${Math.abs(diff)} tâches à rattraper)`,
+      diff,
+      completed: completedAtCurrentDay
     };
   }, [currentSprint]);
 
@@ -821,7 +906,8 @@ export default function Actions30JoursSection({
             </div>
 
             {currentSprint ? (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Side: Summary & Focus Area */}
                 <div className="space-y-6">
                   {/* Progress Card */}
@@ -950,6 +1036,156 @@ export default function Actions30JoursSection({
                   </div>
                 </div>
               </div>
+
+              {/* Graphique de Vitesse & Élan du Sprint */}
+              <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-4 shadow-3xs mt-6 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-neutral-900 text-white rounded-xl">
+                      <TrendingUp className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-neutral-950 uppercase tracking-wider">
+                        Élan & Momentum du Sprint (30 Jours)
+                      </h3>
+                      <p className="text-xs text-neutral-500 font-medium">
+                        Suivez votre élan de réalisation quotidien par rapport au rythme linéaire idéal d'une tâche par jour.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Momentum Status Badge */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {momentumStatus && (
+                      <>
+                        {momentumStatus.status === "ahead" && (
+                          <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                            <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                            {momentumStatus.text}
+                          </span>
+                        )}
+                        {momentumStatus.status === "on_track" && (
+                          <span className="text-[10px] bg-neutral-50 border border-neutral-200 text-neutral-700 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                            <Activity className="w-3 h-3 text-neutral-600" />
+                            {momentumStatus.text}
+                          </span>
+                        )}
+                        {momentumStatus.status === "behind" && (
+                          <span className="text-[10px] bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                            <Flame className="w-3 h-3 text-amber-600" />
+                            {momentumStatus.text}
+                          </span>
+                        )}
+                        {momentumStatus.status === "not_started" && (
+                          <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-600 px-2.5 py-1 rounded-full font-bold">
+                            {momentumStatus.text}
+                          </span>
+                        )}
+                        {momentumStatus.status === "perfect" && (
+                          <span className="text-[10px] bg-emerald-100 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                            <Trophy className="w-3 h-3 text-emerald-600" />
+                            Sprint Parfait !
+                          </span>
+                        )}
+                      </>
+                    )}
+                    <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2.5 py-1 rounded-full font-mono font-bold">
+                      Momentum : {currentSprintStats.completed} / 30 Jours
+                    </span>
+                  </div>
+                </div>
+
+                <div className="w-full h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={momentumChartData}
+                      margin={{ top: 15, right: 15, left: -20, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                      <XAxis 
+                        dataKey="day" 
+                        tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={8}
+                      />
+                      <YAxis 
+                        domain={[0, 30]}
+                        tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-neutral-950 text-white border border-neutral-800 p-3 rounded-xl shadow-xl space-y-1 text-xs">
+                                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Jour {data.day}</p>
+                                <div className="space-y-1">
+                                  <p className="flex justify-between gap-6">
+                                    <span className="text-neutral-400 font-semibold">Réalisé Cumulé :</span>
+                                    <span className="font-bold font-mono text-white">
+                                      {data["Tâches Complétées"] !== undefined ? `${data["Tâches Complétées"]} / 30` : "Non survenu"}
+                                    </span>
+                                  </p>
+                                  <p className="flex justify-between gap-6">
+                                    <span className="text-neutral-400 font-semibold">Cadence Idéale :</span>
+                                    <span className="font-bold font-mono text-neutral-300">
+                                      {data["Cadence Idéale"]} / 30
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      {/* Cadence Idéale (Dashed Line) */}
+                      <Line 
+                        type="monotone" 
+                        dataKey="Cadence Idéale" 
+                        stroke="#a3a3a3" 
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        activeDot={false}
+                      />
+                      {/* Tâches Complétées Réelles (Solid Black Line) */}
+                      <Line 
+                        type="monotone" 
+                        dataKey="Tâches Complétées" 
+                        stroke="#171717" 
+                        strokeWidth={3}
+                        connectNulls={false}
+                        dot={{ r: 3, fill: '#171717' }}
+                        activeDot={{ r: 6, fill: '#171717', stroke: '#ffffff', strokeWidth: 2 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="bg-neutral-50 p-4 border border-neutral-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+                  <div className="space-y-1">
+                    <span className="font-black text-neutral-800 uppercase tracking-wider text-[10px] block">Comment lire ce graphique ?</span>
+                    <p className="text-neutral-500 font-medium leading-relaxed">
+                      La ligne grise en pointillés représente un rythme parfait d'un jour complété par jour calendaire. Si votre ligne noire (cumul réel de tâches terminées) se maintient au-dessus ou au niveau de la ligne grise, votre sprint conserve un excellent élan.
+                    </p>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-600">
+                      <span className="w-3 h-0.5 bg-neutral-900 border-t-2 border-neutral-900" />
+                      <span>Réalisé</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-600">
+                      <span className="w-3 h-0.5 border-t-2 border-dashed border-neutral-400" />
+                      <span>Idéal</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </>
             ) : (
               <div className="text-center py-16 bg-white border border-neutral-200 rounded-2xl p-6">
                 <Calendar className="w-12 h-12 text-neutral-300 mx-auto mb-3" />

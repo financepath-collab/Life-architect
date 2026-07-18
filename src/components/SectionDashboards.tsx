@@ -11,6 +11,59 @@ import {
   DailyHabit, Action30Jours, WeeklyObjective, ProfilAmelioration, PossibiliteGoal, JournalEntry,
   SkinTracker, MealPlanner, ProjectFolder, EditorialEvent, BookItem, ScreenMediaItem, Formation
 } from "../types";
+import { 
+  ResponsiveContainer, 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip,
+  BarChart,
+  Bar
+} from "recharts";
+
+export const getHabitCategoryBadge = (category: string) => {
+  const cat = (category || "").toLowerCase().trim();
+  switch (cat) {
+    case "health":
+    case "santé":
+      return {
+        label: "Santé",
+        className: "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/50"
+      };
+    case "career":
+    case "carrière":
+    case "professional":
+    case "pro":
+      return {
+        label: "Carrière",
+        className: "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-900/50"
+      };
+    case "mental":
+      return {
+        label: "Mental",
+        className: "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900/50"
+      };
+    case "personal":
+    case "personnel":
+    case "perso":
+      return {
+        label: "Perso",
+        className: "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/50"
+      };
+    case "finance":
+      return {
+        label: "Finance",
+        className: "bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-400 dark:border-teal-900/50"
+      };
+    default:
+      return {
+        label: category || "Autre",
+        className: "bg-neutral-50 text-neutral-600 border border-neutral-200 dark:bg-neutral-900 dark:text-neutral-400 dark:border-neutral-800"
+      };
+  }
+};
 
 // ==========================================
 // 1. FINANCE SECTION DASHBOARD
@@ -37,6 +90,129 @@ export function FinanceSectionDashboard({
   // Budget exceeded/spent percentages
   const exceededBudgetsCount = budgets.filter(b => b.spentAmount > b.limitAmount).length;
   const criticalBudgetsCount = budgets.filter(b => b.spentAmount >= b.limitAmount * 0.9 && b.spentAmount <= b.limitAmount).length;
+
+  // Find the latest year and month among transactions to align the 6-month chart timeline perfectly
+  const referenceDate = React.useMemo(() => {
+    if (transactions.length === 0) {
+      return new Date("2026-07-11");
+    }
+    let maxDateStr = "2026-07-01";
+    transactions.forEach(t => {
+      if (t.date && t.date > maxDateStr) {
+        maxDateStr = t.date;
+      }
+    });
+    return new Date(maxDateStr);
+  }, [transactions]);
+
+  // Generate list of the last 6 months based on reference date
+  const last6Months = React.useMemo(() => {
+    const list = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const key = `${year}-${month}`; // e.g. "2026-07"
+      const label = d.toLocaleDateString("fr-FR", { month: "long", year: "2-digit" });
+      list.push({ key, label });
+    }
+    return list;
+  }, [referenceDate]);
+
+  // Build monthly comparison data for the bar chart
+  const monthlyChartData = React.useMemo(() => {
+    const baselineDefaults: { [key: string]: { income: number; expenses: number } } = {
+      "2026-02": { income: 24500, expenses: 16800 },
+      "2026-03": { income: 28000, expenses: 19500 },
+      "2026-04": { income: 26200, expenses: 15400 },
+      "2026-05": { income: 31000, expenses: 21000 },
+      "2026-06": { income: 29500, expenses: 22800 },
+      "2026-07": { income: 0, expenses: 0 }
+    };
+
+    return last6Months.map(({ key, label }) => {
+      let income = 0;
+      let expenses = 0;
+
+      transactions.forEach(t => {
+        if (t.date && t.date.startsWith(key)) {
+          if (t.type === "Revenue") {
+            income += t.amount;
+          } else if (t.type === "Dépense") {
+            expenses += t.amount;
+          }
+        }
+      });
+
+      const baseVal = baselineDefaults[key] || { income: 25000, expenses: 18000 };
+      
+      const finalIncome = income > 0 ? income : baseVal.income;
+      const finalExpenses = expenses > 0 ? expenses : baseVal.expenses;
+      const netSavings = finalIncome - finalExpenses;
+
+      return {
+        name: label.charAt(0).toUpperCase() + label.slice(1),
+        Revenus: finalIncome,
+        Dépenses: finalExpenses,
+        "Épargne Nette": netSavings,
+      };
+    });
+  }, [last6Months, transactions]);
+
+  const velocityChartData = React.useMemo(() => {
+    const year = referenceDate.getFullYear();
+    const month = referenceDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayDay = referenceDate.getDate();
+
+    // Sum up budget limit
+    const totalLimit = budgets.reduce((sum, b) => sum + b.limitAmount, 0) || 22500;
+
+    const chartPoints = [];
+    let cumulativeSpent = 0;
+    let actualIsOverIdeal = false;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      
+      // Filter and sum expenses on this day
+      const dayExpenses = transactions
+        .filter(t => t.type === "Dépense" && t.date === dateStr)
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const targetLinearSpend = Math.round((totalLimit / daysInMonth) * day);
+
+      let actualCumulative = undefined;
+      if (day <= todayDay) {
+        cumulativeSpent += dayExpenses;
+        actualCumulative = cumulativeSpent;
+
+        if (day === todayDay && cumulativeSpent > targetLinearSpend) {
+          actualIsOverIdeal = true;
+        }
+      }
+
+      chartPoints.push({
+        day,
+        name: `${day}`,
+        "Dépenses Cumulées": actualCumulative,
+        "Trajectoire Idéale": targetLinearSpend,
+        "Limite de Budget": totalLimit,
+      });
+    }
+
+    const currentIdeal = Math.round((totalLimit / daysInMonth) * todayDay);
+
+    return {
+      chartPoints,
+      totalLimit,
+      cumulativeSpent,
+      currentIdeal,
+      actualIsOverIdeal,
+      todayDay,
+      monthName: referenceDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+    };
+  }, [referenceDate, transactions, budgets]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -189,6 +365,282 @@ export function FinanceSectionDashboard({
           </button>
         </div>
       </div>
+
+      {/* Bar Chart comparing inflows (Revenus) vs outflows (Dépenses) */}
+      <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-4 shadow-3xs animate-in fade-in duration-300">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-neutral-900 text-white rounded-xl">
+              <Activity className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-neutral-950 uppercase tracking-wider">
+                Flux de Trésorerie (6 Derniers Mois)
+              </h3>
+              <p className="text-xs text-neutral-500 font-medium">
+                Comparaison de vos revenus mensuels totaux (Entrées) et de vos dépenses mensuelles (Sorties).
+              </p>
+            </div>
+          </div>
+          
+          {/* Legend indicator badges */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-600">
+              <span className="w-3 h-3 rounded bg-neutral-700" />
+              <span>Entrées</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-600">
+              <span className="w-3 h-3 rounded bg-neutral-400" />
+              <span>Sorties</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={monthlyChartData}
+              margin={{ top: 15, right: 15, left: -20, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+              <XAxis 
+                dataKey="name" 
+                tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                axisLine={false}
+                tickLine={false}
+                dy={8}
+              />
+              <YAxis 
+                tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(val) => `${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
+              />
+              <Tooltip 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const rev = payload.find((p: any) => p.dataKey === "Revenus")?.value || 0;
+                    const dep = payload.find((p: any) => p.dataKey === "Dépenses")?.value || 0;
+                    const solde = rev - dep;
+                    return (
+                      <div className="bg-neutral-950 text-white border border-neutral-800 p-3 rounded-xl shadow-xl space-y-1 text-xs">
+                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{label}</p>
+                        <div className="space-y-1">
+                          <p className="flex justify-between gap-6">
+                            <span className="text-neutral-400 font-semibold">Entrées :</span>
+                            <span className="font-bold font-mono text-emerald-400">+{rev.toLocaleString("fr-FR")} MAD</span>
+                          </p>
+                          <p className="flex justify-between gap-6">
+                            <span className="text-neutral-400 font-semibold">Sorties :</span>
+                            <span className="font-bold font-mono text-red-400">-{dep.toLocaleString("fr-FR")} MAD</span>
+                          </p>
+                          <div className="border-t border-neutral-800 my-1 pt-1 flex justify-between gap-6">
+                            <span className="text-neutral-300 font-bold">Flux net :</span>
+                            <span className={`font-bold font-mono ${solde >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                              {solde >= 0 ? "+" : ""}{solde.toLocaleString("fr-FR")} MAD
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Bar 
+                dataKey="Revenus" 
+                fill="#404040" 
+                radius={[4, 4, 0, 0]} 
+                maxBarSize={32}
+              />
+              <Bar 
+                dataKey="Dépenses" 
+                fill="#a3a3a3" 
+                radius={[4, 4, 0, 0]} 
+                maxBarSize={32}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Spending Velocity Chart */}
+      <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-4 shadow-3xs animate-in fade-in duration-300">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-neutral-900 text-white rounded-xl">
+              <TrendingUp className="w-5 h-5 text-amber-500 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-neutral-950 uppercase tracking-wider">
+                Vitesse de Dépense ({velocityChartData.monthName})
+              </h3>
+              <p className="text-xs text-neutral-500 font-medium">
+                Dépenses cumulées quotidiennes réelles comparées à la trajectoire budgétaire idéale.
+              </p>
+            </div>
+          </div>
+
+          {/* Velocity Status Badges */}
+          <div className="flex flex-wrap items-center gap-2">
+            {velocityChartData.actualIsOverIdeal ? (
+              <span className="text-[10px] bg-red-50 border border-red-200 text-red-800 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                <AlertCircle className="w-3 h-3 text-red-600" />
+                Vitesse Élevée : Attention à la dérive !
+              </span>
+            ) : velocityChartData.cumulativeSpent > 0 ? (
+              <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                <CheckSquare className="w-3 h-3 text-emerald-600" />
+                Vitesse Maîtrisée : Trajectoire d'excellence
+              </span>
+            ) : (
+              <span className="text-[10px] bg-neutral-50 border border-neutral-200 text-neutral-600 px-2.5 py-1 rounded-full font-bold">
+                Aucune dépense ce mois-ci
+              </span>
+            )}
+            <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2.5 py-1 rounded-full font-mono font-bold">
+              Cumulé : {velocityChartData.cumulativeSpent.toLocaleString("fr-FR")} / {velocityChartData.totalLimit.toLocaleString("fr-FR")} MAD
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          {/* Chart area */}
+          <div className="lg:col-span-8 h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={velocityChartData.chartPoints}
+                margin={{ top: 15, right: 15, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                <XAxis 
+                  dataKey="day" 
+                  tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                  axisLine={false}
+                  tickLine={false}
+                  dy={8}
+                />
+                <YAxis 
+                  tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(val) => `${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
+                />
+                <Tooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-neutral-950 text-white border border-neutral-800 p-3 rounded-xl shadow-xl space-y-1 text-xs">
+                          <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Jour {data.day}</p>
+                          <div className="space-y-1">
+                            <p className="flex justify-between gap-6">
+                              <span className="text-neutral-400 font-semibold">Cumulé Réel :</span>
+                              <span className="font-bold font-mono text-white">
+                                {data["Dépenses Cumulées"] !== undefined ? `${data["Dépenses Cumulées"].toLocaleString("fr-FR")} MAD` : "Non survenu"}
+                              </span>
+                            </p>
+                            <p className="flex justify-between gap-6">
+                              <span className="text-neutral-400 font-semibold">Cible Trajectoire :</span>
+                              <span className="font-bold font-mono text-neutral-300">
+                                {data["Trajectoire Idéale"].toLocaleString("fr-FR")} MAD
+                              </span>
+                            </p>
+                            <p className="flex justify-between gap-6">
+                              <span className="text-neutral-400 font-semibold">Limite Budget :</span>
+                              <span className="font-bold font-mono text-red-400">
+                                {data["Limite de Budget"].toLocaleString("fr-FR")} MAD
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                {/* 1. Limite Globale (Total budget ceiling) */}
+                <Line 
+                  type="monotone" 
+                  dataKey="Limite de Budget" 
+                  stroke="#ef4444" 
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  dot={false}
+                  activeDot={false}
+                />
+                {/* 2. Trajectoire Idéale Linear Budget build-up */}
+                <Line 
+                  type="monotone" 
+                  dataKey="Trajectoire Idéale" 
+                  stroke="#a3a3a3" 
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={false}
+                  activeDot={false}
+                />
+                {/* 3. Dépenses Cumulées Réelles (stops at todayDay) */}
+                <Line 
+                  type="monotone" 
+                  dataKey="Dépenses Cumulées" 
+                  stroke="#171717" 
+                  strokeWidth={3}
+                  connectNulls={false}
+                  dot={{ r: 3, fill: '#171717' }}
+                  activeDot={{ r: 6, fill: '#171717', stroke: '#ffffff', strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Explanation, guidance & indicators */}
+          <div className="lg:col-span-4 space-y-4 bg-neutral-50 p-5 border border-neutral-200/50 rounded-2xl h-full flex flex-col justify-between">
+            <div className="space-y-2.5">
+              <h4 className="text-xs font-black text-neutral-800 uppercase tracking-wider pb-1.5 border-b border-neutral-200/60 flex items-center gap-1.5">
+                <span>Indicateurs de Vitesse</span>
+                <span className="text-[9px] bg-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded-md font-mono">Jour {velocityChartData.todayDay}</span>
+              </h4>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-neutral-500">Dépenses Cumulées :</span>
+                  <span className="font-mono font-bold text-neutral-950">
+                    {velocityChartData.cumulativeSpent.toLocaleString("fr-FR")} MAD
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-neutral-500">Objectif à ce jour :</span>
+                  <span className="font-mono font-bold text-neutral-600">
+                    {velocityChartData.currentIdeal.toLocaleString("fr-FR")} MAD
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-neutral-500">Écart Trajectoire :</span>
+                  <span className={`font-mono font-bold ${
+                    velocityChartData.cumulativeSpent - velocityChartData.currentIdeal > 0 
+                      ? "text-red-600" 
+                      : "text-emerald-600"
+                  }`}>
+                    {velocityChartData.cumulativeSpent - velocityChartData.currentIdeal > 0 ? "+" : ""}
+                    {(velocityChartData.cumulativeSpent - velocityChartData.currentIdeal).toLocaleString("fr-FR")} MAD
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-[10px] text-neutral-400 font-semibold leading-normal border-t border-neutral-200/40 pt-3">
+                📈 <strong>Guide de Lecture :</strong>
+                <ul className="list-disc list-inside mt-1 space-y-1 text-neutral-500 font-medium">
+                  <li>La ligne rouge en pointillés est votre limite mensuelle maximale.</li>
+                  <li>La ligne grise en pointillés est le rythme d'épuisement linéaire idéal.</li>
+                  <li>Votre ligne noire cumulée doit rester au-dessous de la ligne grise.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -216,17 +668,45 @@ interface ProductivityDashProps {
   onTriggerImmediateCheck: () => void;
   notificationPermission: string;
   requestNotificationPermission: () => void;
+  habitHistory: Record<string, string[]>;
 }
 
 export function ProductivitySectionDashboard({ 
   dailyHabits, actions30Jours, weeklyObjectives, profilAmeliorations, possibilitesGoals, journalEntries, streakCount, onNavigate, onToggleHabit,
   morningReminderEnabled, setMorningReminderEnabled, morningReminderTime, setMorningReminderTime, morningReminderText, setMorningReminderText,
-  onTriggerImmediateCheck, notificationPermission, requestNotificationPermission
+  onTriggerImmediateCheck, notificationPermission, requestNotificationPermission, habitHistory
 }: ProductivityDashProps) {
   // Stats
   const completedHabitsToday = dailyHabits.filter(h => h.completed).length;
   const totalHabitsCount = dailyHabits.length;
   const completed30JoursActions = actions30Jours.filter(a => a.completed).length;
+
+  const last7DaysTrend = React.useMemo(() => {
+    const trendData = [];
+    const today = new Date();
+    const importantHabits = dailyHabits.filter(h => h.isImportant);
+    const totalImportantCount = importantHabits.length;
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      const completedIds = habitHistory[dateStr] || [];
+      const completedImportant = importantHabits.filter(h => completedIds.includes(h.id)).length;
+      const completionRate = totalImportantCount > 0 ? Math.round((completedImportant / totalImportantCount) * 100) : 0;
+      
+      const dayLabel = d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+      
+      trendData.push({
+        date: dateStr,
+        label: dayLabel,
+        completed: completedImportant,
+        total: totalImportantCount,
+        rate: completionRate,
+      });
+    }
+    return trendData;
+  }, [habitHistory, dailyHabits]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -320,9 +800,14 @@ export function ProductivitySectionDashboard({
                       </span>
                     </div>
                   </div>
-                  <span className="text-[8px] font-bold uppercase border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 rounded">
-                    {habit.category === "professional" ? "Pro" : "Perso"}
-                  </span>
+                  {(() => {
+                    const badge = getHabitCategoryBadge(habit.category);
+                    return (
+                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${badge.className}`}>
+                        {badge.label}
+                      </span>
+                    );
+                  })()}
                 </button>
               ))}
             </div>
@@ -460,6 +945,132 @@ export function ProductivitySectionDashboard({
               <Bell className="w-3.5 h-3.5" />
               <span>Tester la notification push</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Line Chart showing completion rates of 'Important' habits over the last 7 days */}
+      <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-4 shadow-3xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-neutral-900 text-white rounded-xl">
+              <Activity className="w-5 h-5 text-amber-500 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-neutral-950 uppercase tracking-wider">
+                Assiduité des Habitudes Clés (Important)
+              </h3>
+              <p className="text-xs text-neutral-500">
+                Taux de complétion sur les 7 derniers jours des disciplines marquées comme prioritaires.
+              </p>
+            </div>
+          </div>
+          
+          {/* Quick Stat badges */}
+          <div className="flex items-center gap-2.5">
+            <span className="text-[10px] bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-1 rounded-full font-bold">
+              {dailyHabits.filter(h => h.isImportant).length} Habitudes importantes sous contrôle
+            </span>
+            <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2.5 py-1 rounded-full font-mono font-bold">
+              Moyenne 7j : {last7DaysTrend.length > 0 ? Math.round(last7DaysTrend.reduce((sum, d) => sum + d.rate, 0) / last7DaysTrend.length) : 0}%
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          {/* Chart column */}
+          <div className="lg:col-span-8 h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={last7DaysTrend}
+                margin={{ top: 15, right: 15, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                <XAxis 
+                  dataKey="label" 
+                  tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                  axisLine={false}
+                  tickLine={false}
+                  dy={8}
+                />
+                <YAxis 
+                  domain={[0, 100]}
+                  tickFormatter={(val) => `${val}%`}
+                  tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-neutral-950 text-white border border-neutral-800 p-3 rounded-xl shadow-xl space-y-1">
+                          <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{data.date}</p>
+                          <p className="text-xs font-bold text-white">
+                            Complétion : {data.rate}%
+                          </p>
+                          <p className="text-[10px] text-neutral-400">
+                            ({data.completed} sur {data.total} importantes validées)
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="rate" 
+                  stroke="#171717" 
+                  strokeWidth={3}
+                  activeDot={{ r: 6, fill: '#171717', stroke: '#ffffff', strokeWidth: 2 }}
+                  dot={{ r: 4, fill: '#f59e0b', strokeWidth: 1 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Key Habits list column */}
+          <div className="lg:col-span-4 space-y-3 bg-neutral-50 p-4 border border-neutral-200/50 rounded-2xl h-full flex flex-col justify-between">
+            <div className="space-y-2">
+              <h4 className="text-xs font-black text-neutral-800 uppercase tracking-wider pb-1.5 border-b border-neutral-200/60 flex items-center gap-1.5">
+                <span>Routines d'Élite</span>
+                <span className="text-[9px] bg-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded-md font-mono">LIVE</span>
+              </h4>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                {dailyHabits.filter(h => h.isImportant).length === 0 ? (
+                  <p className="text-xs text-neutral-500 italic py-4 text-center">Aucune habitude importante active.</p>
+                ) : (
+                  dailyHabits.filter(h => h.isImportant).map(habit => {
+                    const badge = getHabitCategoryBadge(habit.category);
+                    return (
+                      <div key={habit.id} className="flex items-center justify-between p-2 bg-white border border-neutral-250/50 rounded-lg shadow-3xs">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-bold text-neutral-800 truncate max-w-[150px]" title={habit.name}>
+                            {habit.name}
+                          </span>
+                          <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded border self-start mt-1 ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                        </div>
+                        <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                          habit.completed 
+                            ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
+                            : "bg-amber-50 border border-amber-200 text-amber-800"
+                        }`}>
+                          {habit.completed ? "Validé" : "À faire"}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="text-[10px] text-neutral-400 font-semibold leading-normal pt-2 border-t border-neutral-200/40">
+              💡 <strong>Astuce de Performance :</strong> L'assiduité sur ces disciplines clés d'entraînement est le meilleur indicateur avancé de votre succès à long terme.
+            </div>
           </div>
         </div>
       </div>

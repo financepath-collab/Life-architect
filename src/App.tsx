@@ -85,6 +85,10 @@ import ExcelSyncToolbar from "./components/ExcelSyncToolbar";
 import QuickCaptureInbox from "./components/QuickCaptureInbox";
 import CommandCenterModal from "./components/CommandCenterModal";
 import BudgetOptimizer from "./components/BudgetOptimizer";
+import SettingsModal from "./components/SettingsModal";
+import { auth, db, handleFirestoreError, OperationType } from "./firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { 
   FinanceSectionDashboard, 
   ProductivitySectionDashboard, 
@@ -152,6 +156,7 @@ import {
   ClipboardCheck,
   CalendarDays,
   Star,
+  Settings,
   Save
 } from "lucide-react";
 
@@ -186,6 +191,16 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem("la_is_unlocked") === "true";
   });
+
+  // --- CLOUD SYNC & SETTINGS STATES ---
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [cloudSyncEnabled, setCloudSyncEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("la_cloud_sync_enabled") === "true";
+  });
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [syncStatus, setSyncStatus] = useState<"synced" | "syncing" | "local" | "error">("local");
+  const [lastSyncedTime, setLastSyncedTime] = useState<Date | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // --- SECOND BRAIN COMMAND CENTER SHORTCUTS ---
   const [commandCenterOpen, setCommandCenterOpen] = useState(false);
@@ -300,8 +315,12 @@ export default function App() {
         const parsed = JSON.parse(saved) as DailyHabit[];
         return parsed.map(h => {
           const initial = INITIAL_HABITS.find(ih => ih.id === h.id);
+          let cat = h.category;
+          if (cat === "personal" || !cat) cat = "Personal";
+          if (cat === "professional") cat = "Career";
           return {
             ...h,
+            category: cat,
             isImportant: h.isImportant !== undefined ? h.isImportant : (initial?.isImportant ?? false),
             dueTime: h.dueTime !== undefined ? h.dueTime : (initial?.dueTime ?? "")
           };
@@ -312,6 +331,16 @@ export default function App() {
     }
     return INITIAL_HABITS;
   });
+
+  const [weeklyObjectives, setWeeklyObjectives] = useState<WeeklyObjective[]>(() => {
+    const saved = localStorage.getItem("mp_weekly_objectives_v2");
+    return saved ? JSON.parse(saved) : INITIAL_WEEKLY_OBJECTIVES;
+  });
+
+  const weeklyObjectivesRef = useRef(weeklyObjectives);
+  useEffect(() => {
+    weeklyObjectivesRef.current = weeklyObjectives;
+  }, [weeklyObjectives]);
 
   const [overdueHabitsAlert, setOverdueHabitsAlert] = useState<DailyHabit[]>([]);
   const [showOverdueModal, setShowOverdueModal] = useState<boolean>(false);
@@ -584,16 +613,6 @@ export default function App() {
       clearInterval(intervalId);
     };
   }, [notificationInterval, morningReminderEnabled, morningReminderTime, morningReminderText]);
-
-  const [weeklyObjectives, setWeeklyObjectives] = useState<WeeklyObjective[]>(() => {
-    const saved = localStorage.getItem("mp_weekly_objectives_v2");
-    return saved ? JSON.parse(saved) : INITIAL_WEEKLY_OBJECTIVES;
-  });
-
-  const weeklyObjectivesRef = useRef(weeklyObjectives);
-  useEffect(() => {
-    weeklyObjectivesRef.current = weeklyObjectives;
-  }, [weeklyObjectives]);
 
   const [transactions, setTransactions] = useState<FinanceTransaction[]>(() => {
     const saved = localStorage.getItem("mp_transactions_v2");
@@ -1316,6 +1335,231 @@ export default function App() {
     }
   };
 
+  // --- CLOUD SYNC ENGINE (FIREBASE PERSISTENCE WITH LOCALSTORAGE FALLBACK) ---
+  const getCurrentStatePayload = () => {
+    return {
+      dailyHabits,
+      habitHistory,
+      weeklyObjectives,
+      transactions,
+      stocks,
+      budgets,
+      salaires,
+      epargnes,
+      actions30Jours,
+      profilAmeliorations,
+      possibilitesGoals,
+      skinTrackers,
+      sportExercises,
+      sportHistory,
+      mealPlanners,
+      focusMode,
+      achatsMensuels,
+      abonnements,
+      formations,
+      books,
+      screenMedia,
+      accounts,
+      links,
+      channels,
+      wishList,
+      achatsCouteux,
+      streakCount,
+      monthlyGoals,
+      editorialEvents,
+      folders,
+      journalEntries,
+      notificationInterval,
+    };
+  };
+
+  const loadStatePayload = (payload: any) => {
+    if (!payload) return;
+    try {
+      if (payload.dailyHabits) setDailyHabits(payload.dailyHabits);
+      if (payload.habitHistory) setHabitHistory(payload.habitHistory);
+      if (payload.weeklyObjectives) setWeeklyObjectives(payload.weeklyObjectives);
+      if (payload.transactions) setTransactions(payload.transactions);
+      if (payload.stocks) setStocks(payload.stocks);
+      if (payload.budgets) setBudgets(payload.budgets);
+      if (payload.salaires) setSalaires(payload.salaires);
+      if (payload.epargnes) setEpargnes(payload.epargnes);
+      if (payload.actions30Jours) setActions30Jours(payload.actions30Jours);
+      if (payload.profilAmeliorations) setProfilAmeliorations(payload.profilAmeliorations);
+      if (payload.possibilitesGoals) setPossibilitesGoals(payload.possibilitesGoals);
+      if (payload.skinTrackers) setSkinTrackers(payload.skinTrackers);
+      if (payload.sportExercises) setSportExercises(payload.sportExercises);
+      if (payload.sportHistory) setSportHistory(payload.sportHistory);
+      if (payload.mealPlanners) setMealPlanners(payload.mealPlanners);
+      if (payload.focusMode !== undefined) setFocusMode(payload.focusMode);
+      if (payload.achatsMensuels) setAchatsMensuels(payload.achatsMensuels);
+      if (payload.abonnements) setAbonnements(payload.abonnements);
+      if (payload.formations) setFormations(payload.formations);
+      if (payload.books) setBooks(payload.books);
+      if (payload.screenMedia) setScreenMedia(payload.screenMedia);
+      if (payload.accounts) setAccounts(payload.accounts);
+      if (payload.links) setLinks(payload.links);
+      if (payload.channels) setChannels(payload.channels);
+      if (payload.wishList) setWishList(payload.wishList);
+      if (payload.achatsCouteux) setAchatsCouteux(payload.achatsCouteux);
+      if (payload.streakCount !== undefined) setStreakCount(payload.streakCount);
+      if (payload.monthlyGoals) setMonthlyGoals(payload.monthlyGoals);
+      if (payload.editorialEvents) setEditorialEvents(payload.editorialEvents);
+      if (payload.folders) setFolders(payload.folders);
+      if (payload.journalEntries) setJournalEntries(payload.journalEntries);
+      if (payload.notificationInterval !== undefined) setNotificationInterval(payload.notificationInterval);
+    } catch (err) {
+      console.error("Failed to unpack cloud sync payload:", err);
+    }
+  };
+
+  // Auth State Listener & Boot Sync loader
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+      if (user && localStorage.getItem("la_cloud_sync_enabled") === "true") {
+        setCloudSyncEnabled(true);
+        setSyncStatus("syncing");
+        try {
+          const docRef = doc(db, "user_sync", user.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data && data.payload) {
+              loadStatePayload(data.payload);
+              setLastSyncedTime(data.updatedAt?.toDate() || new Date());
+              setSyncStatus("synced");
+              triggerToast("☁️ Données synchronisées avec le cloud !", "success");
+            }
+          }
+        } catch (error) {
+          console.error("Boot cloud sync failed:", error);
+          setSyncStatus("error");
+          try {
+            handleFirestoreError(error, OperationType.GET, `user_sync/${user.uid}`);
+          } catch (e) {}
+        }
+      } else {
+        setSyncStatus("local");
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Save Data to Firebase Firestore
+  const saveDataToFirebase = async () => {
+    if (!auth.currentUser) return;
+    setIsSyncing(true);
+    setSyncStatus("syncing");
+    try {
+      const payload = getCurrentStatePayload();
+      const docRef = doc(db, "user_sync", auth.currentUser.uid);
+      await setDoc(docRef, {
+        userId: auth.currentUser.uid,
+        updatedAt: new Date(),
+        payload: payload
+      });
+      setLastSyncedTime(new Date());
+      setSyncStatus("synced");
+    } catch (error) {
+      console.error("Firebase auto-sync failed:", error);
+      setSyncStatus("error");
+      try {
+        handleFirestoreError(error, OperationType.WRITE, `user_sync/${auth.currentUser?.uid}`);
+      } catch (e) {}
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Debounced auto-sync hook on state mutations
+  useEffect(() => {
+    if (!cloudSyncEnabled || !firebaseUser) return;
+    
+    const delayDebounceFn = setTimeout(() => {
+      saveDataToFirebase();
+    }, 3000); // 3 seconds debounce
+    
+    return () => clearTimeout(delayDebounceFn);
+  }, [
+    dailyHabits, weeklyObjectives, transactions, stocks, budgets, salaires,
+    epargnes, actions30Jours, profilAmeliorations, skinTrackers, mealPlanners,
+    achatsMensuels, abonnements, formations, books, screenMedia, accounts,
+    links, channels, wishList, achatsCouteux, folders, journalEntries,
+    cloudSyncEnabled, firebaseUser
+  ]);
+
+  // Toggle Cloud Sync handler
+  const handleToggleCloudSync = async (enabled: boolean) => {
+    if (enabled) {
+      try {
+        let currentUser = firebaseUser;
+        if (currentUser) {
+          setIsSyncing(true);
+          setSyncStatus("syncing");
+          const docRef = doc(db, "user_sync", currentUser.uid);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data && data.payload) {
+              loadStatePayload(data.payload);
+              setLastSyncedTime(data.updatedAt?.toDate() || new Date());
+              triggerToast("☁️ Synchronisation activée. Données chargées depuis le cloud !", "success");
+            }
+          } else {
+            // New user on cloud, push local data as base
+            const payload = getCurrentStatePayload();
+            await setDoc(docRef, {
+              userId: currentUser.uid,
+              updatedAt: new Date(),
+              payload: payload
+            });
+            setLastSyncedTime(new Date());
+            triggerToast("☁️ Synchronisation activée. Données locales envoyées sur le cloud !", "success");
+          }
+          setCloudSyncEnabled(true);
+          localStorage.setItem("la_cloud_sync_enabled", "true");
+          setSyncStatus("synced");
+        }
+      } catch (error) {
+        console.error("Enabling cloud sync failed:", error);
+        triggerToast("❌ Impossible d'activer la synchronisation.", "error");
+        setSyncStatus("error");
+        try {
+          handleFirestoreError(error, OperationType.WRITE, `user_sync/${firebaseUser?.uid}`);
+        } catch (e) {}
+      } finally {
+        setIsSyncing(false);
+      }
+    } else {
+      setCloudSyncEnabled(false);
+      localStorage.setItem("la_cloud_sync_enabled", "false");
+      triggerToast("📁 Synchronisation désactivée. Sauvegarde locale active.", "info");
+      setSyncStatus("local");
+    }
+  };
+
+  // Manual Force Sync handler
+  const handleForceSync = async () => {
+    if (!firebaseUser) {
+      triggerToast("⚠️ Veuillez connecter votre compte d'abord.", "info");
+      return;
+    }
+    setIsSyncing(true);
+    setSyncStatus("syncing");
+    try {
+      await saveDataToFirebase();
+      triggerToast("☁️ Données synchronisées avec succès sur Firebase !", "success");
+    } catch (error) {
+      console.error("Force sync failed:", error);
+      triggerToast("❌ Échec de la synchronisation cloud forcée.", "error");
+      setSyncStatus("error");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Habit toggling
   const toggleHabit = (id: string) => {
     setDailyHabits(prev => prev.map(h => h.id === id ? { ...h, completed: !h.completed } : h));
@@ -1617,7 +1861,7 @@ export default function App() {
           columns: [
             { key: "name", label: "Habitude", type: "text", required: true },
             { key: "description", label: "Description / Fréquence", type: "text" },
-            { key: "category", label: "Catégorie", type: "select", options: ["personal", "professional"] },
+            { key: "category", label: "Catégorie", type: "select", options: ["Health", "Career", "Mental", "Personal", "Finance"] },
             { key: "isImportant", label: "Importante", type: "boolean" },
             { key: "dueTime", label: "Heure Limite (ex: 12:00)", type: "text" },
             { key: "completed", label: "Fait Aujourd'hui", type: "boolean" }
@@ -2589,6 +2833,18 @@ export default function App() {
               <span className="hidden min-[1650px]:inline">Sauvegarder</span>
             </button>
 
+            {/* System Settings Button */}
+            <button
+              onClick={() => setSettingsModalOpen(true)}
+              className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0 relative"
+              title="Paramètres de synchronisation et du système"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              {cloudSyncEnabled && syncStatus === "synced" && (
+                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-emerald-500 rounded-full border border-white animate-pulse" />
+              )}
+            </button>
+
             {/* Theme Toggle Button */}
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
@@ -2792,10 +3048,33 @@ export default function App() {
 
                         if (pendingTasks.length === 0) {
                           return (
-                            <div className="text-center py-8 space-y-2">
-                              <span className="text-2xl">🎉</span>
-                              <p className="text-xs font-bold text-neutral-500">Aucun objectif de projet en attente !</p>
-                              <p className="text-[10px] text-neutral-400">Ajoutez-en dans vos dossiers de projets.</p>
+                            <div className="flex flex-col items-center justify-center text-center py-8 px-4 space-y-3 bg-neutral-50/50 border border-neutral-150/60 rounded-2xl">
+                              <div className="relative w-16 h-16 flex items-center justify-center">
+                                <div className="absolute inset-0 rounded-full bg-neutral-100/70 border border-neutral-200/50 scale-95" />
+                                <svg 
+                                  id="svg-empty-tasks"
+                                  className="w-10 h-10 text-neutral-400 relative z-10" 
+                                  viewBox="0 0 24 24" 
+                                  fill="none" 
+                                  stroke="currentColor" 
+                                  strokeWidth="1.5" 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" className="stroke-neutral-200" />
+                                  <path d="m9 12 2 2 4-4" className="stroke-neutral-400" strokeWidth="2" />
+                                  <path d="M8 6h8" className="stroke-neutral-200/50" />
+                                  <path d="M8 18h8" className="stroke-neutral-200/50" />
+                                </svg>
+                                <div className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                <div className="absolute bottom-2 left-1 w-1 h-1 rounded-full bg-neutral-300" />
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-black text-neutral-800 uppercase tracking-wider">Aucun objectif en attente</p>
+                                <p className="text-[10px] text-neutral-500 font-medium max-w-[200px] mx-auto leading-relaxed">
+                                  Tous vos objectifs de projets ont été complétés ! Ajoutez-en de nouveaux dans vos dossiers.
+                                </p>
+                              </div>
                             </div>
                           );
                         }
@@ -3011,35 +3290,69 @@ export default function App() {
                         budgets.forEach((b, index) => {
                           if (b.spentAmount > b.limitAmount) {
                             alerts.push(
-                              <div 
+                              <motion.div 
                                 key={`budget-alert-${index}`}
                                 onClick={() => handleNavigateToModule("budgets")}
-                                className="p-3 bg-red-50 border border-red-100 rounded-xl flex gap-2.5 cursor-pointer hover:bg-red-50/80 transition-all"
+                                className="p-3 bg-red-50/70 border border-red-200 rounded-xl flex gap-2.5 cursor-pointer hover:bg-red-55/90 transition-all shadow-3xs"
+                                animate={{
+                                  scale: [1, 1.015, 1],
+                                  boxShadow: [
+                                    "0px 0px 0px rgba(239, 68, 68, 0)",
+                                    "0px 0px 8px rgba(239, 68, 68, 0.25)",
+                                    "0px 0px 0px rgba(239, 68, 68, 0)"
+                                  ]
+                                }}
+                                transition={{
+                                  duration: 2,
+                                  repeat: Infinity,
+                                  ease: "easeInOut"
+                                }}
                               >
-                                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                                <div className="relative shrink-0 mt-0.5">
+                                  <AlertCircle className="w-4 h-4 text-red-600" />
+                                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-600" />
+                                </div>
                                 <div className="space-y-0.5">
                                   <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Budget Dépassé</span>
                                   <p className="text-xs font-bold text-neutral-850 leading-snug">
                                     Enveloppe {b.category} : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
                                   </p>
                                 </div>
-                              </div>
+                              </motion.div>
                             );
                           } else if (b.spentAmount >= b.limitAmount * 0.9) {
                             alerts.push(
-                              <div 
+                              <motion.div 
                                 key={`budget-alert-warning-${index}`}
                                 onClick={() => handleNavigateToModule("budgets")}
-                                className="p-3 bg-amber-50 border border-amber-150 rounded-xl flex gap-2.5 cursor-pointer hover:bg-amber-50/80 transition-all"
+                                className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex gap-2.5 cursor-pointer hover:bg-amber-55/90 transition-all shadow-3xs"
+                                animate={{
+                                  scale: [1, 1.015, 1],
+                                  boxShadow: [
+                                    "0px 0px 0px rgba(245, 158, 11, 0)",
+                                    "0px 0px 8px rgba(245, 158, 11, 0.25)",
+                                    "0px 0px 0px rgba(245, 158, 11, 0)"
+                                  ]
+                                }}
+                                transition={{
+                                  duration: 2.2,
+                                  repeat: Infinity,
+                                  ease: "easeInOut"
+                                }}
                               >
-                                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                <div className="relative shrink-0 mt-0.5">
+                                  <AlertCircle className="w-4 h-4 text-amber-600" />
+                                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-600" />
+                                </div>
                                 <div className="space-y-0.5">
                                   <span className="text-[10px] font-black text-amber-800 uppercase block tracking-wider font-mono">Budget Critique</span>
                                   <p className="text-xs font-bold text-neutral-850 leading-snug">
                                     Enveloppe {b.category} à 90%+ : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
                                   </p>
                                 </div>
-                              </div>
+                              </motion.div>
                             );
                           }
                         });
@@ -3072,10 +3385,36 @@ export default function App() {
 
                         if (alerts.length === 0) {
                           return (
-                            <div className="text-center py-8 space-y-2 bg-emerald-50/25 border border-emerald-100 rounded-2xl">
-                              <span className="text-2xl">💚</span>
-                              <p className="text-xs font-bold text-emerald-900">Tout est au vert !</p>
-                              <p className="text-[10px] text-emerald-600 font-medium">Aucun budget dépassé ou facture urgente détectée.</p>
+                            <div className="flex flex-col items-center justify-center text-center py-8 px-4 space-y-3 bg-emerald-50/20 border border-emerald-100/60 rounded-2xl">
+                              <div className="relative w-16 h-16 flex items-center justify-center">
+                                <div className="absolute inset-0 rounded-full bg-emerald-50 border border-emerald-100/50 scale-95" />
+                                <svg 
+                                  id="svg-empty-alerts"
+                                  className="w-10 h-10 text-emerald-600 relative z-10" 
+                                  viewBox="0 0 24 24" 
+                                  fill="none" 
+                                  stroke="currentColor" 
+                                  strokeWidth="1.5" 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" className="stroke-emerald-200" fill="url(#shieldGrad)" />
+                                  <path d="m9 12 2 2 4-4" className="stroke-emerald-500" strokeWidth="2.5" />
+                                  <defs>
+                                    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor="#ecfdf5" stopOpacity="0.4" />
+                                      <stop offset="100%" stopColor="#d1fae5" stopOpacity="0.8" />
+                                    </linearGradient>
+                                  </defs>
+                                </svg>
+                                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-black text-emerald-950 uppercase tracking-wider">Tout est au vert !</p>
+                                <p className="text-[10px] text-emerald-600 font-medium max-w-[200px] mx-auto leading-relaxed">
+                                  Aucun budget dépassé ou facture urgente détectée. Votre santé financière est optimale.
+                                </p>
+                              </div>
                             </div>
                           );
                         }
@@ -3225,6 +3564,7 @@ export default function App() {
                       onTriggerImmediateCheck={testMorningReminder}
                       notificationPermission={notificationPermission}
                       requestNotificationPermission={requestNotificationPermission}
+                      habitHistory={habitHistory}
                     />
                   ) : activeMenu === "health_dash" ? (
                     <HealthSectionDashboard
@@ -3555,6 +3895,19 @@ export default function App() {
         forceBackup={() => triggerToast("Données du Second Brain sauvegardées localement avec succès !", "success")}
         isDarkMode={isDarkMode}
         setIsDarkMode={setIsDarkMode}
+      />
+
+      {/* SYSTEM SETTINGS MODAL */}
+      <SettingsModal
+        isOpen={settingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+        cloudSyncEnabled={cloudSyncEnabled}
+        onToggleCloudSync={handleToggleCloudSync}
+        firebaseUser={firebaseUser}
+        syncStatus={syncStatus}
+        lastSyncedTime={lastSyncedTime}
+        isSyncing={isSyncing}
+        onForceSync={handleForceSync}
       />
 
       {/* GLOBAL TOAST NOTIFICATION CONTAINER */}

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { DailyHabit } from "../types";
+import { getHabitCategoryBadge } from "./SectionDashboards";
 import { 
   Flame, 
   Award, 
@@ -871,10 +872,20 @@ export default function DisciplineHeatmap({
                       <Square className="w-4.5 h-4.5 text-neutral-300" />
                     )}
                   </div>
-                  <div>
-                    <span className={`text-xs font-extrabold block ${habit.completed ? "line-through" : ""}`}>
-                      {habit.name}
-                    </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className={`text-xs font-extrabold truncate ${habit.completed ? "line-through" : ""}`}>
+                        {habit.name}
+                      </span>
+                      {(() => {
+                        const badge = getHabitCategoryBadge(habit.category);
+                        return (
+                          <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded border shrink-0 ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
                     {habit.description && (
                       <span className="text-[10px] text-neutral-400 block mt-0.5">{habit.description}</span>
                     )}

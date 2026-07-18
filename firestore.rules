@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global safety net - default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- REUSABLE SECURITY PRIMITIVES ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\.@]+$');
+    }
+
+    function isValidUserSync(data) {
+      return data.userId is string 
+        && data.userId.size() <= 128
+        && data.updatedAt is timestamp
+        && data.payload is map;
+    }
+
+    // --- COLLECTION RULESETS ---
+    match /user_sync/{userId} {
+      // Restrict access so that users can only read or write their own cloud-sync documents
+      allow get: if isSignedIn() && userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && userId == request.auth.uid 
+        && isValidId(userId) 
+        && isValidUserSync(request.resource.data)
+        && request.resource.data.updatedAt == request.time;
+        
+      allow update: if isSignedIn() 
+        && userId == request.auth.uid 
+        && isValidId(userId) 
+        && isValidUserSync(request.resource.data)
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.userId == resource.data.userId; // Prevent hijacking userId
+        
+      allow delete: if isSignedIn() && userId == request.auth.uid;
+    }
+  }
+}

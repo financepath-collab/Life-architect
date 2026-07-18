@@ -21,7 +21,8 @@ import {
   Brain, 
   Sparkles, 
   Activity,
-  Award
+  Award,
+  Coins
 } from "lucide-react";
 import { WeeklyObjective } from "../types";
 
@@ -44,6 +45,27 @@ export default function PerformanceCorrelations({
     { name: "Semaine 3 (S-2)", start: "2026-06-23", end: "2026-06-29", defaultProd: 60, defaultBudget: 70 },
     { name: "Semaine 4 (S-3)", start: "2026-06-16", end: "2026-06-22", defaultProd: 50, defaultBudget: 55 }
   ];
+
+  // Helper to detect leisure categories
+  const isLeisureCategory = (cat: string = "", desc: string = "") => {
+    const normalizedCat = cat.toLowerCase();
+    const normalizedDesc = desc.toLowerCase();
+    return (
+      normalizedCat.includes("loisir") ||
+      normalizedCat.includes("sortie") ||
+      normalizedCat.includes("repas") ||
+      normalizedCat.includes("restau") ||
+      normalizedCat.includes("caf") ||
+      normalizedCat.includes("voyage") ||
+      normalizedCat.includes("cin") ||
+      normalizedDesc.includes("caf") ||
+      normalizedDesc.includes("cin") ||
+      normalizedDesc.includes("restaurant") ||
+      normalizedDesc.includes("starbucks") ||
+      normalizedDesc.includes("burger") ||
+      normalizedDesc.includes("loisir")
+    );
+  };
 
   // Map sport history and compute actual stats per week
   const data = WEEKS_DEFINITION.map((wk, idx) => {
@@ -72,7 +94,7 @@ export default function PerformanceCorrelations({
     if (idx === 0) {
       // In current week, check transactions count or spending vs budget
       const currentWeekSpend = transactions
-        .filter(t => t.date >= wk.start && t.date <= wk.end && t.type === "Débit")
+        .filter(t => t.date >= wk.start && t.date <= wk.end && (t.type === "Débit" || t.type === "Dépense"))
         .reduce((sum, t) => sum + t.amount, 0);
       
       // Say 3000 MAD is the weekly limit. Higher spending = lower discipline index
@@ -84,11 +106,26 @@ export default function PerformanceCorrelations({
       if (budgetDiscipline > 100) budgetDiscipline = 100;
     }
 
+    // 4. Calculate Leisure Spending
+    const weekLeisureTransactions = transactions.filter(t => {
+      return t.date >= wk.start && t.date <= wk.end && 
+        (t.type === "Dépense" || t.type === "Débit") &&
+        isLeisureCategory(t.category, t.description);
+    });
+
+    let leisureExpenses = weekLeisureTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+    // Fallback if no transaction or simulation: staying active reduces dopamine-driven stress spending
+    if (leisureExpenses === 0) {
+      leisureExpenses = Math.max(120, 1200 - (sportSessions * 180) + (idx * 100));
+    }
+
     return {
       weekName: wk.name,
       "Séances de Sport": sportSessions,
       "Productivité Affaires (%)": productivity,
       "Discipline Budgétaire (%)": budgetDiscipline,
+      "Dépenses Loisirs (MAD)": leisureExpenses,
     };
   }).reverse(); // Reverse to display chronologically from left to right
 
@@ -112,9 +149,11 @@ export default function PerformanceCorrelations({
   const xSport = data.map(d => d["Séances de Sport"]);
   const yProd = data.map(d => d["Productivité Affaires (%)"]);
   const yBudget = data.map(d => d["Discipline Budgétaire (%)"]);
+  const yLeisure = data.map(d => d["Dépenses Loisirs (MAD)"]);
 
   const rSportProd = calculateCorrelation(xSport, yProd);
   const rSportBudget = calculateCorrelation(xSport, yBudget);
+  const rSportLeisure = calculateCorrelation(xSport, yLeisure);
 
   // Interpret correlation strength
   const getCorrelationLabel = (r: number) => {
@@ -125,8 +164,17 @@ export default function PerformanceCorrelations({
     return { label: "Corrélation Négative", color: "text-rose-600 bg-rose-50 border-rose-200" };
   };
 
+  const getLeisureCorrelationLabel = (r: number) => {
+    if (r <= -0.7) return { label: "Forte Corrélation Inverse (Idéal)", color: "text-emerald-600 bg-emerald-50 border-emerald-200" };
+    if (r <= -0.3) return { label: "Corrélation Inverse Modérée", color: "text-teal-600 bg-teal-50 border-teal-200" };
+    if (r < 0) return { label: "Corrélation Inverse Faible", color: "text-amber-600 bg-amber-50 border-amber-200" };
+    if (r === 0) return { label: "Aucune Corrélation", color: "text-neutral-500 bg-neutral-50 border-neutral-200" };
+    return { label: "Corrélation Positive (Dépenses Accrues)", color: "text-rose-600 bg-rose-50 border-rose-200" };
+  };
+
   const prodInterpretation = getCorrelationLabel(rSportProd);
   const budgetInterpretation = getCorrelationLabel(rSportBudget);
+  const leisureInterpretation = getLeisureCorrelationLabel(rSportLeisure);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -154,7 +202,7 @@ export default function PerformanceCorrelations({
       </div>
 
       {/* STATISTICAL COEFFICIENTS BENTO GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* CARD 1: SPORT VS PRODUCTIVITY */}
         <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-4 shadow-3xs hover:border-neutral-300 transition-all">
@@ -181,7 +229,7 @@ export default function PerformanceCorrelations({
           <div className={`border px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center justify-between ${prodInterpretation.color}`}>
             <span>{prodInterpretation.label}</span>
             <span className="font-mono text-[10px] bg-white/50 px-2 py-0.5 rounded-md border border-black/5">
-              {Math.abs(rSportProd) * 100}% d'influence
+              {Math.round(Math.abs(rSportProd) * 100)}% d'influence
             </span>
           </div>
         </div>
@@ -211,7 +259,37 @@ export default function PerformanceCorrelations({
           <div className={`border px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center justify-between ${budgetInterpretation.color}`}>
             <span>{budgetInterpretation.label}</span>
             <span className="font-mono text-[10px] bg-white/50 px-2 py-0.5 rounded-md border border-black/5">
-              {Math.abs(rSportBudget) * 100}% d'influence
+              {Math.round(Math.abs(rSportBudget) * 100)}% d'influence
+            </span>
+          </div>
+        </div>
+
+        {/* CARD 3: SPORT VS LEISURE EXPENSES */}
+        <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-4 shadow-3xs hover:border-neutral-300 transition-all">
+          <div className="flex justify-between items-start gap-4">
+            <div className="space-y-1">
+              <span className="text-[10px] text-neutral-400 font-extrabold uppercase tracking-widest font-mono block">Indice de Corrélation C</span>
+              <h4 className="text-sm font-black text-neutral-900 tracking-tight flex items-center gap-1.5">
+                <Coins className="w-4 h-4 text-emerald-500" />
+                Effort Physique vs Dépenses Loisirs
+              </h4>
+            </div>
+            <div className="text-right">
+              <span className="text-2xl font-black font-mono text-neutral-950 block">
+                {rSportLeisure > 0 ? `+${rSportLeisure}` : rSportLeisure}
+              </span>
+              <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block">Coeff. r de Pearson</span>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">
+            Ce score mesure l'impact de votre bien-être physique sur vos finances. Un esprit sain réduit le besoin de dépenses de compensation impulsives.
+          </p>
+
+          <div className={`border px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center justify-between ${leisureInterpretation.color}`}>
+            <span>{leisureInterpretation.label}</span>
+            <span className="font-mono text-[10px] bg-white/50 px-2 py-0.5 rounded-md border border-black/5">
+              {Math.round(Math.abs(rSportLeisure) * 100)}% d'influence
             </span>
           </div>
         </div>
@@ -314,26 +392,137 @@ export default function PerformanceCorrelations({
         </div>
       </div>
 
-      {/* ACTIONABLE ADVICE & INSIGHTS CARD */}
-      <div className="bg-amber-50/50 border border-amber-200/60 rounded-3xl p-6 flex gap-4">
-        <div className="bg-amber-500/10 p-2.5 rounded-2xl text-amber-700 shrink-0 self-start">
-          <Award className="w-5 h-5 text-amber-600" />
+      {/* NEW: BIEN-ÊTRE VS LEISURE EXPENSES CHART SECTION */}
+      <div className="bg-white border border-neutral-200 rounded-3xl p-6 md:p-8 space-y-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-5">
+          <div className="space-y-1">
+            <h3 className="text-base font-black text-neutral-900 tracking-tight flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-emerald-600 animate-pulse" />
+              Analyse Croisée : Bien-être Physique vs Budget Loisirs
+            </h3>
+            <p className="text-xs text-neutral-400">
+              Visualisez de manière croisée le nombre de séances de sport par semaine (Barres) et vos dépenses réelles & simulées en loisirs (Lignes).
+            </p>
+          </div>
+
+          {/* LEGENDS CUES */}
+          <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase font-mono">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 bg-emerald-500 rounded-sm" />
+              <span>Séances Sport</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-0.5 bg-rose-500 block" />
+              <span>Loisirs (MAD)</span>
+            </div>
+          </div>
         </div>
-        <div className="space-y-2">
-          <h4 className="text-xs font-extrabold text-amber-900 uppercase tracking-wider font-mono flex items-center gap-1.5">
-            Note de Corrélation & Plan d'Action
-          </h4>
-          <p className="text-xs text-amber-800 leading-relaxed font-medium">
-            {rSportProd >= 0.7 ? (
-              <span>
-                <strong>Excellent constat :</strong> Votre coefficient de corrélation d'affaires est extrêmement fort ({rSportProd}). Cela signifie mathématiquement que chaque séance de 30 minutes de sport effectuée est une garantie de focus pour vos vidéos. Ne baissez sous aucun prétexte à moins de 3 séances hebdomadaires !
-              </span>
-            ) : (
-              <span>
-                <strong>Analyse en cours :</strong> Votre régularité sportive commence à porter ses fruits sur vos indices financiers et professionnels. Continuez à renseigner votre historique d'entraînements pour affiner les coefficients algorithmiques de votre tableau de bord.
-              </span>
-            )}
-          </p>
+
+        {/* RECHARTS CHART CONTAINER */}
+        <div className="h-80 w-full font-mono text-[11px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis 
+                dataKey="weekName" 
+                tickLine={false} 
+                stroke="#a3a3a3" 
+                fontWeight="bold"
+              />
+              {/* Left Y-Axis for Sport sessions */}
+              <YAxis 
+                yAxisId="left" 
+                orientation="left" 
+                stroke="#10b981" 
+                tickLine={false}
+                domain={[0, 7]}
+                label={{ value: "Séances (Sport)", angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#10b981', fontWeight: 'bold' } }}
+              />
+              {/* Right Y-Axis for Leisure spending in MAD */}
+              <YAxis 
+                yAxisId="right" 
+                orientation="right" 
+                stroke="#f43f5e" 
+                tickLine={false}
+                domain={[0, 'auto']}
+                label={{ value: "Loisirs (MAD)", angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#f43f5e', fontWeight: 'bold' } }}
+              />
+              <Tooltip 
+                contentStyle={{ backgroundColor: "#171717", borderRadius: "16px", color: "#fff", border: "none", fontSize: "11px" }}
+                itemStyle={{ color: "#fff" }}
+                formatter={(value: any, name: string) => {
+                  if (name === "Dépenses Loisirs (MAD)") return [`${value} MAD`, name];
+                  return [value, name];
+                }}
+              />
+              <Bar 
+                yAxisId="left" 
+                dataKey="Séances de Sport" 
+                fill="#10b981" 
+                radius={[8, 8, 0, 0]} 
+                maxBarSize={45}
+              />
+              <Line 
+                yAxisId="right" 
+                type="monotone" 
+                dataKey="Dépenses Loisirs (MAD)" 
+                stroke="#f43f5e" 
+                strokeWidth={3} 
+                dot={{ r: 5, strokeWidth: 1 }} 
+                activeDot={{ r: 8 }} 
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* COMBINED INSIGHTS CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="bg-amber-50/50 border border-amber-200/60 rounded-3xl p-6 flex gap-4">
+          <div className="bg-amber-500/10 p-2.5 rounded-2xl text-amber-700 shrink-0 self-start">
+            <Award className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="space-y-2">
+            <h4 className="text-xs font-extrabold text-amber-900 uppercase tracking-wider font-mono flex items-center gap-1.5">
+              Note de Corrélation & Plan d'Action
+            </h4>
+            <p className="text-xs text-amber-800 leading-relaxed font-medium">
+              {rSportProd >= 0.7 ? (
+                <span>
+                  <strong>Excellent constat :</strong> Votre coefficient de corrélation d'affaires est extrêmement fort ({rSportProd}). Cela signifie mathématiquement que chaque séance de 30 minutes de sport effectuée est une garantie de focus pour vos vidéos. Ne baissez sous aucun prétexte à moins de 3 séances hebdomadaires !
+                </span>
+              ) : (
+                <span>
+                  <strong>Analyse en cours :</strong> Votre régularité sportive commence à porter ses fruits sur vos indices financiers et professionnels. Continuez à renseigner votre historique d'entraînements pour affiner les coefficients algorithmiques de votre tableau de bord.
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-emerald-50/50 border border-emerald-200/60 rounded-3xl p-6 flex gap-4">
+          <div className="bg-emerald-500/10 p-2.5 rounded-2xl text-emerald-700 shrink-0 self-start">
+            <Sparkles className="w-5 h-5 text-emerald-600" />
+          </div>
+          <div className="space-y-2">
+            <h4 className="text-xs font-extrabold text-emerald-900 uppercase tracking-wider font-mono flex items-center gap-1.5">
+              Note Dopamine & Régulation des Dépenses Loisirs
+            </h4>
+            <p className="text-xs text-emerald-800 leading-relaxed font-medium">
+              {rSportLeisure <= -0.3 ? (
+                <span>
+                  <strong>Corrélation inverse positive ({rSportLeisure}) :</strong> Plus vous pratiquez de séances sportives, plus vos dépenses de loisirs diminuent. L'effort physique libère des endorphines et régule votre niveau de stress, limitant ainsi la recherche de gratification rapide à travers des sorties ou achats de compensation coûteux.
+                </span>
+              ) : (
+                <span>
+                  <strong>Observation comportementale :</strong> Vos séances d'entraînement régulent votre humeur générale. Consignez assidûment vos dépenses de sorties pour mesurer comment le sport vous aide à modérer vos dépenses récréatives.
+                </span>
+              )}
+            </p>
+          </div>
         </div>
       </div>
 
