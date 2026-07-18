@@ -187,6 +187,83 @@ export default function SkinTrackerSection({
   }, [date, skinTrackers]);
 
   // Sync checkboxes with individual steps in both directions
+  const updateSkinTrackerField = <K extends keyof SkinTracker>(field: K, value: SkinTracker[K]) => {
+    setSkinTrackers(prev => {
+      const existing = prev.find(entry => entry.date === date);
+      if (existing) {
+        return prev.map(entry => {
+          if (entry.date === date) {
+            return { ...entry, [field]: value };
+          }
+          return entry;
+        });
+      } else {
+        const newEntry: SkinTracker = {
+          id: "sk_" + Date.now(),
+          date,
+          morningRoutine: field === "morningRoutine" ? (value as boolean) : morningRoutine,
+          eveningRoutine: field === "eveningRoutine" ? (value as boolean) : eveningRoutine,
+          skinCondition: field === "skinCondition" ? (value as SkinTracker["skinCondition"]) : skinCondition,
+          productsUsed: "Routine de soins",
+          waterIntakeLiters: field === "waterIntakeLiters" ? (value as number) : waterIntakeLiters,
+          photoUrl: field === "photoUrl" ? (value as string | undefined) : photoUrl
+        };
+        return [newEntry, ...prev];
+      }
+    });
+  };
+
+  // Automatically check/uncheck individual steps inside checkedStepsByDate when skinTrackers changes
+  useEffect(() => {
+    let changed = false;
+    const updatedCheckedSteps = { ...checkedStepsByDate };
+
+    const activeMorningSteps = routineSteps.filter(s => s.period === "morning" && s.isActive).map(s => s.id);
+    const activeEveningSteps = routineSteps.filter(s => s.period === "evening" && s.isActive).map(s => s.id);
+
+    skinTrackers.forEach(entry => {
+      const currentDate = entry.date;
+      const currentList = updatedCheckedSteps[currentDate] || [];
+
+      const morningAllChecked = activeMorningSteps.length > 0 && activeMorningSteps.every(id => currentList.includes(id));
+      const eveningAllChecked = activeEveningSteps.length > 0 && activeEveningSteps.every(id => currentList.includes(id));
+
+      let newList = [...currentList];
+      let dateChanged = false;
+
+      // If tracker says morning routine is done, but not all morning steps are checked
+      if (entry.morningRoutine && !morningAllChecked) {
+        newList = [...new Set([...newList, ...activeMorningSteps])];
+        dateChanged = true;
+      } 
+      // If tracker says morning routine is NOT done, but all morning steps are checked
+      else if (!entry.morningRoutine && morningAllChecked && activeMorningSteps.length > 0) {
+        newList = newList.filter(id => !activeMorningSteps.includes(id));
+        dateChanged = true;
+      }
+
+      // If tracker says evening routine is done, but not all evening steps are checked
+      if (entry.eveningRoutine && !eveningAllChecked) {
+        newList = [...new Set([...newList, ...activeEveningSteps])];
+        dateChanged = true;
+      }
+      // If tracker says evening routine is NOT done, but all evening steps are checked
+      else if (!entry.eveningRoutine && eveningAllChecked && activeEveningSteps.length > 0) {
+        newList = newList.filter(id => !activeEveningSteps.includes(id));
+        dateChanged = true;
+      }
+
+      if (dateChanged) {
+        updatedCheckedSteps[currentDate] = newList;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      setCheckedStepsByDate(updatedCheckedSteps);
+    }
+  }, [skinTrackers, routineSteps]);
+
   const handleToggleMorningCheckbox = (checked: boolean) => {
     setMorningRoutine(checked);
     const mSteps = routineSteps.filter(s => s.period === "morning" && s.isActive).map(s => s.id);
@@ -201,6 +278,8 @@ export default function SkinTrackerSection({
       }
       return { ...prev, [date]: newList };
     });
+
+    updateSkinTrackerField("morningRoutine", checked);
   };
 
   const handleToggleEveningCheckbox = (checked: boolean) => {
@@ -217,6 +296,8 @@ export default function SkinTrackerSection({
       }
       return { ...prev, [date]: newList };
     });
+
+    updateSkinTrackerField("eveningRoutine", checked);
   };
 
   const toggleStepForDate = (stepId: string, targetDate: string) => {
@@ -255,8 +336,18 @@ export default function SkinTrackerSection({
               }
               return entry;
             });
+          } else {
+            const newEntry: SkinTracker = {
+              id: "sk_" + Date.now(),
+              date: targetDate,
+              morningRoutine: activeMorningSteps.length > 0 ? morningAllChecked : false,
+              eveningRoutine: activeEveningSteps.length > 0 ? eveningAllChecked : false,
+              skinCondition: "Bonne",
+              productsUsed: "Routine de soins",
+              waterIntakeLiters: 1.5
+            };
+            return [newEntry, ...prevTrackers];
           }
-          return prevTrackers;
         });
       }, 0);
 
@@ -544,7 +635,10 @@ export default function SkinTrackerSection({
                       <button
                         key={cond}
                         type="button"
-                        onClick={() => setSkinCondition(cond)}
+                        onClick={() => {
+                          setSkinCondition(cond);
+                          updateSkinTrackerField("skinCondition", cond);
+                        }}
                         className={`px-3 py-2 rounded-xl border text-[11px] font-bold transition-all text-left ${colorClasses} ${
                           isActive ? "border-2" : "bg-white border-neutral-200 text-neutral-700"
                         }`}
@@ -571,7 +665,11 @@ export default function SkinTrackerSection({
                   max="4"
                   step="0.5"
                   value={waterIntakeLiters}
-                  onChange={(e) => setWaterIntakeLiters(parseFloat(e.target.value))}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    setWaterIntakeLiters(val);
+                    updateSkinTrackerField("waterIntakeLiters", val);
+                  }}
                   className="w-full accent-cyan-600 cursor-pointer h-1.5 bg-neutral-200 rounded-lg"
                 />
               </div>
