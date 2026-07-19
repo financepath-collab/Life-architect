@@ -195,9 +195,11 @@ export const INITIAL_WISHLIST: WishListItem[] = [
 ];
 
 export const INITIAL_ACHATS_COUTEUX: AchatCouteuxItem[] = [
-  { id: "acc1", itemName: "Nouveau Drone DJI Inspire 3", targetDate: "2026-10-30", estimatedPrice: 85000, status: "Économise", store: "Drone Maroc", priority: "Prioritaire" },
-  { id: "acc2", itemName: "Objectif Cinéma Arri Alexa Mini", targetDate: "2026-12-15", estimatedPrice: 42000, status: "Planifié", store: "CineGears Casablanca", priority: "Secondaire" },
-  { id: "acc3", itemName: "Mac Studio M2 Ultra (128 Go RAM)", targetDate: "2026-09-01", estimatedPrice: 55000, status: "Économise", store: "iStyle Maroc", priority: "Prioritaire" }
+  { id: "acc-macbook", itemName: "MacBook Pro M3 Max (ReLab)", targetDate: "2026-08-15", estimatedPrice: 32000, status: "Économise", store: "https://relab.ma/page-de-produit/macbook", priority: "Prioritaire" },
+  { id: "acc-dji", itemName: "Drone DJI Air 3S Fly More Combo", targetDate: "2026-10-30", estimatedPrice: 16500, status: "Planifié", store: "DJI Store Casablanca", priority: "Secondaire" },
+  { id: "acc-auto", itemName: "Voiture Hybride Moderne (Automobile)", targetDate: "2027-06-30", estimatedPrice: 290000, status: "Planifié", store: "Toyota Casablanca", priority: "Secondaire" },
+  { id: "acc-watch", itemName: "Montre Classique Automatique", targetDate: "2026-12-25", estimatedPrice: 14000, status: "Planifié", store: "Krone Casablanca", priority: "Faible" },
+  { id: "acc-perfume", itemName: "Parfum d'Exception (Bleu de Chanel)", targetDate: "2026-09-10", estimatedPrice: 1600, status: "Planifié", store: "Beauty Success", priority: "Faible" }
 ];
 
 export const INITIAL_MONTHLY_GOALS: MonthlyGoal[] = [

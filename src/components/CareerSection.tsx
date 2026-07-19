@@ -25,7 +25,9 @@ import {
   Pencil,
   MapPin,
   LayoutDashboard,
-  Target
+  Target,
+  TrendingUp,
+  TrendingDown
 } from "lucide-react";
 
 interface CareerSectionProps {
@@ -199,6 +201,29 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
   const activeOpportunities = jobOpportunities.filter(o => o.status !== "Refusé" && o.status !== "Offre").length;
   const offeredOpportunities = jobOpportunities.filter(o => o.status === "Offre").length;
   const obtainedCertificatesCount = certificates.filter(c => c.status === "Obtenu").length;
+  
+  // --- INTERVIEW SUCCESS RATE (LAST 30 DAYS) ---
+  const interviewSuccessRate30Days = React.useMemo(() => {
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+
+    const recentOpps = jobOpportunities.filter(opp => {
+      if (!opp.dateApplied) return false;
+      const appDate = new Date(opp.dateApplied);
+      return appDate >= thirtyDaysAgo && appDate <= today && opp.status !== "À postuler";
+    });
+
+    const totalApplied = recentOpps.length;
+    const totalInterviews = recentOpps.filter(opp => opp.status === "Entretien" || opp.status === "Offre").length;
+    const rate = totalApplied > 0 ? (totalInterviews / totalApplied) * 100 : 0;
+
+    return {
+      totalApplied,
+      totalInterviews,
+      rate: Math.round(rate)
+    };
+  }, [jobOpportunities]);
 
   // --- SUBMISSION HANDLERS ---
   const handleAddCertificate = (e: React.FormEvent) => {
@@ -305,6 +330,73 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
   return (
     <div className="space-y-6">
       
+      {/* 0. SUMMARY WIDGET: INTERVIEW SUCCESS RATE */}
+      <div className="bg-white border border-neutral-200 rounded-3xl p-5 shadow-3xs flex flex-col md:flex-row md:items-center justify-between gap-5 animate-in fade-in duration-300">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
+            <Target className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-black text-neutral-950 uppercase tracking-tight flex items-center gap-2">
+              <span>Conversion en Entretien (30j)</span>
+              <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-100">
+                Taux de succès
+              </span>
+            </h4>
+            <p className="text-xs text-neutral-500 font-medium leading-relaxed">
+              Pourcentage de candidatures envoyées au cours des 30 derniers jours qui ont abouti à un entretien d'embauche ou à une offre.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6 shrink-0 border-t md:border-t-0 border-neutral-100 pt-4 md:pt-0">
+          <div className="space-y-1.5">
+            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block font-mono">Performance de Conversion</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black font-mono text-neutral-950 leading-none">
+                {interviewSuccessRate30Days.rate}%
+              </span>
+              <span className="text-xs text-neutral-500 font-bold font-mono">
+                ({interviewSuccessRate30Days.totalInterviews} / {interviewSuccessRate30Days.totalApplied} candidatures)
+              </span>
+              {interviewSuccessRate30Days.rate >= 50 ? (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-0.5">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>Excellent</span>
+                </span>
+              ) : interviewSuccessRate30Days.rate > 0 ? (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-0.5">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>En cours</span>
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-50 text-neutral-600 border border-neutral-200 flex items-center gap-0.5">
+                  <span>Aucun entretien</span>
+                </span>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="w-32 bg-neutral-100 h-2 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    interviewSuccessRate30Days.rate >= 50 
+                      ? "bg-emerald-500" 
+                      : interviewSuccessRate30Days.rate >= 25 
+                      ? "bg-indigo-500" 
+                      : "bg-amber-500"
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(0, interviewSuccessRate30Days.rate || 0))}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-neutral-400 font-bold font-mono">
+                {interviewSuccessRate30Days.totalApplied > 0 ? "Actif" : "En attente"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 1. SECTOR METRICS PANEL */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 bg-gradient-to-br from-zinc-900 to-indigo-950 text-white rounded-3xl p-6 border border-zinc-800 shadow-md relative overflow-hidden">
         <div className="absolute top-[-30%] right-[-10%] w-[50%] h-[150%] rounded-full bg-indigo-500/10 blur-[100px] pointer-events-none" />
@@ -800,242 +892,300 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
       {/* ==================================================== */}
       {/* --- TAB: PORTAILS & SITES DE RECRUTEMENT --- */}
       {/* ==================================================== */}
-      {careerTab === "recruitment" && (
-        <div className="space-y-4 animate-in fade-in duration-300">
-          <div className="bg-white border border-neutral-200 rounded-3xl p-5 space-y-4 shadow-3xs">
-            <div className="flex justify-between items-center border-b border-neutral-100 pb-2.5">
-              <div>
-                <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wide flex items-center gap-1.5">
-                  <Link2 className="w-4 h-4 text-indigo-500" />
-                  <span>Portails & Sites de Recrutement Internationaux</span>
-                </h4>
-                <p className="text-[10px] text-neutral-400 font-bold mt-0.5 font-mono">
-                  Visites régulières : {recruitmentSites.filter(s => s.visited).length}/{recruitmentSites.length} visités
-                  {siteCountryFilter !== "Tous" || siteSearch ? ` (${recruitmentSites.filter(site => {
-                    const matchesSearch = site.name.toLowerCase().includes(siteSearch.toLowerCase()) || 
-                                          (site.notes || "").toLowerCase().includes(siteSearch.toLowerCase()) ||
-                                          (site.keywords || []).some(kw => kw.toLowerCase().includes(siteSearch.toLowerCase()));
-                    const matchesCountry = siteCountryFilter === "Tous" || site.country === siteCountryFilter;
-                    return matchesSearch && matchesCountry;
-                  }).length} filtrés)` : ""}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {recruitmentSites.some(s => s.visited) && (
+      {careerTab === "recruitment" && (() => {
+        const todayStr = new Date().toISOString().split("T")[0];
+        
+        // Gen last 7 days dynamically
+        const last7Days = [];
+        const daysOfWeek = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+        const todayObj = new Date();
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(todayObj.getDate() - i);
+          const dateStr = d.toISOString().split("T")[0];
+          const dayLabel = daysOfWeek[d.getDay()];
+          const dayNum = d.getDate();
+          last7Days.push({ dateStr, label: dayLabel, num: dayNum, isToday: dateStr === todayStr });
+        }
+
+        const filteredSites = recruitmentSites.filter(site => {
+          const matchesSearch = site.name.toLowerCase().includes(siteSearch.toLowerCase()) || 
+                                (site.notes || "").toLowerCase().includes(siteSearch.toLowerCase()) ||
+                                (site.keywords || []).some(kw => kw.toLowerCase().includes(siteSearch.toLowerCase()));
+          const matchesCountry = siteCountryFilter === "Tous" || site.country === siteCountryFilter;
+          return matchesSearch && matchesCountry;
+        });
+
+        const todayVisitedCount = recruitmentSites.filter(s => s.visitedDates?.includes(todayStr) || s.visited).length;
+
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <div className="bg-white border border-neutral-200 rounded-3xl p-5 space-y-4 shadow-3xs">
+              <div className="flex justify-between items-center border-b border-neutral-100 pb-2.5">
+                <div>
+                  <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wide flex items-center gap-1.5">
+                    <Link2 className="w-4 h-4 text-indigo-500" />
+                    <span>Portails & Sites de Recrutement Internationaux</span>
+                  </h4>
+                  <p className="text-[10px] text-neutral-400 font-bold mt-0.5 font-mono">
+                    Visites aujourd'hui : <span className="text-indigo-600 font-extrabold">{todayVisitedCount}</span> / {recruitmentSites.length} visités
+                    {siteCountryFilter !== "Tous" || siteSearch ? ` (${filteredSites.length} filtrés)` : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {recruitmentSites.some(s => (s.visitedDates && s.visitedDates.length > 0) || s.visited) && (
+                    <button
+                      onClick={() => setRecruitmentSites(prev => prev.map(s => ({ ...s, visited: false, visitedDates: [] })))}
+                      className="text-neutral-400 hover:text-indigo-600 text-[10px] font-bold font-sans transition-colors cursor-pointer"
+                    >
+                      Tout effacer
+                    </button>
+                  )}
                   <button
-                    onClick={() => setRecruitmentSites(prev => prev.map(s => ({ ...s, visited: false })))}
-                    className="text-neutral-400 hover:text-indigo-600 text-[10px] font-bold font-sans transition-colors cursor-pointer"
+                    onClick={() => setShowSiteForm(true)}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 cursor-pointer select-none"
                   >
-                    Tout décocher
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Ajouter un portail</span>
                   </button>
-                )}
-                <button
-                  onClick={() => setShowSiteForm(true)}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 cursor-pointer select-none"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Ajouter un portail</span>
-                </button>
+                </div>
               </div>
-            </div>
 
-            {/* Barre de recherche & Filtre par pays */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-1">
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-neutral-400">
-                  <Search className="w-3.5 h-3.5" />
-                </span>
-                <input 
-                  type="text"
-                  placeholder="Rechercher un site par nom, mot-clé, notes..."
-                  value={siteSearch}
-                  onChange={(e) => setSiteSearch(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-8 pr-2.5 py-1.5 text-xs font-sans focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                />
+              {/* Barre de recherche & Filtre par pays */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-1">
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-neutral-400">
+                    <Search className="w-3.5 h-3.5" />
+                  </span>
+                  <input 
+                    type="text"
+                    placeholder="Rechercher un site par nom, mot-clé, notes..."
+                    value={siteSearch}
+                    onChange={(e) => setSiteSearch(e.target.value)}
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-8 pr-2.5 py-1.5 text-xs font-sans focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <select
+                    value={siteCountryFilter}
+                    onChange={(e) => setSiteCountryFilter(e.target.value)}
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-neutral-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    <option value="Tous">Tous les Pays ({recruitmentSites.length})</option>
+                    <option value="Maroc">Maroc</option>
+                    <option value="France">France</option>
+                    <option value="Canada">Canada</option>
+                    <option value="Suisse">Suisse</option>
+                    <option value="Germany">Allemagne</option>
+                    <option value="Luxembourg">Luxembourg</option>
+                    <option value="Netherlands">Pays-Bas</option>
+                    <option value="USA">USA</option>
+                    <option value="Worldwide">International</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <select
-                  value={siteCountryFilter}
-                  onChange={(e) => setSiteCountryFilter(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-neutral-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                >
-                  <option value="Tous">Tous les Pays ({recruitmentSites.length})</option>
-                  <option value="Maroc">Maroc</option>
-                  <option value="France">France</option>
-                  <option value="Canada">Canada</option>
-                  <option value="Suisse">Suisse</option>
-                  <option value="Germany">Allemagne</option>
-                  <option value="Luxembourg">Luxembourg</option>
-                  <option value="Netherlands">Pays-Bas</option>
-                  <option value="USA">USA</option>
-                  <option value="Worldwide">International</option>
-                </select>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-1">
-              {recruitmentSites.filter(site => {
-                const matchesSearch = site.name.toLowerCase().includes(siteSearch.toLowerCase()) || 
-                                      (site.notes || "").toLowerCase().includes(siteSearch.toLowerCase()) ||
-                                      (site.keywords || []).some(kw => kw.toLowerCase().includes(siteSearch.toLowerCase()));
-                const matchesCountry = siteCountryFilter === "Tous" || site.country === siteCountryFilter;
-                return matchesSearch && matchesCountry;
-              }).map(site => (
-                <div 
-                  key={site.id} 
-                  className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 transition-all ${
-                    site.visited 
-                      ? "bg-neutral-50/40 border-neutral-200/40 opacity-75" 
-                      : "bg-neutral-50 hover:bg-neutral-100/60 border-neutral-200/40"
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex justify-between gap-3 items-start">
-                      <div className="flex items-start gap-2.5 flex-1">
-                        <input 
-                          type="checkbox"
-                          checked={!!site.visited}
-                          onChange={() => {
-                            setRecruitmentSites(prev => prev.map(s => {
-                              if (s.id !== site.id) return s;
-                              return { ...s, visited: !s.visited };
-                            }));
-                          }}
-                          className="mt-0.5 w-4 h-4 rounded-md border-neutral-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer font-sans"
-                          id={`site-check-${site.id}`}
-                        />
-                        <div className="space-y-1 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <label 
-                              htmlFor={`site-check-${site.id}`}
-                              className={`text-xs font-black cursor-pointer select-none transition-all ${
-                                site.visited ? "line-through text-neutral-400" : "text-neutral-900"
-                              }`}
-                            >
-                              {site.name}
-                            </label>
-                            <a 
-                              href={site.url} target="_blank" rel="noopener noreferrer" 
-                              className="text-indigo-600 hover:text-indigo-500 p-0.5 transition-colors"
-                              title={`Visiter ${site.name}`}
-                            >
-                              <ExternalLink className="w-3.5 h-3.5 inline-block" />
-                            </a>
-                            {site.country && (
-                              <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-neutral-200/60 text-neutral-600 font-sans tracking-wide ml-auto">
-                                {site.country === "Germany" ? "Allemagne" : site.country === "Netherlands" ? "Pays-Bas" : site.country}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">{site.notes}</p>
-                          
-                          {site.identifiant && site.identifiant !== "N/A" && (
-                            <div className="mt-1.5 flex items-center gap-1 text-[10px] text-neutral-500 font-mono bg-neutral-200/30 rounded-md px-2 py-0.5 w-fit">
-                              <span className="font-bold text-neutral-400">ID:</span>
-                              <span className="font-extrabold text-neutral-700">{site.identifiant}</span>
-                              <button 
-                                onClick={() => {
-                                  navigator.clipboard.writeText(site.identifiant || "");
-                                }}
-                                className="text-[9px] text-indigo-600 hover:text-indigo-800 ml-1.5 cursor-pointer font-bold font-sans"
-                                title="Copier l'identifiant"
-                              >
-                                Copier
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+              {/* LIST LAYOUT (NO SQUARE CARDS, CLEAN HORIZONTAL DIVIDER ROWS) */}
+              <div className="divide-y divide-neutral-100 max-h-[600px] overflow-y-auto pr-1">
+                {filteredSites.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-neutral-400 font-medium">
+                    Aucun site trouvé correspondant à vos critères.
+                  </div>
+                ) : (
+                  filteredSites.map(site => {
+                    const isVisitedOnDate = (dateStr: string) => {
+                      if (site.visitedDates?.includes(dateStr)) return true;
+                      if (dateStr === todayStr && site.visited) return true;
+                      return false;
+                    };
 
-                      <button 
-                        onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
-                        className="text-neutral-400 hover:text-red-500 p-1 rounded-lg shrink-0 cursor-pointer transition-colors"
-                        title="Supprimer ce site"
+                    return (
+                      <div 
+                        key={site.id} 
+                        className="py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6 transition-all"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                        {/* Info details (Left) */}
+                        <div className="space-y-2.5 flex-1 min-w-0">
+                          <div className="flex items-start gap-2.5">
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <a 
+                                  href={site.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-xs font-bold text-neutral-900 hover:text-indigo-600 transition-colors flex items-center gap-1 min-w-0 truncate font-sans"
+                                  title={`Visiter ${site.name}`}
+                                >
+                                  <span className="truncate">{site.name}</span>
+                                  <ExternalLink className="w-3.5 h-3.5 shrink-0 inline text-neutral-400" />
+                                </a>
+                                {site.country && (
+                                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600 font-sans tracking-wide">
+                                    {site.country === "Germany" ? "Allemagne" : site.country === "Netherlands" ? "Pays-Bas" : site.country}
+                                  </span>
+                                )}
+                                {site.identifiant && site.identifiant !== "N/A" && (
+                                  <div className="flex items-center gap-1 text-[9.5px] text-neutral-500 font-mono bg-neutral-50 border border-neutral-150 rounded-md px-1.5 py-0.5">
+                                    <span className="font-bold text-neutral-400">ID:</span>
+                                    <span className="font-extrabold text-neutral-700">{site.identifiant}</span>
+                                    <button 
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(site.identifiant || "");
+                                      }}
+                                      className="text-[9px] text-indigo-600 hover:text-indigo-800 ml-1 cursor-pointer font-bold font-sans"
+                                      title="Copier l'identifiant"
+                                    >
+                                      Copier
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-neutral-500 font-medium leading-relaxed max-w-2xl">{site.notes}</p>
+                            </div>
+                          </div>
 
-                    {/* Keywords & Target Skills */}
-                    <div className="space-y-1.5 pt-2 pl-6.5 border-t border-neutral-200/40">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block">Mots-clés & Compétences cibles:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {site.keywords && site.keywords.length > 0 ? (
-                          site.keywords.map((kw, idx) => (
-                            <span key={idx} className="group relative text-[9px] bg-indigo-50 hover:bg-red-50 text-indigo-700 hover:text-red-700 border border-indigo-100/60 hover:border-red-200 px-2 py-0.5 rounded-full font-bold font-mono transition-all flex items-center gap-1">
-                              <span>#{kw}</span>
-                              <button 
-                                onClick={() => {
+                          {/* Keywords & Text Area side-by-side or stacked cleanly */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1.5 pl-0 border-t border-dotted border-neutral-150">
+                            <div className="space-y-1.5">
+                              <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block">Mots-clés & Compétences:</span>
+                              <div className="flex flex-wrap gap-1">
+                                {site.keywords && site.keywords.length > 0 ? (
+                                  site.keywords.map((kw, idx) => (
+                                    <span key={idx} className="group relative text-[9px] bg-indigo-50/60 hover:bg-red-50 text-indigo-700 hover:text-red-700 border border-indigo-100/40 hover:border-red-200 px-2 py-0.5 rounded-full font-bold font-mono transition-all flex items-center gap-1">
+                                      <span>#{kw}</span>
+                                      <button 
+                                        type="button"
+                                        onClick={() => {
+                                          setRecruitmentSites(prev => prev.map(s => {
+                                            if (s.id !== site.id) return s;
+                                            return { ...s, keywords: (s.keywords || []).filter(k => k !== kw) };
+                                          }));
+                                        }}
+                                        className="text-[8px] opacity-60 hover:opacity-100 cursor-pointer font-sans"
+                                        title="Supprimer"
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-[10px] text-neutral-400 italic">Aucun mot-clé associé.</span>
+                                )}
+                              </div>
+                              <form 
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  const input = e.currentTarget.elements.namedItem("newKw") as HTMLInputElement;
+                                  const val = input?.value?.trim();
+                                  if (val) {
+                                    setRecruitmentSites(prev => prev.map(s => {
+                                      if (s.id !== site.id) return s;
+                                      const currentKws = s.keywords || [];
+                                      if (currentKws.includes(val)) return s;
+                                      return { ...s, keywords: [...currentKws, val] };
+                                    }));
+                                    input.value = "";
+                                  }
+                                }}
+                                className="flex items-center gap-1.5 pt-0.5 max-w-[160px]"
+                              >
+                                <input 
+                                  type="text"
+                                  name="newKw"
+                                  placeholder="+ Ajouter mot-clé"
+                                  className="bg-neutral-50 hover:bg-neutral-100/50 border border-neutral-200 rounded-lg px-2 py-0.5 text-[10px] font-mono w-full focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                                />
+                              </form>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block">Candidatures & opportunités découvertes :</span>
+                              <input
+                                type="text"
+                                value={site.discoveredOpportunities || ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
                                   setRecruitmentSites(prev => prev.map(s => {
                                     if (s.id !== site.id) return s;
-                                    return { ...s, keywords: (s.keywords || []).filter(k => k !== kw) };
+                                    return { ...s, discoveredOpportunities: val };
                                   }));
                                 }}
-                                className="text-[8px] opacity-60 hover:opacity-100 cursor-pointer font-sans"
-                                title="Supprimer"
-                              >
-                                ×
-                              </button>
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-[10px] text-neutral-400 italic">Aucun mot-clé associé.</span>
-                        )}
-                      </div>
-                      
-                      {/* Inline Form to add keyword */}
-                      <form 
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const input = e.currentTarget.elements.namedItem("newKw") as HTMLInputElement;
-                          const val = input?.value?.trim();
-                          if (val) {
-                            setRecruitmentSites(prev => prev.map(s => {
-                              if (s.id !== site.id) return s;
-                              const currentKws = s.keywords || [];
-                              if (currentKws.includes(val)) return s;
-                              return { ...s, keywords: [...currentKws, val] };
-                            }));
-                            input.value = "";
-                          }
-                        }}
-                        className="flex items-center gap-1.5 pt-0.5 max-w-[200px]"
-                      >
-                        <input 
-                          type="text"
-                          name="newKw"
-                          placeholder="+ Ajouter un mot-clé"
-                          className="bg-white border border-neutral-200/80 rounded-lg px-2 py-0.5 text-[10px] font-mono w-full focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                        />
-                      </form>
-                    </div>
-                  </div>
+                                placeholder="Notes de candidatures, contacts..."
+                                className="w-full bg-neutral-50 hover:bg-neutral-100/50 focus:bg-white border border-neutral-200/60 focus:border-indigo-500 rounded-lg px-2.5 py-1 text-[11px] text-neutral-600 placeholder:text-neutral-400 transition-all focus:outline-hidden font-sans"
+                              />
+                            </div>
+                          </div>
+                        </div>
 
-                  {/* Interactive Text Area for Discovered Opportunities */}
-                  <div className="pt-2.5 pl-6.5 border-t border-neutral-200/40 space-y-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block">
-                      Opportunités découvertes & candidatures :
-                    </label>
-                    <textarea
-                      value={site.discoveredOpportunities || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setRecruitmentSites(prev => prev.map(s => {
-                          if (s.id !== site.id) return s;
-                          return { ...s, discoveredOpportunities: val };
-                        }));
-                      }}
-                      placeholder="Ex: Vu offre de CFO chez XYZ Corp, contacté le recruteur... / Postulé via Easy Apply..."
-                      className="w-full bg-white border border-neutral-200 rounded-xl p-2.5 text-[10.5px] leading-relaxed text-neutral-600 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 transition-all placeholder:text-neutral-400 font-medium font-sans"
-                      rows={2}
-                    />
-                  </div>
-                </div>
-              ))}
+                        {/* Interactive Circle check-ins & actions (Right) */}
+                        <div className="flex sm:items-center justify-between lg:justify-end gap-4 shrink-0 border-t lg:border-t-0 border-neutral-100 pt-3 lg:pt-0">
+                          <div className="space-y-1">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block text-left lg:text-right">
+                              Visite quotidienne :
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {last7Days.map((day) => {
+                                const checked = isVisitedOnDate(day.dateStr);
+                                return (
+                                  <button
+                                    key={day.dateStr}
+                                    type="button"
+                                    onClick={() => {
+                                      setRecruitmentSites(prev => prev.map(s => {
+                                        if (s.id !== site.id) return s;
+                                        const currentDates = s.visitedDates || [];
+                                        const exists = currentDates.includes(day.dateStr);
+                                        let newDates: string[];
+                                        if (exists) {
+                                          newDates = currentDates.filter(d => d !== day.dateStr);
+                                        } else {
+                                          newDates = [...currentDates, day.dateStr];
+                                        }
+                                        const isVisitedToday = newDates.includes(todayStr);
+                                        return { 
+                                          ...s, 
+                                          visitedDates: newDates,
+                                          visited: isVisitedToday
+                                        };
+                                      }));
+                                    }}
+                                    className={`w-9 h-9 rounded-full flex flex-col items-center justify-center transition-all select-none cursor-pointer ${
+                                      checked
+                                        ? "bg-indigo-600 text-white border border-indigo-600 shadow-xs hover:bg-indigo-500"
+                                        : "bg-white text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:bg-neutral-50"
+                                    } ${day.isToday ? "ring-2 ring-indigo-500 ring-offset-1" : ""}`}
+                                    title={day.isToday ? "Aujourd'hui" : `${day.label} ${day.num}`}
+                                  >
+                                    <span className="text-[7px] font-black tracking-wider leading-none uppercase">
+                                      {day.label}
+                                    </span>
+                                    <span className="text-[11px] font-black leading-none mt-0.5 font-mono">
+                                      {day.num}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <button 
+                            type="button"
+                            onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
+                            className="text-neutral-400 hover:text-red-500 p-2.5 rounded-xl hover:bg-neutral-50 border border-transparent hover:border-neutral-200 shrink-0 cursor-pointer transition-colors mt-auto self-end"
+                            title="Supprimer ce site"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ==================================================== */}
       {/* --- TAB: ENTREPRISES CIBLES --- */}

@@ -15,7 +15,8 @@ import {
   Star,
   FileSpreadsheet,
   AlertCircle,
-  PieChart
+  PieChart,
+  ExternalLink
 } from "lucide-react";
 
 export interface TableColumn {
@@ -858,7 +859,21 @@ export default function InteractiveModuleTable({
                         ) : col.type === "date" ? (
                           <span className="text-neutral-500 font-mono">{value}</span>
                         ) : (
-                          <span className="truncate max-w-xs block text-neutral-800">{value}</span>
+                          <span className="truncate max-w-xs block text-neutral-800">
+                            {typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://")) ? (
+                              <a 
+                                href={value} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-indigo-600 hover:text-indigo-500 hover:underline font-semibold inline-flex items-center gap-1"
+                              >
+                                {value.replace("https://", "").replace("http://", "").split("/")[0]}
+                                <ExternalLink className="w-3 h-3 shrink-0 inline text-neutral-400" />
+                              </a>
+                            ) : (
+                              value
+                            )}
+                          </span>
                         )}
                       </td>
                     );

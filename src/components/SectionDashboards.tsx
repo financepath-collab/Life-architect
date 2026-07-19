@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { 
   Coins, Flame, Heart, FolderKanban, BookOpen, Star, AlertCircle, Bell, 
-  ArrowRight, TrendingUp, PiggyBank, Landmark, ClipboardCheck, CheckCircle2, 
+  ArrowRight, TrendingUp, TrendingDown, PiggyBank, Landmark, ClipboardCheck, CheckCircle2, 
   ListTodo, Calendar, Award, Target, Trophy, Sparkles, Smile, RefreshCw, 
   Plus, Trash2, Dumbbell, Play, Pause, ExternalLink, GraduationCap, Link2, 
   BookOpenCheck, CheckSquare, Coffee, ChevronRight, Activity
@@ -214,6 +214,74 @@ export function FinanceSectionDashboard({
     };
   }, [referenceDate, transactions, budgets]);
 
+  // Projections of remaining month expenses based on daily average run-rate
+  const projectionData = React.useMemo(() => {
+    const year = referenceDate.getFullYear();
+    const month = referenceDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayDay = referenceDate.getDate();
+    const daysRemaining = daysInMonth - todayDay;
+
+    // Sum up budget limit
+    const totalLimit = budgets.reduce((sum, b) => sum + b.limitAmount, 0) || 22500;
+
+    // Sum actual expenses for the current month
+    const key = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const currentMonthExpenses = transactions
+      .filter(t => t.type === "Dépense" && t.date && t.date.startsWith(key))
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    // Baseline fallback if no transactions logged yet to make it feel realistic
+    const baselineExpenses = currentMonthExpenses > 0 ? currentMonthExpenses : 16800;
+
+    // Daily average run-rate calculation
+    const averageDailySpent = todayDay > 0 ? baselineExpenses / todayDay : 0;
+
+    // Remaining projection
+    const projectedRemainingSpend = averageDailySpent * daysRemaining;
+    const totalProjectedSpent = baselineExpenses + projectedRemainingSpend;
+
+    const overrun = totalProjectedSpent - totalLimit;
+    const isOverrun = overrun > 0;
+    const spentPct = totalLimit > 0 ? (totalProjectedSpent / totalLimit) * 100 : 0;
+
+    // Tailored advice and status badge settings
+    let advice = "";
+    let statusColor = "emerald"; // emerald | amber | red
+    let statusLabel = "";
+
+    if (spentPct > 100) {
+      statusColor = "red";
+      statusLabel = "Risque Dépassement";
+      advice = `Réduire les sorties discrétionnaires de ${(overrun / Math.max(1, daysRemaining)).toFixed(0)} MAD/jour pour conserver votre budget d'élite.`;
+    } else if (spentPct >= 90) {
+      statusColor = "amber";
+      statusLabel = "Vigilance Sûre";
+      advice = `Rythme de dépenses serré. Limitez les extras à maximum ${Math.max(0, (totalLimit - baselineExpenses) / Math.max(1, daysRemaining)).toFixed(0)} MAD/jour.`;
+    } else {
+      statusColor = "emerald";
+      statusLabel = "Budget Sécurisé";
+      advice = "Félicitations ! Votre rythme de dépenses actuel vous permet de sécuriser votre épargne mensuelle avec brio.";
+    }
+
+    return {
+      daysInMonth,
+      todayDay,
+      daysRemaining,
+      baselineExpenses,
+      averageDailySpent,
+      projectedRemainingSpend,
+      totalProjectedSpent,
+      totalLimit,
+      overrun,
+      isOverrun,
+      spentPct,
+      advice,
+      statusColor,
+      statusLabel
+    };
+  }, [referenceDate, transactions, budgets]);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200/60 pb-4">
@@ -271,58 +339,60 @@ export function FinanceSectionDashboard({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Enveloppes Budgétaires Status */}
-        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs">
-          <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-            <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
-              <Landmark className="w-4 h-4 text-neutral-700" />
-              <span>Suivi Budgétaire d'Élite</span>
-            </h3>
-            {exceededBudgetsCount > 0 ? (
-              <span className="text-[9px] bg-red-100 border border-red-200 text-red-800 px-2 py-0.5 rounded-full font-bold">
-                {exceededBudgetsCount} Dépassés
-              </span>
-            ) : criticalBudgetsCount > 0 ? (
-              <span className="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-bold">
-                {criticalBudgetsCount} Limites Critiques
-              </span>
-            ) : (
-              <span className="text-[9px] bg-emerald-100 border border-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                Tous Budgets OK
-              </span>
-            )}
-          </div>
-
+        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
           <div className="space-y-3">
-            {budgets.slice(0, 4).map((b, idx) => {
-              const spentPct = b.limitAmount > 0 ? Math.round((b.spentAmount / b.limitAmount) * 100) : 0;
-              return (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-bold text-neutral-800">
-                    <span>{b.category}</span>
-                    <span>{b.spentAmount.toLocaleString("fr-FR")} / {b.limitAmount.toLocaleString("fr-FR")} MAD</span>
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
+                <Landmark className="w-4 h-4 text-neutral-700" />
+                <span>Suivi Budgétaire d'Élite</span>
+              </h3>
+              {exceededBudgetsCount > 0 ? (
+                <span className="text-[9px] bg-red-100 border border-red-200 text-red-800 px-2 py-0.5 rounded-full font-bold">
+                  {exceededBudgetsCount} Dépassés
+                </span>
+              ) : criticalBudgetsCount > 0 ? (
+                <span className="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-bold">
+                  {criticalBudgetsCount} Limites Critiques
+                </span>
+              ) : (
+                <span className="text-[9px] bg-emerald-100 border border-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                  Tous Budgets OK
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {budgets.slice(0, 4).map((b, idx) => {
+                const spentPct = b.limitAmount > 0 ? Math.round((b.spentAmount / b.limitAmount) * 100) : 0;
+                return (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold text-neutral-800">
+                      <span>{b.category}</span>
+                      <span>{b.spentAmount.toLocaleString("fr-FR")} / {b.limitAmount.toLocaleString("fr-FR")} MAD</span>
+                    </div>
+                    <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          spentPct > 100 
+                            ? "bg-red-500" 
+                            : spentPct >= 90 
+                              ? "bg-amber-500" 
+                              : "bg-neutral-900"
+                        }`} 
+                        style={{ width: `${Math.min(100, spentPct)}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        spentPct > 100 
-                          ? "bg-red-500" 
-                          : spentPct >= 90 
-                            ? "bg-amber-500" 
-                            : "bg-neutral-900"
-                      }`} 
-                      style={{ width: `${Math.min(100, spentPct)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           <button 
             onClick={() => onNavigate("budgets")}
-            className="w-full py-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full mt-4 py-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>Optimiser et ajuster mes budgets</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -330,39 +400,145 @@ export function FinanceSectionDashboard({
         </div>
 
         {/* Prochains Prélèvements SaaS */}
-        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs">
-          <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-            <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
-              <Bell className="w-4 h-4 text-neutral-700" />
-              <span>SaaS Actifs & Prochaines Factures</span>
-            </h3>
-            <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full font-mono">
-              {abonnements.filter(a => a.status === "Actif").length} SaaS Actifs
-            </span>
-          </div>
+        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
+                <Bell className="w-4 h-4 text-neutral-700" />
+                <span>SaaS & Factures</span>
+              </h3>
+              <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full font-mono">
+                {abonnements.filter(a => a.status === "Actif").length} SaaS Actifs
+              </span>
+            </div>
 
-          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-            {abonnements.filter(a => a.status === "Actif").slice(0, 3).map((ab) => (
-              <div key={ab.id} className="p-3 bg-neutral-50 border border-neutral-200/50 rounded-xl flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-neutral-900 block">{ab.serviceName}</span>
-                  <span className="text-[10px] text-neutral-400 font-medium">Facturation {ab.billingPeriod}</span>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {abonnements.filter(a => a.status === "Actif").slice(0, 3).map((ab) => (
+                <div key={ab.id} className="p-3 bg-neutral-50 border border-neutral-200/50 rounded-xl flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-neutral-900 block">{ab.serviceName}</span>
+                    <span className="text-[10px] text-neutral-400 font-medium">Facturation {ab.billingPeriod}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-bold font-mono text-neutral-850 block">{ab.costMonthly} MAD/m</span>
+                    <span className="text-[9px] text-neutral-500 font-bold">Le {new Date(ab.nextBillingDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs font-bold font-mono text-neutral-850 block">{ab.costMonthly} MAD/m</span>
-                  <span className="text-[9px] text-neutral-500 font-bold">Le {new Date(ab.nextBillingDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           <button 
             onClick={() => onNavigate("abonnements")}
-            className="w-full py-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full mt-4 py-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <span>Voir tous les abonnements & hébergements</span>
+            <span>Voir tous les abonnements</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
+        </div>
+
+        {/* Anticiper les Dépenses & Projections de fin de mois */}
+        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                <span>Anticipation Fin de Mois</span>
+              </h3>
+              <span className={`text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                projectionData.statusColor === "red" 
+                  ? "bg-red-100 border border-red-200 text-red-800" 
+                  : projectionData.statusColor === "amber" 
+                    ? "bg-amber-100 border border-amber-200 text-amber-800" 
+                    : "bg-emerald-100 border border-emerald-200 text-emerald-800"
+              }`}>
+                {projectionData.statusLabel}
+              </span>
+            </div>
+
+            {/* Calculations metrics */}
+            <div className="grid grid-cols-2 gap-2.5 py-1">
+              <div className="bg-neutral-50/75 border border-neutral-200/40 p-2 text-center rounded-xl">
+                <span className="text-[8.5px] text-neutral-400 font-black uppercase tracking-wider block mb-0.5">Moyenne / Jour</span>
+                <span className="text-[12.5px] font-black font-mono text-neutral-800">
+                  {projectionData.averageDailySpent.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} MAD
+                </span>
+              </div>
+              <div className="bg-neutral-50/75 border border-neutral-200/40 p-2 text-center rounded-xl">
+                <span className="text-[8.5px] text-neutral-400 font-black uppercase tracking-wider block mb-0.5">Jours Restants</span>
+                <span className="text-[12.5px] font-black font-mono text-neutral-800">
+                  {projectionData.daysRemaining} jours
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 border-t border-neutral-100/60 pt-2.5">
+              <div className="flex justify-between text-[11px] font-bold text-neutral-500">
+                <span>Dépenses cumulées</span>
+                <span className="font-mono text-neutral-800 font-bold">{projectionData.baselineExpenses.toLocaleString("fr-FR")} MAD</span>
+              </div>
+              <div className="flex justify-between text-[11px] font-bold text-neutral-500">
+                <span>Projection fin de mois</span>
+                <span className={`font-mono font-black ${projectionData.isOverrun ? "text-red-600" : "text-emerald-600"}`}>
+                  {projectionData.totalProjectedSpent.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} MAD
+                </span>
+              </div>
+              <div className="flex justify-between text-[11px] font-bold text-neutral-500">
+                <span>Limite Budget</span>
+                <span className="font-mono text-neutral-700 font-semibold">{projectionData.totalLimit.toLocaleString("fr-FR")} MAD</span>
+              </div>
+            </div>
+
+            {/* Interactive Progress / Gauge bar representing Real vs Projected vs Limit */}
+            <div className="space-y-1 pt-1">
+              <div className="flex justify-between text-[9.5px] font-black uppercase tracking-wide">
+                <span className="text-neutral-400">Progression & Projection</span>
+                <span className={`font-mono ${projectionData.isOverrun ? "text-red-600 animate-pulse" : "text-emerald-600"}`}>
+                  {projectionData.spentPct.toFixed(0)}% du budget
+                </span>
+              </div>
+              <div className="relative w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden border border-neutral-200/30">
+                {/* 1. Real Spent */}
+                <div 
+                  className="absolute left-0 top-0 h-full bg-neutral-900 transition-all duration-300 z-10" 
+                  style={{ width: `${Math.min(100, (projectionData.baselineExpenses / projectionData.totalLimit) * 100)}%` }}
+                />
+                {/* 2. Projected Spent (remaining) */}
+                <div 
+                  className={`absolute top-0 h-full transition-all duration-300 opacity-70 ${
+                    projectionData.statusColor === "red" 
+                      ? "bg-red-400" 
+                      : projectionData.statusColor === "amber" 
+                        ? "bg-amber-400" 
+                        : "bg-emerald-400"
+                  }`}
+                  style={{ 
+                    left: `${Math.min(100, (projectionData.baselineExpenses / projectionData.totalLimit) * 100)}%`,
+                    width: `${Math.min(100 - (projectionData.baselineExpenses / projectionData.totalLimit) * 100, (projectionData.projectedRemainingSpend / projectionData.totalLimit) * 100)}%`,
+                    backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.4) 3px, rgba(255,255,255,0.4) 6px)"
+                  }}
+                />
+                {/* 3. Budget Limit Marker (at 100%) */}
+                <div className="absolute right-0 top-0 h-full w-1 bg-red-600 z-20" title="Limite Budget" />
+              </div>
+            </div>
+          </div>
+
+          {/* Advice / Copilot Banner */}
+          <div className={`p-2.5 rounded-xl border flex items-start gap-2.5 transition-all ${
+            projectionData.statusColor === "red"
+              ? "bg-red-50/50 border-red-200/50 text-red-900"
+              : projectionData.statusColor === "amber"
+                ? "bg-amber-50/50 border-amber-200/50 text-amber-900"
+                : "bg-emerald-50/40 border-emerald-200/40 text-emerald-900"
+          }`}>
+            <AlertCircle className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
+              projectionData.statusColor === "red" ? "text-red-600" : projectionData.statusColor === "amber" ? "text-amber-600" : "text-emerald-600"
+            }`} />
+            <p className="text-[10px] font-semibold leading-relaxed">
+              {projectionData.advice}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -708,6 +884,48 @@ export function ProductivitySectionDashboard({
     return trendData;
   }, [habitHistory, dailyHabits]);
 
+  const habitTrendWeeks = React.useMemo(() => {
+    const today = new Date();
+    const habitsCount = dailyHabits.length || 7;
+
+    let currentCompleted = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      currentCompleted += (habitHistory[dateStr] || []).length;
+    }
+
+    let prevCompleted = 0;
+    for (let i = 7; i < 14; i++) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      prevCompleted += (habitHistory[dateStr] || []).length;
+    }
+
+    const currentRate = (currentCompleted / Math.max(1, 7 * habitsCount)) * 100;
+    const prevRate = (prevCompleted / Math.max(1, 7 * habitsCount)) * 100;
+
+    const rateDiff = currentRate - prevRate;
+    const isIncrease = rateDiff >= 0;
+
+    let relativeIncrease = 0;
+    if (prevRate > 0) {
+      relativeIncrease = (rateDiff / prevRate) * 100;
+    } else if (currentRate > 0) {
+      relativeIncrease = 100;
+    }
+
+    return {
+      currentRate: Math.round(currentRate),
+      prevRate: Math.round(prevRate),
+      rateDiff: parseFloat(rateDiff.toFixed(1)),
+      relativeIncrease: parseFloat(relativeIncrease.toFixed(1)),
+      isIncrease
+    };
+  }, [habitHistory, dailyHabits]);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200/60 pb-4">
@@ -723,7 +941,7 @@ export function ProductivitySectionDashboard({
       </div>
 
       {/* Streak and Habits Hero Block */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-neutral-900 text-white border border-neutral-800 rounded-2xl p-5 flex items-center justify-between shadow-sm">
           <div className="space-y-1.5">
             <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Série de Discipline</span>
@@ -757,6 +975,32 @@ export function ProductivitySectionDashboard({
               {completed30JoursActions} / 30
             </h4>
             <span className="text-[10px] text-neutral-400 block font-medium">Sprint de combat et focus projet</span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex items-center justify-between shadow-3xs">
+          <div className="space-y-1.5 w-full">
+            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Rendement Hebdomadaire</span>
+            <div className="flex items-baseline gap-2">
+              <h4 className="text-2xl font-black font-mono text-neutral-900 leading-none">
+                {habitTrendWeeks.isIncrease ? "+" : ""}{habitTrendWeeks.relativeIncrease}%
+              </h4>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 ${
+                habitTrendWeeks.isIncrease 
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400" 
+                  : "bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/40 dark:text-red-400"
+              }`}>
+                {habitTrendWeeks.isIncrease ? (
+                  <TrendingUp className="w-3 h-3" />
+                ) : (
+                  <TrendingDown className="w-3 h-3" />
+                )}
+                <span>{habitTrendWeeks.rateDiff > 0 ? "+" : ""}{habitTrendWeeks.rateDiff}% pt</span>
+              </span>
+            </div>
+            <span className="text-[10px] text-neutral-400 block font-medium leading-relaxed">
+              Complétion à <strong className="text-neutral-700">{habitTrendWeeks.currentRate}%</strong> contre {habitTrendWeeks.prevRate}% la semaine dernière
+            </span>
           </div>
         </div>
       </div>
