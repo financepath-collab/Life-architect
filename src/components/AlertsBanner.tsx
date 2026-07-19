@@ -53,10 +53,35 @@ export default function AlertsBanner({
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [snoozedAlerts, setSnoozedAlerts] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem("mp_snoozed_alerts_v2");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const now = Date.now();
+        const filtered: Record<string, number> = {};
+        for (const [id, expiresAt] of Object.entries(parsed)) {
+          if (typeof expiresAt === "number" && expiresAt > now) {
+            filtered[id] = expiresAt;
+          }
+        }
+        return filtered;
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
+  });
+
   // Save dismissed alerts locally
   useEffect(() => {
     localStorage.setItem("mp_dismissed_alerts_v2", JSON.stringify(dismissedIds));
   }, [dismissedIds]);
+
+  // Save snoozed alerts locally
+  useEffect(() => {
+    localStorage.setItem("mp_snoozed_alerts_v2", JSON.stringify(snoozedAlerts));
+  }, [snoozedAlerts]);
 
   // Handle snooze/dismiss
   const handleDismiss = (id: string, e: React.MouseEvent) => {
@@ -64,8 +89,18 @@ export default function AlertsBanner({
     setDismissedIds(prev => [...prev, id]);
   };
 
+  const handleSnooze = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    setSnoozedAlerts(prev => ({
+      ...prev,
+      [id]: expiresAt
+    }));
+  };
+
   const handleResetDismissed = () => {
     setDismissedIds([]);
+    setSnoozedAlerts({});
   };
 
   // Safe date helper to calculate days remaining relative to the creator workspace current time (July 11, 2026 or current date)
@@ -215,8 +250,13 @@ export default function AlertsBanner({
     return a.daysRemaining - b.daysRemaining;
   });
 
-  // Filter out dismissed alerts
-  const activeAlerts = sortedAlerts.filter(alert => !dismissedIds.includes(alert.id));
+  // Filter out dismissed and snoozed alerts
+  const nowMs = Date.now();
+  const activeAlerts = sortedAlerts.filter(alert => {
+    if (dismissedIds.includes(alert.id)) return false;
+    if (snoozedAlerts[alert.id] && snoozedAlerts[alert.id] > nowMs) return false;
+    return true;
+  });
 
   // Compute stats for active alerts
   const totalUrgentCount = activeAlerts.filter(a => a.urgency === "urgent" || a.urgency === "overdue").length;
@@ -460,6 +500,19 @@ export default function AlertsBanner({
 
                         {/* Actions overlay */}
                         <div className="flex items-center gap-1.5 shrink-0 self-center">
+                          {/* Snooze button for non-urgent financial alerts */}
+                          {(alert.type === "subscription" || alert.type === "savings") && 
+                           (alert.urgency !== "urgent" && alert.urgency !== "overdue") && (
+                            <button
+                              onClick={(e) => handleSnooze(alert.id, e)}
+                              title="Répéter dans 24h (Snooze)"
+                              className="p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 text-indigo-600 hover:text-indigo-800 transition-all cursor-pointer opacity-0 group-hover:opacity-100 shadow-3xs flex items-center gap-1"
+                            >
+                              <Clock className="w-3.5 h-3.5" />
+                              <span className="text-[9px] font-bold hidden md:inline">Snooze 24h</span>
+                            </button>
+                          )}
+
                           {/* Dismiss button */}
                           <button
                             onClick={(e) => handleDismiss(alert.id, e)}

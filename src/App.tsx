@@ -638,7 +638,18 @@ export default function App() {
 
   const [epargnes, setEpargnes] = useState<FinanceEpargne[]>(() => {
     const saved = localStorage.getItem("mp_epargnes_v2");
-    return saved ? JSON.parse(saved) : INITIAL_EPARGNES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && (parsed.length === 0 || parsed.some(e => e.name === "Achat Appartement Casablanca"))) {
+          return INITIAL_EPARGNES;
+        }
+        return parsed;
+      } catch (e) {
+        return INITIAL_EPARGNES;
+      }
+    }
+    return INITIAL_EPARGNES;
   });
 
   const [actions30Jours, setActions30Jours] = useState<Action30Jours[]>(() => {
@@ -795,6 +806,30 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("mp_project_folders_v1", JSON.stringify(folders));
   }, [folders]);
+
+  const [snoozedAlerts, setSnoozedAlerts] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem("mp_snoozed_alerts_v2");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const now = Date.now();
+        const filtered: Record<string, number> = {};
+        for (const [id, expiresAt] of Object.entries(parsed)) {
+          if (typeof expiresAt === "number" && expiresAt > now) {
+            filtered[id] = expiresAt;
+          }
+        }
+        return filtered;
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    localStorage.setItem("mp_snoozed_alerts_v2", JSON.stringify(snoozedAlerts));
+  }, [snoozedAlerts]);
 
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() => {
     try {
@@ -2263,6 +2298,15 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleSnoozeAlert = (alertId: string) => {
+    const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+    setSnoozedAlerts(prev => ({
+      ...prev,
+      [alertId]: expiresAt
+    }));
+    triggerToast("Alerte masquée pour 24h !", "success");
+  };
+
   const getWeekRangeLabel = () => {
     const today = new Date();
     const day = today.getDay();
@@ -3053,6 +3097,15 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Integrated Alert & Notification Hub */}
+              <AlertsBanner
+                abonnements={abonnements}
+                profilAmeliorations={profilAmeliorations}
+                epargnes={epargnes}
+                dailyHabits={dailyHabits}
+                onNavigateToModule={handleNavigateToModule}
+              />
+
               {/* 3-Column Responsive Bento-style Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
@@ -3294,32 +3347,62 @@ export default function App() {
                           Alertes de Finance
                         </h3>
                       </div>
-                      <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
-                        Attention
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {Object.keys(snoozedAlerts).length > 0 && (
+                          <button
+                            onClick={() => {
+                              setSnoozedAlerts({});
+                              triggerToast("Toutes les alertes ont été réactivées !", "success");
+                            }}
+                            className="text-[9px] text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer transition-all"
+                            title="Réactiver toutes les alertes masquées temporairement"
+                          >
+                            Réactiver ({Object.keys(snoozedAlerts).length})
+                          </button>
+                        )}
+                        <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
+                          Attention
+                        </span>
+                      </div>
                     </div>
 
                     {/* Real-time Alerts */}
                     <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
                       {(() => {
                         const alerts: React.ReactNode[] = [];
+                        const nowMs = Date.now();
 
                         // 1. Low balances
                         accounts.forEach(acc => {
+                          const alertId = `acc-alert-${acc.id}`;
+                          if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
+
                           if (acc.balance < 1000) {
                             alerts.push(
                               <div 
-                                key={`acc-alert-${acc.id}`}
+                                key={alertId}
                                 onClick={() => handleNavigateToModule("comptes")}
-                                className="p-3 bg-red-50 border border-red-100 rounded-xl flex gap-2.5 cursor-pointer hover:bg-red-50/80 transition-all"
+                                className="group relative p-3 bg-red-50 border border-red-100 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-red-50/80 transition-all"
                               >
-                                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                                <div className="space-y-0.5">
-                                  <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Trésorerie Basse</span>
-                                  <p className="text-xs font-bold text-neutral-850">
-                                    Compte {acc.name} est à {acc.balance.toLocaleString("fr-FR")} {acc.currency}.
-                                  </p>
+                                <div className="flex gap-2.5">
+                                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Trésorerie Basse</span>
+                                    <p className="text-xs font-bold text-neutral-850">
+                                      Compte {acc.name} est à {acc.balance.toLocaleString("fr-FR")} {acc.currency}.
+                                    </p>
+                                  </div>
                                 </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSnoozeAlert(alertId);
+                                  }}
+                                  title="Masquer pendant 24h"
+                                  className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-red-600 hover:border-red-200 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0"
+                                >
+                                  <Clock className="w-3.5 h-3.5" />
+                                </button>
                               </div>
                             );
                           }
@@ -3328,11 +3411,14 @@ export default function App() {
                         // 2. Exceeded Budgets
                         budgets.forEach((b, index) => {
                           if (b.spentAmount > b.limitAmount) {
+                            const alertId = `budget-alert-${b.category}`;
+                            if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
+
                             alerts.push(
                               <motion.div 
-                                key={`budget-alert-${index}`}
+                                key={alertId}
                                 onClick={() => handleNavigateToModule("budgets")}
-                                className="p-3 bg-red-50/70 border border-red-200 rounded-xl flex gap-2.5 cursor-pointer hover:bg-red-55/90 transition-all shadow-3xs"
+                                className="group relative p-3 bg-red-50/70 border border-red-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-red-55/90 transition-all shadow-3xs"
                                 animate={{
                                   scale: [1, 1.015, 1],
                                   boxShadow: [
@@ -3347,25 +3433,40 @@ export default function App() {
                                   ease: "easeInOut"
                                 }}
                               >
-                                <div className="relative shrink-0 mt-0.5">
-                                  <AlertCircle className="w-4 h-4 text-red-600" />
-                                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-                                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-600" />
+                                <div className="flex gap-2.5">
+                                  <div className="relative shrink-0 mt-0.5">
+                                    <AlertCircle className="w-4 h-4 text-red-600" />
+                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-600" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Budget Dépassé</span>
+                                    <p className="text-xs font-bold text-neutral-850 leading-snug">
+                                      Enveloppe {b.category} : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="space-y-0.5">
-                                  <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Budget Dépassé</span>
-                                  <p className="text-xs font-bold text-neutral-850 leading-snug">
-                                    Enveloppe {b.category} : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
-                                  </p>
-                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSnoozeAlert(alertId);
+                                  }}
+                                  title="Masquer pendant 24h"
+                                  className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-red-600 hover:border-red-200 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0"
+                                >
+                                  <Clock className="w-3.5 h-3.5" />
+                                </button>
                               </motion.div>
                             );
                           } else if (b.spentAmount >= b.limitAmount * 0.9) {
+                            const alertId = `budget-alert-warning-${b.category}`;
+                            if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
+
                             alerts.push(
                               <motion.div 
-                                key={`budget-alert-warning-${index}`}
+                                key={alertId}
                                 onClick={() => handleNavigateToModule("budgets")}
-                                className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex gap-2.5 cursor-pointer hover:bg-amber-55/90 transition-all shadow-3xs"
+                                className="group relative p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-amber-55/90 transition-all shadow-3xs"
                                 animate={{
                                   scale: [1, 1.015, 1],
                                   boxShadow: [
@@ -3380,17 +3481,29 @@ export default function App() {
                                   ease: "easeInOut"
                                 }}
                               >
-                                <div className="relative shrink-0 mt-0.5">
-                                  <AlertCircle className="w-4 h-4 text-amber-600" />
-                                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-600" />
+                                <div className="flex gap-2.5">
+                                  <div className="relative shrink-0 mt-0.5">
+                                    <AlertCircle className="w-4 h-4 text-amber-600" />
+                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-600" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] font-black text-amber-800 uppercase block tracking-wider font-mono">Budget Critique</span>
+                                    <p className="text-xs font-bold text-neutral-850 leading-snug">
+                                      Enveloppe {b.category} à 90%+ : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="space-y-0.5">
-                                  <span className="text-[10px] font-black text-amber-800 uppercase block tracking-wider font-mono">Budget Critique</span>
-                                  <p className="text-xs font-bold text-neutral-850 leading-snug">
-                                    Enveloppe {b.category} à 90%+ : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
-                                  </p>
-                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSnoozeAlert(alertId);
+                                  }}
+                                  title="Snoozer pendant 24h"
+                                  className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-250 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0 animate-in fade-in"
+                                >
+                                  <Clock className="w-3.5 h-3.5" />
+                                </button>
                               </motion.div>
                             );
                           }
@@ -3399,23 +3512,38 @@ export default function App() {
                         // 3. Imminent Subscriptions
                         const today = new Date();
                         abonnements.forEach(ab => {
+                          const alertId = `sub_${ab.id}`;
+                          if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
+
                           if (ab.status === "Actif" && ab.nextBillingDate) {
                             const bDate = new Date(ab.nextBillingDate);
                             const diffDays = Math.ceil((bDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
                             if (diffDays >= 0 && diffDays <= 7) {
                               alerts.push(
                                 <div 
-                                  key={`ab-alert-${ab.id}`}
+                                  key={alertId}
                                   onClick={() => handleNavigateToModule("abonnements")}
-                                  className="p-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl flex gap-2.5 cursor-pointer transition-all"
+                                  className="group relative p-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer transition-all"
                                 >
-                                  <Bell className="w-4 h-4 text-neutral-600 shrink-0 mt-0.5" />
-                                  <div className="space-y-0.5">
-                                    <span className="text-[10px] font-black text-neutral-500 uppercase block tracking-wider font-mono">Facture Imminente</span>
-                                    <p className="text-xs font-bold text-neutral-850 leading-snug">
-                                      {ab.serviceName} prélevé de {ab.costMonthly} MAD dans {diffDays} jours.
-                                    </p>
+                                  <div className="flex gap-2.5">
+                                    <Bell className="w-4 h-4 text-neutral-600 shrink-0 mt-0.5" />
+                                    <div className="space-y-0.5">
+                                      <span className="text-[10px] font-black text-neutral-500 uppercase block tracking-wider font-mono">Facture Imminente</span>
+                                      <p className="text-xs font-bold text-neutral-850 leading-snug">
+                                        {ab.serviceName} prélevé de {ab.costMonthly} MAD dans {diffDays} jours.
+                                      </p>
+                                    </div>
                                   </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSnoozeAlert(alertId);
+                                    }}
+                                    title="Snoozer pendant 24h"
+                                    className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-250 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0 animate-in fade-in"
+                                  >
+                                    <Clock className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
                               );
                             }

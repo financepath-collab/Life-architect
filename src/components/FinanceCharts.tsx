@@ -570,22 +570,42 @@ export default function FinanceCharts({
               </div>
 
               {/* Individual budget breakdown */}
-              <div className="space-y-2.5 pt-2">
+              <div className="space-y-3 pt-2">
                 <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Suivi par catégorie</span>
-                {budgets.slice(0, 4).map(b => {
-                  const rate = b.limitAmount > 0 ? (b.spentAmount / b.limitAmount) * 100 : 0;
+                {budgets.map(b => {
+                  const rate = b.limitAmount > 0 ? Math.round((b.spentAmount / b.limitAmount) * 100) : 0;
+                  
+                  // Transition hue from emerald green (142) to bright red (0)
+                  const ratio = Math.min(100, rate) / 100;
+                  const hue = Math.max(0, 142 - ratio * 142);
+                  const barColor = `hsl(${hue}, 80%, 45%)`;
+                  const badgeBg = `hsl(${hue}, 85%, 96%)`;
+                  const badgeText = `hsl(${hue}, 85%, 35%)`;
+
                   return (
-                    <div key={b.id} className="space-y-1">
+                    <div key={b.id} className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-neutral-700 font-semibold">{b.category}</span>
-                        <span className="text-neutral-500 font-mono">
-                          {b.spentAmount} / <span className="text-neutral-400">{b.limitAmount} MAD</span>
-                        </span>
+                        <span className="text-neutral-700 font-bold">{b.category}</span>
+                        <div className="flex items-center gap-1.5 font-mono">
+                          <span className="text-neutral-500">
+                            {b.spentAmount} / <span className="text-neutral-400">{b.limitAmount} MAD</span>
+                          </span>
+                          <span 
+                            className="text-[9px] font-black px-1 py-0.5 rounded text-center min-w-[32px]"
+                            style={{ backgroundColor: badgeBg, color: badgeText }}
+                          >
+                            {rate}%
+                          </span>
+                        </div>
                       </div>
-                      <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden">
+                      <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden p-[1px] shadow-inner relative">
                         <div 
-                          className={`h-full rounded-full ${rate > 90 ? "bg-rose-600" : "bg-neutral-900"}`} 
-                          style={{ width: `${Math.min(100, rate)}%` }}
+                          className="h-full rounded-full transition-all duration-500 ease-out" 
+                          style={{ 
+                            width: `${Math.min(100, rate)}%`,
+                            backgroundColor: barColor,
+                            boxShadow: rate > 100 ? '0 0 6px rgba(239, 68, 68, 0.4)' : `0 0 4px ${barColor}30`
+                          }}
                         />
                       </div>
                     </div>

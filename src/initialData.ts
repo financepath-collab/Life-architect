@@ -77,9 +77,18 @@ export const INITIAL_SALAIRES: FinanceSalaire[] = [
 ];
 
 export const INITIAL_EPARGNES: FinanceEpargne[] = [
-  { id: "e1", name: "Achat Appartement Casablanca", targetAmount: 300000, currentAmount: 145000, deadline: "2028-12-31", status: "En cours" },
-  { id: "e2", name: "Fonds d'Urgence (6 mois charges)", targetAmount: 45000, currentAmount: 45000, deadline: "2026-03-31", status: "Atteint" },
-  { id: "e3", name: "Nouveau MacBook Pro & Caméra 4K", targetAmount: 35000, currentAmount: 12000, deadline: "2026-12-15", status: "En cours" }
+  { id: "e1", name: "Fonds d'urgence (3 mois) - Sécurité", targetAmount: 42000, currentAmount: 42000, deadline: "2026-06-30", status: "Atteint" },
+  { id: "e2", name: "Investissement BVC - Investissement", targetAmount: 60000, currentAmount: 35000, deadline: "2026-12-31", status: "En cours" },
+  { id: "e3", name: "MAISON STUDIO - Autre", targetAmount: 250000, currentAmount: 45000, deadline: "2028-12-31", status: "En cours" },
+  { id: "e4", name: "City trip Europe (Paris, Bruxelles, Amsterdam)", targetAmount: 25000, currentAmount: 12000, deadline: "2026-08-31", status: "En cours" },
+  { id: "e5", name: "Espagne & Portugal (Séville, Lisbonne, Porto)", targetAmount: 20000, currentAmount: 5000, deadline: "2027-05-31", status: "En cours" },
+  { id: "e6", name: "Certification FMVA CFI - Formation", targetAmount: 5000, currentAmount: 5000, deadline: "2026-04-30", status: "Atteint" },
+  { id: "e7", name: "Tenue professionnelle (Costumes entretiens) - Mode", targetAmount: 1000, currentAmount: 600, deadline: "2026-08-15", status: "En cours" },
+  { id: "e8", name: "Chaise Ergonomique - Contenu", targetAmount: 2000, currentAmount: 2000, deadline: "2026-07-10", status: "Atteint" },
+  { id: "e9", name: "Abonnement gym de Salle de sport", targetAmount: 4000, currentAmount: 1500, deadline: "2026-09-30", status: "En cours" },
+  { id: "e10", name: "Console de jeu Nintendo Switch", targetAmount: 6000, currentAmount: 2000, deadline: "2026-11-25", status: "En cours" },
+  { id: "e11", name: "Moto", targetAmount: 45000, currentAmount: 8000, deadline: "2027-04-30", status: "En cours" },
+  { id: "e12", name: "Caravane", targetAmount: 120000, currentAmount: 15000, deadline: "2028-06-30", status: "En cours" }
 ];
 
 export const INITIAL_ACTIONS_30_JOURS: Action30Jours[] = [

@@ -363,25 +363,49 @@ export function FinanceSectionDashboard({
               )}
             </div>
 
-            <div className="space-y-3">
-              {budgets.slice(0, 4).map((b, idx) => {
+            <div className="space-y-3.5">
+              {budgets.map((b, idx) => {
                 const spentPct = b.limitAmount > 0 ? Math.round((b.spentAmount / b.limitAmount) * 100) : 0;
+                
+                // Transition hue from emerald green (142) to bright red (0)
+                const ratio = Math.min(100, spentPct) / 100;
+                const hue = Math.max(0, 142 - ratio * 142);
+                const barColor = `hsl(${hue}, 80%, 45%)`;
+                const badgeBg = `hsl(${hue}, 85%, 96%)`;
+                const badgeText = `hsl(${hue}, 85%, 35%)`;
+                const badgeBorder = `hsl(${hue}, 85%, 88%)`;
+
                 return (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex justify-between text-xs font-bold text-neutral-800">
-                      <span>{b.category}</span>
-                      <span>{b.spentAmount.toLocaleString("fr-FR")} / {b.limitAmount.toLocaleString("fr-FR")} MAD</span>
+                  <div key={idx} className="space-y-1.5">
+                    <div className="flex justify-between items-center text-xs font-bold text-neutral-800">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
+                        <span className="truncate max-w-[120px] md:max-w-[150px]" title={b.category}>{b.category}</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] text-neutral-500 font-medium font-mono">
+                          {b.spentAmount.toLocaleString("fr-FR")} / {b.limitAmount.toLocaleString("fr-FR")} MAD
+                        </span>
+                        <span 
+                          className="text-[9px] font-black px-1.5 py-0.5 rounded-md font-mono shrink-0 shadow-3xs"
+                          style={{ 
+                            backgroundColor: badgeBg, 
+                            color: badgeText,
+                            border: `1px solid ${badgeBorder}`
+                          }}
+                        >
+                          {spentPct}%
+                        </span>
+                      </div>
                     </div>
-                    <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
+                    <div className="w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden p-[1px] shadow-inner relative">
                       <div 
-                        className={`h-full rounded-full transition-all duration-300 ${
-                          spentPct > 100 
-                            ? "bg-red-500" 
-                            : spentPct >= 90 
-                              ? "bg-amber-500" 
-                              : "bg-neutral-900"
-                        }`} 
-                        style={{ width: `${Math.min(100, spentPct)}%` }}
+                        className="h-full rounded-full transition-all duration-500 ease-out" 
+                        style={{ 
+                          width: `${Math.min(100, spentPct)}%`,
+                          backgroundColor: barColor,
+                          boxShadow: spentPct > 100 ? '0 0 8px rgba(239, 68, 68, 0.5)' : `0 0 4px ${barColor}40`
+                        }}
                       />
                     </div>
                   </div>
