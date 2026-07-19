@@ -65,8 +65,7 @@ import NetSavingsChart from "./components/NetSavingsChart";
 import FocusSport from "./components/FocusSport";
 import SkinTrackerSection from "./components/SkinTrackerSection";
 import PerformanceCorrelations from "./components/PerformanceCorrelations";
-import BooksSection from "./components/BooksSection";
-import ScreenMediaSection from "./components/ScreenMediaSection";
+import MediaHubSection from "./components/MediaHubSection";
 import FormationsSection from "./components/FormationsSection";
 import CareerSection from "./components/CareerSection";
 import ProjectFoldersSection from "./components/ProjectFoldersSection";
@@ -3825,9 +3824,9 @@ export default function App() {
                   ) : activeMenu === "skin" ? (
                     <SkinTrackerSection skinTrackers={skinTrackers} setSkinTrackers={setSkinTrackers} />
                   ) : activeMenu === "books" ? (
-                    <BooksSection books={books} setBooks={setBooks} />
+                    <MediaHubSection books={books} setBooks={setBooks} screenMedia={screenMedia} setScreenMedia={setScreenMedia} initialFormatFilter="Livre" />
                   ) : activeMenu === "screenmedia" ? (
-                    <ScreenMediaSection screenMedia={screenMedia} setScreenMedia={setScreenMedia} />
+                    <MediaHubSection books={books} setBooks={setBooks} screenMedia={screenMedia} setScreenMedia={setScreenMedia} initialFormatFilter="Tous" />
                   ) : activeMenu === "project_folders" ? (
                     <ProjectFoldersSection
                       folders={folders}
