@@ -2687,7 +2687,7 @@ export default function App() {
       
       {/* UNIFIED STICKY TOP NAVIGATION BAR */}
       <header className="sticky top-0 z-50 w-full bg-white border-b border-neutral-200/80 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 xl:gap-4">
+        <div className="max-w-[96%] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 xl:gap-4">
           
           {/* Logo & Brand (Left) */}
           <div 
@@ -3025,7 +3025,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* WORKSPACE CONTENT SCROLL */}
-        <main className="flex-1 p-8 overflow-y-auto space-y-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-8 overflow-y-auto space-y-8 max-w-[96%] w-full mx-auto">
 
           {/* TAB 1: TABLEAU DE BORD (MAIN HOME CONTROLLER) - SIMPLIFIED RAPPELS & TACHES */}
           {activeMenu === "dashboard" && (
@@ -3820,7 +3820,7 @@ export default function App() {
 
         {/* Global Footer info banner */}
         <footer className="border-t border-neutral-200 bg-white py-6 text-center text-xs text-neutral-400 shrink-0 mt-12">
-          <div className="max-w-7xl mx-auto px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="max-w-[96%] mx-auto px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p>© 2026 LIFE ARCHITECT • Second Brain Personnel & Professionnel. Tous droits réservés.</p>
             <div className="flex gap-4 text-neutral-500 font-semibold font-mono text-[9px]">
               <span>FINANCES</span>
