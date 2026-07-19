@@ -835,142 +835,221 @@ export default function MediaHubSection({
           )}
         </AnimatePresence>
 
-        {/* 5. MEDIA GRID LIST (CARDS) */}
+        {/* 5. MEDIA SPREADSHEET TABLE (EXCEL FORMAT) */}
         {filteredList.length === 0 ? (
           <div className="text-center py-20 text-neutral-400 italic bg-neutral-50/50 rounded-2xl border border-dashed border-neutral-200 font-medium text-xs">
             Aucun élément multimédia ne correspond à vos critères de recherche.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredList.map((item) => {
-              return (
-                <div 
-                  key={item.id}
-                  className="bg-neutral-50/50 border border-neutral-200/80 rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:border-neutral-400 hover:bg-white transition-all shadow-3xs group relative"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-[9px] bg-neutral-200 text-neutral-800 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider font-mono flex items-center gap-1 shrink-0 shadow-3xs">
-                          {getFormatIcon(item.type, "w-2.5 h-2.5")}
-                          <span>{item.type}</span>
-                        </span>
-                        <span className="text-[9px] bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full font-bold font-mono truncate max-w-[110px]" title={item.genreOrPlatform}>
-                          {item.genreOrPlatform}
-                        </span>
-                      </div>
-                      
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                        item.status === "Terminé"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                          : item.status === "En cours"
-                            ? "bg-red-50 text-red-700 border border-red-100"
-                            : "bg-neutral-100 text-neutral-600 border border-neutral-200"
-                      }`}>
-                        {item.status === "À lire/voir" ? (item.type === "Livre" ? "À Lire" : "À Voir") : item.status}
-                      </span>
-                    </div>
+          <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 shadow-3xs bg-white">
+            <table className="w-full text-left border-collapse font-sans text-xs min-w-[1050px]">
+              <thead>
+                <tr className="bg-neutral-50/70 border-b border-neutral-200 text-neutral-500 font-extrabold uppercase tracking-wider text-[10px]">
+                  <th className="py-3 px-4 border-r border-neutral-150">Nom / Titre</th>
+                  <th className="py-3 px-4 border-r border-neutral-150">Auteur / Diffuseur</th>
+                  <th className="py-3 px-4 border-r border-neutral-150 w-32">Format / Type</th>
+                  <th className="py-3 px-4 border-r border-neutral-150">Genre / Plateforme</th>
+                  <th className="py-3 px-4 border-r border-neutral-150 text-center w-36">Position / Volume</th>
+                  <th className="py-3 px-4 border-r border-neutral-150 w-48">Progression</th>
+                  <th className="py-3 px-4 border-r border-neutral-150 w-32">Statut</th>
+                  <th className="py-3 px-4 border-r border-neutral-150 w-44">Note & Avis</th>
+                  <th className="py-3 px-4 text-center w-20">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-150">
+                {filteredList.map((item) => {
+                  const isExpanded = editingNotesId === item.id;
+                  return (
+                    <React.Fragment key={item.id}>
+                      <tr className="hover:bg-neutral-50/50 transition-colors group">
+                        {/* Title & icon */}
+                        <td className="py-3 px-4 font-black text-neutral-900 border-r border-neutral-150 max-w-[240px] truncate">
+                          <div className="flex items-center gap-2">
+                            {item.type === "Livre" ? (
+                              <BookMarked className="w-4 h-4 text-neutral-400 shrink-0" />
+                            ) : (
+                              <Clapperboard className="w-4 h-4 text-neutral-400 shrink-0" />
+                            )}
+                            <span title={item.title}>{item.title}</span>
+                          </div>
+                        </td>
 
-                    <div className="space-y-1 min-w-0">
-                      <h4 className="text-xs font-black text-neutral-900 leading-tight flex items-start gap-1.5">
-                        {item.type === "Livre" ? (
-                          <BookMarked className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
-                        ) : (
-                          <Clapperboard className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
-                        )}
-                        <span className="line-clamp-2" title={item.title}>{item.title}</span>
-                      </h4>
-                      <p className="text-[11px] text-neutral-500 font-semibold pl-5.5">
-                        {item.type === "Livre" ? "Auteur" : "Plateforme"} : {item.creator}
-                      </p>
-                      {item.type !== "Film" && item.season && (
-                        <span className="text-[10px] text-neutral-400 font-bold block pl-5.5">
-                          Saison {item.season}
-                        </span>
-                      )}
-                    </div>
+                        {/* Creator */}
+                        <td className="py-3 px-4 font-bold text-neutral-600 border-r border-neutral-150 max-w-[150px] truncate">
+                          {item.creator}
+                        </td>
 
-                    {/* Progress indicator */}
-                    {item.type !== "Film" && item.status !== "À lire/voir" && (
-                      <div className="space-y-1.5 pl-5.5 pt-0.5">
-                        <div className="flex items-center justify-between text-[10px] font-bold text-neutral-500 font-sans">
-                          <span>Progression :</span>
-                          <span className="font-mono text-neutral-800">
-                            {item.progressPercent}% ({item.currentProgressText} / {item.totalProgressText})
+                        {/* Format */}
+                        <td className="py-3 px-4 border-r border-neutral-150">
+                          <span className="inline-flex items-center gap-1 text-[9px] bg-neutral-100 text-neutral-800 px-2 py-0.5 rounded-md font-bold font-mono border border-neutral-200/80 shadow-3xs uppercase tracking-wider">
+                            {getFormatIcon(item.type, "w-2.5 h-2.5")}
+                            <span>{item.type}</span>
                           </span>
-                        </div>
-                        <div className="w-full bg-neutral-200 rounded-full h-1 overflow-hidden">
-                          <div className="bg-neutral-900 h-1 rounded-full transition-all" style={{ width: `${item.progressPercent}%` }} />
-                        </div>
-                      </div>
-                    )}
+                        </td>
 
-                    {/* Film completed or standard stars */}
-                    {item.status === "Terminé" && (
-                      <div className="flex items-center gap-0.5 pl-5.5 pt-0.5">
-                        {[1, 2, 3, 4, 5].map(s => (
-                          <button
-                            type="button"
-                            key={s}
-                            onClick={() => handleUpdateRating(item, s)}
-                            className="text-neutral-200 hover:text-amber-400 transition-colors"
+                        {/* Genre/Platform */}
+                        <td className="py-3 px-4 border-r border-neutral-150 font-semibold text-neutral-500 max-w-[130px] truncate">
+                          {item.genreOrPlatform}
+                        </td>
+
+                        {/* Position text */}
+                        <td className="py-3 px-4 border-r border-neutral-150 text-center font-mono font-bold text-neutral-700">
+                          {item.type === "Film" ? (
+                            <span className="text-neutral-400 font-sans font-medium text-[10px]">Unitaire (Film)</span>
+                          ) : (
+                            <span>
+                              {item.season ? `S${item.season} • ` : ""}
+                              {item.currentValue} / {item.totalValue} {item.type === "Livre" ? "p." : "ep."}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Progress meter & fast adjustment buttons */}
+                        <td className="py-3 px-4 border-r border-neutral-150">
+                          {item.type === "Film" ? (
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-neutral-400">Film unique</span>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-black font-mono ${
+                                item.status === "Terminé" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"
+                              }`}>
+                                {item.status === "Terminé" ? "100%" : "À voir"}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-[10px] font-bold text-neutral-500">
+                                <span className="font-mono text-neutral-800">{item.progressPercent}%</span>
+                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={() => handleUpdateProgress(item, item.currentValue - 1)}
+                                    className="w-4 h-4 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded text-neutral-700 flex items-center justify-center font-mono font-bold text-[9px] cursor-pointer"
+                                    title="-1"
+                                  >
+                                    -
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateProgress(item, item.currentValue + 1)}
+                                    className="w-4 h-4 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded text-neutral-700 flex items-center justify-center font-mono font-bold text-[9px] cursor-pointer"
+                                    title="+1"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="w-full bg-neutral-100 rounded-full h-1.5 overflow-hidden p-[1px] shadow-inner relative">
+                                <div className="bg-neutral-900 h-full rounded-full transition-all" style={{ width: `${item.progressPercent}%` }} />
+                              </div>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Status with quick click-to-cycle or clear dropdown */}
+                        <td className="py-3 px-4 border-r border-neutral-150">
+                          <select
+                            value={item.status}
+                            onChange={(e) => handleUpdateStatus(item, e.target.value as any)}
+                            className={`text-[10px] font-bold py-1 px-1.5 rounded-lg border focus:outline-none cursor-pointer shadow-3xs w-full ${
+                              item.status === "Terminé"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : item.status === "En cours"
+                                  ? "bg-red-50 text-red-700 border-red-200"
+                                  : "bg-neutral-50 text-neutral-600 border-neutral-200"
+                            }`}
                           >
-                            <Star className={`w-3.5 h-3.5 ${item.rating >= s ? "text-amber-400 fill-amber-400" : "text-neutral-200"}`} />
+                            <option value="À lire/voir">Wishlist</option>
+                            <option value="En cours">En cours</option>
+                            <option value="Terminé">Terminé</option>
+                          </select>
+                        </td>
+
+                        {/* Note stars & quick comment button */}
+                        <td className="py-3 px-4 border-r border-neutral-150">
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center">
+                              {[1, 2, 3, 4, 5].map(s => (
+                                <button
+                                  type="button"
+                                  key={s}
+                                  onClick={() => handleUpdateRating(item, s)}
+                                  className="text-neutral-200 hover:text-amber-400 transition-colors cursor-pointer"
+                                >
+                                  <Star className={`w-3 h-3 ${item.rating >= s ? "text-amber-400 fill-amber-400" : "text-neutral-200"}`} />
+                                </button>
+                              ))}
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (editingNotesId === item.id) {
+                                  setEditingNotesId(null);
+                                } else {
+                                  setEditingNotesId(item.id);
+                                  setTempNotes(item.notes);
+                                }
+                              }}
+                              className={`p-1.5 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors shrink-0 flex items-center gap-1 cursor-pointer font-bold text-[10px] ${
+                                item.notes ? "text-amber-500 font-black" : ""
+                              }`}
+                              title="Notes & Commentaires"
+                            >
+                              <Play className={`w-2.5 h-2.5 transition-transform ${isExpanded ? "rotate-90 text-neutral-800" : "rotate-0"}`} />
+                              <span>Notes</span>
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Row Actions */}
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            onClick={() => handleDeleteItem(item)}
+                            className="text-neutral-400 hover:text-red-600 p-1 rounded hover:bg-neutral-100 transition-colors cursor-pointer inline-block"
+                            title="Supprimer cette ligne"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                        ))}
-                      </div>
-                    )}
+                        </td>
+                      </tr>
 
-                    {/* Comments block */}
-                    {item.notes && (
-                      <div className="pl-5.5 pt-1">
-                        <p className="text-[11px] text-neutral-500 bg-white border border-neutral-100 rounded-lg p-2.5 italic leading-relaxed font-medium">
-                          {item.notes}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions buttons */}
-                  <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2 pl-5.5">
-                    <div className="flex items-center gap-1.5">
-                      {item.status !== "En cours" && (
-                        <button 
-                          onClick={() => handleUpdateStatus(item, "En cours")}
-                          className="text-[10px] font-bold text-red-600 hover:bg-red-50 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-                        >
-                          {item.type === "Livre" ? "Lire" : "Regarder"}
-                        </button>
+                      {/* Expandable note Row */}
+                      {isExpanded && (
+                        <tr className="bg-neutral-50/50 font-sans">
+                          <td colSpan={9} className="py-3.5 px-6 border-b border-neutral-200">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-[11px] font-black text-neutral-500 uppercase tracking-wider">
+                                <span className="flex items-center gap-1.5">
+                                  <Layers className="w-3.5 h-3.5 text-neutral-400" />
+                                  Notes, avis & Concepts mémorisés de : <strong className="text-neutral-800 font-black">"{item.title}"</strong>
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleSaveNotes(item.id, item.type === "Livre")}
+                                    className="bg-neutral-900 text-white hover:bg-neutral-800 font-extrabold px-2.5 py-1 rounded-md text-[10px] flex items-center gap-1 transition-colors cursor-pointer shadow-3xs"
+                                  >
+                                    <Check className="w-3 h-3" /> Enregistrer les Notes
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingNotesId(null)}
+                                    className="text-neutral-400 hover:text-neutral-600 text-[10px] font-bold"
+                                  >
+                                    Annuler
+                                  </button>
+                                </div>
+                              </div>
+                              <textarea
+                                value={tempNotes}
+                                onChange={(e) => setTempNotes(e.target.value)}
+                                className="w-full bg-white border border-neutral-200 rounded-xl p-3 text-xs text-neutral-800 font-medium focus:outline-none focus:border-neutral-900 shadow-inner"
+                                rows={3}
+                                placeholder="Résumez les idées majeures, les leçons à retenir, vos citations ou scènes favorites de ce contenu..."
+                              />
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                      {item.status !== "Terminé" && (
-                        <button 
-                          onClick={() => handleUpdateStatus(item, "Terminé")}
-                          className="text-[10px] font-bold text-emerald-600 hover:bg-emerald-50 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-                        >
-                          Terminé
-                        </button>
-                      )}
-                      {item.status !== "À lire/voir" && (
-                        <button 
-                          onClick={() => handleUpdateStatus(item, "À lire/voir")}
-                          className="text-[10px] font-bold text-neutral-500 hover:bg-neutral-100 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-                        >
-                          Wishlist
-                        </button>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => handleDeleteItem(item)}
-                      className="text-neutral-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-neutral-100 transition-colors cursor-pointer ml-auto opacity-0 group-hover:opacity-100"
-                      title="Supprimer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
