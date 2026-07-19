@@ -144,6 +144,13 @@ export interface ProfilAmelioration {
   actionPlan: string;
 }
 
+export interface GoalMilestone {
+  id: string;
+  title: string;
+  completed: boolean;
+  dueDate?: string;
+}
+
 export interface PossibiliteGoal {
   id: string;
   title: string;
@@ -151,6 +158,7 @@ export interface PossibiliteGoal {
   targetYear: string;
   description: string;
   completed: boolean;
+  milestones?: GoalMilestone[];
 }
 
 // 3. Santé Submodules

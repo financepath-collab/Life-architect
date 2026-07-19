@@ -111,10 +111,62 @@ export const INITIAL_PROFIL_AMELIORATIONS: ProfilAmelioration[] = [
 ];
 
 export const INITIAL_POSSIBILITES_GOALS: PossibiliteGoal[] = [
-  { id: "g1", title: "Atteindre 50 000 abonnés sur YouTube", type: "Court Terme", targetYear: "2026", description: "Produire une vidéo qualitative par semaine sans faute.", completed: false },
-  { id: "g2", title: "Lancer la formation phare 'Bourse Maroc Élite'", type: "Court Terme", targetYear: "2026", description: "Un pack complet de 15h de cours vidéo et un accès Discord privé.", completed: false },
-  { id: "g3", title: "Atteindre l'Indépendance Financière (Rentier Maroc)", type: "Long Terme", targetYear: "2032", description: "Générer 25 000 MAD de revenus passifs nets par mois via bourse et immo.", completed: false },
-  { id: "g4", title: "Écrire un best-seller sur l'Éducation Financière au Maroc", type: "Moyen Terme", targetYear: "2028", description: "Livre broché et Kindle expliquant la gestion d'argent en Darija/Français.", completed: false }
+  { 
+    id: "g1", 
+    title: "Atteindre 50 000 abonnés sur YouTube", 
+    type: "Court Terme", 
+    targetYear: "2026", 
+    description: "Produire une vidéo qualitative par semaine sans faute.", 
+    completed: false,
+    milestones: [
+      { id: "g1_m1", title: "Atteindre 10 000 abonnés", completed: true, dueDate: "2026-02-15" },
+      { id: "g1_m2", title: "Atteindre 25 000 abonnés", completed: false, dueDate: "2026-06-30" },
+      { id: "g1_m3", title: "Atteindre 40 000 abonnés", completed: false, dueDate: "2026-10-15" },
+      { id: "g1_m4", title: "Atteindre 50 000 abonnés", completed: false, dueDate: "2026-12-31" }
+    ]
+  },
+  { 
+    id: "g2", 
+    title: "Lancer la formation phare 'Bourse Maroc Élite'", 
+    type: "Court Terme", 
+    targetYear: "2026", 
+    description: "Un pack complet de 15h de cours vidéo et un accès Discord privé.", 
+    completed: false,
+    milestones: [
+      { id: "g2_m1", title: "Rédiger le plan détaillé de la formation (15 modules)", completed: true, dueDate: "2026-03-01" },
+      { id: "g2_m2", title: "Enregistrer les 5 premiers modules", completed: true, dueDate: "2026-05-15" },
+      { id: "g2_m3", title: "Créer le serveur Discord privé & configurer les rôles", completed: false, dueDate: "2026-08-01" },
+      { id: "g2_m4", title: "Finaliser les vidéos restantes et lancer le site de vente", completed: false, dueDate: "2026-09-15" }
+    ]
+  },
+  { 
+    id: "g3", 
+    title: "Atteindre l'Indépendance Financière (Rentier Maroc)", 
+    type: "Long Terme", 
+    targetYear: "2032", 
+    description: "Générer 25 000 MAD de revenus passifs nets par mois via bourse et immo.", 
+    completed: false,
+    milestones: [
+      { id: "g3_m1", title: "Atteindre un capital de 500 000 MAD en Bourse", completed: true, dueDate: "2027-12-31" },
+      { id: "g3_m2", title: "Acheter un premier bien immobilier locatif à Casablanca", completed: false, dueDate: "2029-06-30" },
+      { id: "g3_m3", title: "Faire passer le capital bourse à 1 500 000 MAD", completed: false, dueDate: "2031-12-31" },
+      { id: "g3_m4", title: "Atteindre un cashflow net récurrent de 25 000 MAD/mois", completed: false, dueDate: "2032-12-31" }
+    ]
+  },
+  { 
+    id: "g4", 
+    title: "Écrire un best-seller sur l'Éducation Financière au Maroc", 
+    type: "Moyen Terme", 
+    targetYear: "2028", 
+    description: "Livre broché et Kindle expliquant la gestion d'argent en Darija/Français.", 
+    completed: false,
+    milestones: [
+      { id: "g4_m1", title: "Élaborer la structure globale et le plan des chapitres", completed: true, dueDate: "2026-09-01" },
+      { id: "g4_m2", title: "Rédiger la première moitié (Chapitres 1 à 5)", completed: false, dueDate: "2027-03-01" },
+      { id: "g4_m3", title: "Faire relire par un comité de relecture & apporter les corrections", completed: false, dueDate: "2027-10-15" },
+      { id: "g4_m4", title: "Lancer la campagne de précommande et imprimer le premier tirage", completed: false, dueDate: "2028-04-01" }
+    ]
+  }
 ];
 
 export const INITIAL_SKIN_TRACKERS: SkinTracker[] = [

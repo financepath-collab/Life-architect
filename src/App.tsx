@@ -86,6 +86,7 @@ import QuickCaptureInbox from "./components/QuickCaptureInbox";
 import CommandCenterModal from "./components/CommandCenterModal";
 import BudgetOptimizer from "./components/BudgetOptimizer";
 import SettingsModal from "./components/SettingsModal";
+import LifeGoalsSection from "./components/LifeGoalsSection";
 import { auth, db, handleFirestoreError, OperationType } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -3906,6 +3907,13 @@ export default function App() {
                           />
                         );
                       })()}
+                    </div>
+                  ) : activeMenu === "goals" ? (
+                    <div>
+                      <LifeGoalsSection
+                        possibilitesGoals={possibilitesGoals}
+                        setPossibilitesGoals={setPossibilitesGoals}
+                      />
                     </div>
                   ) : (
                     <div>
