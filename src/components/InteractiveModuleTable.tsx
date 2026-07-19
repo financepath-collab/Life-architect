@@ -218,11 +218,14 @@ export default function InteractiveModuleTable({
         }
         
         if (column?.type === "date") {
-          const timeA = new Date(valA).getTime();
-          const timeB = new Date(valB).getTime();
-          if (!isNaN(timeA) && !isNaN(timeB)) {
+          const timeA = valA ? new Date(valA).getTime() : 0;
+          const timeB = valB ? new Date(valB).getTime() : 0;
+          if (!isNaN(timeA) && !isNaN(timeB) && timeA !== 0 && timeB !== 0) {
             return direction === "asc" ? timeA - timeB : timeB - timeA;
           }
+          return direction === "asc"
+            ? String(valA).localeCompare(String(valB), "fr", { numeric: true })
+            : String(valB).localeCompare(String(valA), "fr", { numeric: true });
         }
 
         if (column?.type === "boolean") {
@@ -576,6 +579,59 @@ export default function InteractiveModuleTable({
           </button>
         )}
       </div>
+
+      {/* Quick Column Sorting Bar (Date, Amount, Category) */}
+      {columns.some(col => ["date", "amount", "category"].includes(col.key)) && (
+        <div className="flex flex-wrap items-center gap-2 px-1 py-0.5 bg-neutral-50/40 rounded-xl border border-neutral-200/50 p-2.5">
+          <div className="flex items-center gap-1.5 mr-1">
+            <span className="p-1 bg-neutral-900 text-white rounded-md">
+              <ArrowUpDown className="w-3 h-3" />
+            </span>
+            <span className="text-[10px] text-neutral-500 font-black uppercase tracking-wider">Trier par colonne :</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {columns
+              .filter(col => ["date", "amount", "category"].includes(col.key))
+              .map(col => {
+                const isSorted = sortConfig?.key === col.key;
+                const direction = isSorted ? sortConfig.direction : null;
+                return (
+                  <button
+                    key={col.key}
+                    type="button"
+                    onClick={() => handleSort(col.key)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
+                      isSorted
+                        ? "bg-neutral-950 text-white border-neutral-950 shadow-xs"
+                        : "bg-white text-neutral-600 border-neutral-200/80 hover:text-neutral-900 hover:border-neutral-300"
+                    }`}
+                    title={`Trier par ${col.label}`}
+                  >
+                    <span>{col.label}</span>
+                    {isSorted ? (
+                      direction === "asc" ? (
+                        <span className="text-[9px] font-black font-mono px-1 bg-white/20 rounded-sm">▲ Asc</span>
+                      ) : (
+                        <span className="text-[9px] font-black font-mono px-1 bg-white/20 rounded-sm">▼ Desc</span>
+                      )
+                    ) : (
+                      <span className="text-[9px] text-neutral-400 font-mono">⇅</span>
+                    )}
+                  </button>
+                );
+              })}
+            {sortConfig && (
+              <button
+                type="button"
+                onClick={() => setSortConfig(null)}
+                className="text-[10px] text-neutral-500 hover:text-red-600 font-black uppercase tracking-wider transition-colors cursor-pointer px-2.5 py-1.5 bg-neutral-100 hover:bg-red-50/50 rounded-lg border border-neutral-200/40"
+              >
+                Réinitialiser le tri
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* View 'Historique' for Modules with Date Column (like Transactions) */}
       {columns.some(col => col.key === "date") && (
