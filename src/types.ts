@@ -335,4 +335,61 @@ export interface JournalEntry {
   tags?: string;
 }
 
+// 7. Career Submodules
+export interface CareerSkill {
+  id: string;
+  name: string;
+  category: "Finance" | "Soft Skills" | "Tech / IA" | "Langues" | "Management" | "Autre";
+  status: "Acquise" | "En cours de travail" | "Planifiée";
+  notes: string;
+  lastUpdated: string;
+}
+
+export interface RecruitmentSite {
+  id: string;
+  name: string;
+  url: string;
+  notes: string;
+  keywords?: string[];
+  visited?: boolean;
+  discoveredOpportunities?: string;
+  country?: string;
+  identifiant?: string;
+}
+
+export interface TargetCompany {
+  id: string;
+  name: string;
+  website: string;
+  interest: number; // 1 to 5 stars
+  notes: string;
+  contact?: string;
+}
+
+export interface JobOpportunity {
+  id: string;
+  title: string;
+  company: string;
+  siteUrl?: string;
+  salary?: string;
+  status: "À postuler" | "Postulé" | "Entretien" | "Offre" | "Refusé";
+  dateApplied?: string;
+  nextAction?: string;
+  notes: string;
+}
+
+export interface CareerCertificate {
+  id: string;
+  name: string;
+  authority: string; // e.g. "CFA Institute", "Udemy", "AMMC"
+  issueDate?: string;
+  expiryDate?: string;
+  credentialId?: string;
+  credentialUrl?: string;
+  status: "Obtenu" | "En cours" | "Planifié";
+  niche: "Finance" | "Tech" | "Management" | "Autre";
+  notes?: string;
+}
+
+
 

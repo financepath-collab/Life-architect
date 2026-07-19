@@ -1,4 +1,4 @@
-import { RecruitmentSite } from "../components/FormationsSection";
+import { RecruitmentSite } from "../types";
 
 export const DEFAULT_RECRUITMENT_SITES: RecruitmentSite[] = [
   {

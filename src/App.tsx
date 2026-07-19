@@ -68,6 +68,7 @@ import PerformanceCorrelations from "./components/PerformanceCorrelations";
 import BooksSection from "./components/BooksSection";
 import ScreenMediaSection from "./components/ScreenMediaSection";
 import FormationsSection from "./components/FormationsSection";
+import CareerSection from "./components/CareerSection";
 import ProjectFoldersSection from "./components/ProjectFoldersSection";
 import AlertsBanner from "./components/AlertsBanner";
 import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
@@ -299,10 +300,11 @@ export default function App() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loginError, setLoginError] = useState<string>("");
   const [expandedCategories, setExpandedCategories] = useState<{ [key: string]: boolean }>({
-    finance: true,
-    productivity: true,
+    finance: false,
+    productivity: false,
     health: false,
-    projets: true,
+    projets: false,
+    career_cat: false,
     formation: false,
     accounts: false
   });
@@ -1722,10 +1724,23 @@ export default function App() {
       items: [
         { id: "projets_dash", label: "Dashboard Projets & Académie", icon: LayoutDashboard, desc: "Dossiers de projets actifs, formations et calendrier." },
         { id: "project_folders", label: "Dossiers de Projets", icon: FolderOpen, desc: "Organisez vos projets professionnels, personnels et académiques en un seul endroit." },
-        { id: "formations", label: "Carrière & Académie", icon: GraduationCap, desc: "Suivi de votre apprentissage, compétences et opportunités professionnelles." },
+        { id: "formations", label: "Formations & Académie", icon: GraduationCap, desc: "Suivi de vos formations suivies, cours et l'Académie THE MA CIRCLE." },
         { id: "channels", label: "Projets Médias & Canaux", icon: Tv, desc: "Statistiques et fréquences de publication de vos canaux de communication." },
         { id: "editorial_calendar", label: "Calendrier de Projets", icon: Calendar, desc: "Calendrier de vos événements, projets de communication et publications." },
         { id: "links", label: "Liens Favoris", icon: Link2, desc: "Signets rapides vers vos ressources de marché bourse." }
+      ]
+    },
+    {
+      id: "career_cat",
+      label: "Carrière Professionnelle",
+      icon: Award,
+      items: [
+        { id: "career_dash", label: "Dashboard Carrière", icon: LayoutDashboard, desc: "Indicateurs clés de carrière, taux de succès et suivi global." },
+        { id: "career_pipeline", label: "Pipeline & Offres", icon: Briefcase, desc: "Suivi précis de vos opportunités d'emploi, entretiens et propositions." },
+        { id: "career_companies", label: "Entreprises Cibles", icon: Target, desc: "Cartographie et classement des entreprises d'élite visées." },
+        { id: "career_sites", label: "Portails Recrutement", icon: Globe, desc: "Plateformes de marché et profils professionnels suivis." },
+        { id: "career_skills", label: "Compétences & Dev", icon: Sparkles, desc: "Journal de montée en compétences critiques." },
+        { id: "career_certificates", label: "Certificats & Diplômes", icon: CheckCircle, desc: "Suivi des certifications financières et académiques d'élite." }
       ]
     },
     {
@@ -2146,6 +2161,19 @@ export default function App() {
           ] as TableColumn[]
         };
 
+      case "career_dash":
+        return { title: "Dashboard de Carrière", description: "Aperçu de vos candidatures, certifications obtenues et compétences cibles.", data: [], onAdd: () => {}, onEdit: () => {}, onDelete: () => {}, onImport: () => {}, columns: [] };
+      case "career_pipeline":
+        return { title: "Pipeline & Offres d'Emploi", description: "Suivi détaillé de vos opportunités d'emploi, processus de recrutement et candidatures.", data: [], onAdd: () => {}, onEdit: () => {}, onDelete: () => {}, onImport: () => {}, columns: [] };
+      case "career_companies":
+        return { title: "Entreprises Cibles", description: "Classement et cartographie des structures professionnelles et financières cibles.", data: [], onAdd: () => {}, onEdit: () => {}, onDelete: () => {}, onImport: () => {}, columns: [] };
+      case "career_sites":
+        return { title: "Portails Recrutement & Profils", description: "Raccourcis vers vos plateformes de recrutement, cabinets et profils en ligne.", data: [], onAdd: () => {}, onEdit: () => {}, onDelete: () => {}, onImport: () => {}, columns: [] };
+      case "career_skills":
+        return { title: "Compétences & Développement", description: "Journal de montée en compétences professionnelles et plans d'action.", data: [], onAdd: () => {}, onEdit: () => {}, onDelete: () => {}, onImport: () => {}, columns: [] };
+      case "career_certificates":
+        return { title: "Certificats & Diplômes", description: "Gestion de vos diplômes académiques, CFA, certifications AMMC et FMVA.", data: [], onAdd: () => {}, onEdit: () => {}, onDelete: () => {}, onImport: () => {}, columns: [] };
+
       default:
         return null;
     }
@@ -2194,15 +2222,18 @@ export default function App() {
 
   // Handle clicking a category row
   const handleCategoryClick = (catId: string) => {
-    // Expand category
+    const isCurrentlyExpanded = !!expandedCategories[catId];
+    // Toggle expand
     setExpandedCategories(prev => ({
       ...prev,
-      [catId]: true
+      [catId]: !isCurrentlyExpanded
     }));
-    // Navigate to the first sub-item of that category
-    const cat = categories.find(c => c.id === catId);
-    if (cat && cat.items.length > 0) {
-      handleMenuClick(cat.items[0].id);
+    // Navigate to the first sub-item of that category only if expanding
+    if (!isCurrentlyExpanded) {
+      const cat = categories.find(c => c.id === catId);
+      if (cat && cat.items.length > 0) {
+        handleMenuClick(cat.items[0].id);
+      }
     }
   };
 
@@ -3674,6 +3705,8 @@ export default function App() {
                       events={editorialEvents}
                       setEvents={setEditorialEvents}
                     />
+                  ) : ["career_dash", "career_pipeline", "career_sites", "career_companies", "career_skills", "career_certificates"].includes(activeMenu) ? (
+                    <CareerSection activeTab={activeMenu.replace("career_", "") as any} onNavigate={handleMenuClick} />
                   ) : activeMenu === "formations" ? (
                     <FormationsSection formations={formations} setFormations={setFormations} folders={folders} setFolders={setFolders} hideTabs={false} />
                   ) : activeMenu === "monthly_goals" ? (
