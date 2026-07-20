@@ -96,7 +96,7 @@ import {
   loadFromDrive,
   logoutDrive
 } from "./googleDriveService";
-import { auth, db, handleFirestoreError, OperationType } from "./firebase";
+import { auth, db, handleFirestoreError, OperationType, isOfflineError } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { 
@@ -1646,12 +1646,18 @@ export default function App() {
               setSyncStatus("synced");
               triggerToast("☁️ Compte cloud configuré et synchronisé avec succès !", "success");
             }
-          } catch (error) {
-            console.error("❌ Échec lors de l'initialisation de la synchronisation cloud :", error);
-            setSyncStatus("error");
-            try {
-              handleFirestoreError(error, OperationType.GET, `user_sync/${user.uid}`);
-            } catch (e) {}
+          } catch (error: any) {
+            if (isOfflineError(error)) {
+              console.warn("⚠️ Mode hors-ligne détecté lors de l'initialisation de la synchronisation cloud.");
+              setSyncStatus("local");
+              triggerToast("🌐 Mode hors-ligne - Données sauvegardées en local.", "info");
+            } else {
+              console.error("❌ Échec lors de l'initialisation de la synchronisation cloud :", error);
+              setSyncStatus("error");
+              try {
+                handleFirestoreError(error, OperationType.GET, `user_sync/${user.uid}`);
+              } catch (e) {}
+            }
           }
         } else {
           console.log("ℹ️ Synchronisation automatique inactive (désactivée par préférence utilisateur).");
@@ -1685,12 +1691,18 @@ export default function App() {
       });
       setLastSyncedTime(new Date());
       setSyncStatus("synced");
-    } catch (error) {
-      console.error("Firebase auto-sync failed:", error);
-      setSyncStatus("error");
-      try {
-        handleFirestoreError(error, OperationType.WRITE, `user_sync/${auth.currentUser?.uid}`);
-      } catch (e) {}
+    } catch (error: any) {
+      if (isOfflineError(error)) {
+        console.warn("⚠️ Échec de la sauvegarde cloud (hors-ligne). Sauvegarde locale active.");
+        setSyncStatus("local");
+        triggerToast("🌐 Hors-ligne : Sauvegardé en local.", "info");
+      } else {
+        console.error("Firebase auto-sync failed:", error);
+        setSyncStatus("error");
+        try {
+          handleFirestoreError(error, OperationType.WRITE, `user_sync/${auth.currentUser?.uid}`);
+        } catch (e) {}
+      }
     } finally {
       setIsSyncing(false);
     }
@@ -1714,7 +1726,17 @@ export default function App() {
     cloudSyncEnabled, firebaseUser, syncStatus
   ]);
 
-  // Toggle Cloud Sync handler
+  // Online / Reconnection Auto-Sync listener
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log("🌐 [Firebase Sync] Connexion réseau restaurée ! Tentative de synchronisation des données...");
+      if (firebaseUser && cloudSyncEnabled) {
+        saveDataToFirebase();
+      }
+    };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [firebaseUser, cloudSyncEnabled]);
   const handleToggleCloudSync = async (enabled: boolean) => {
     if (enabled) {
       try {
@@ -1796,13 +1818,19 @@ export default function App() {
             triggerToast("☁️ Synchronisation activée. Données locales envoyées sur le cloud !", "success");
           }
         }
-      } catch (error) {
-        console.error("Enabling cloud sync failed:", error);
-        triggerToast("❌ Impossible d'activer la synchronisation.", "error");
-        setSyncStatus("error");
-        try {
-          handleFirestoreError(error, OperationType.WRITE, `user_sync/${firebaseUser?.uid}`);
-        } catch (e) {}
+      } catch (error: any) {
+        if (isOfflineError(error)) {
+          console.warn("⚠️ Impossible d'activer la synchronisation en mode hors-ligne.");
+          triggerToast("🌐 Hors-ligne : Connexion réseau requise pour activer la synchronisation.", "error");
+          setSyncStatus("local");
+        } else {
+          console.error("Enabling cloud sync failed:", error);
+          triggerToast("❌ Impossible d'activer la synchronisation.", "error");
+          setSyncStatus("error");
+          try {
+            handleFirestoreError(error, OperationType.WRITE, `user_sync/${firebaseUser?.uid}`);
+          } catch (e) {}
+        }
       } finally {
         setIsSyncing(false);
       }
@@ -1825,10 +1853,16 @@ export default function App() {
     try {
       await saveDataToFirebase();
       triggerToast("☁️ Données synchronisées avec succès sur Firebase !", "success");
-    } catch (error) {
-      console.error("Force sync failed:", error);
-      triggerToast("❌ Échec de la synchronisation cloud forcée.", "error");
-      setSyncStatus("error");
+    } catch (error: any) {
+      if (isOfflineError(error)) {
+        console.warn("⚠️ Échec de la synchronisation forcée (hors-ligne).");
+        triggerToast("🌐 Hors-ligne : Impossible de forcer la synchronisation.", "error");
+        setSyncStatus("local");
+      } else {
+        console.error("Force sync failed:", error);
+        triggerToast("❌ Échec de la synchronisation cloud forcée.", "error");
+        setSyncStatus("error");
+      }
     } finally {
       setIsSyncing(false);
     }

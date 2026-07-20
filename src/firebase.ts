@@ -34,9 +34,26 @@ export interface FirestoreErrorInfo {
   };
 }
 
+export function isOfflineError(error: unknown): boolean {
+  if (typeof window !== "undefined" && !navigator.onLine) {
+    return true;
+  }
+  const errMsg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return (
+    errMsg.includes("offline") ||
+    errMsg.includes("network") ||
+    errMsg.includes("unreachable") ||
+    errMsg.includes("internet") ||
+    errMsg.includes("failed-precondition") ||
+    errMsg.includes("unavailable") ||
+    errMsg.includes("could not connect")
+  );
+}
+
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMsg = error instanceof Error ? error.message : String(error);
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMsg,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -51,6 +68,14 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
+
+  if (isOfflineError(error)) {
+    console.warn("🌱 [Firestore] Opération suspendue en raison d'un état hors-ligne ou d'une indisponibilité du réseau :", errMsg);
+    const offlineErr = new Error("OFFLINE");
+    (offlineErr as any).isOffline = true;
+    throw offlineErr;
+  }
+
   console.error("Firestore Error: ", JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
