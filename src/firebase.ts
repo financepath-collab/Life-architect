@@ -5,7 +5,7 @@ import firebaseConfig from "../firebase-applet-config.json";
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId); /* CRITICAL: The app will break without this line */
-export const auth = getAuth();
+export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export enum OperationType {
@@ -65,3 +65,14 @@ export async function testConnection() {
     console.log("Firestore connection check info:", error);
   }
 }
+
+let cachedGoogleAccessToken: string | null = null;
+
+export const getSharedGoogleAccessToken = (): string | null => {
+  return cachedGoogleAccessToken;
+};
+
+export const setSharedGoogleAccessToken = (token: string | null) => {
+  cachedGoogleAccessToken = token;
+};
+

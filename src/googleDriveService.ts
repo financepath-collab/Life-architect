@@ -1,11 +1,13 @@
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "./firebase";
+import { auth, getSharedGoogleAccessToken, setSharedGoogleAccessToken } from "./firebase";
 
 const provider = new GoogleAuthProvider();
+// Add required Google Calendar and Google Drive scopes
+provider.addScope("https://www.googleapis.com/auth/calendar");
+provider.addScope("https://www.googleapis.com/auth/calendar.events");
 provider.addScope("https://www.googleapis.com/auth/drive.file");
 provider.addScope("https://www.googleapis.com/auth/drive");
 
-let cachedAccessToken: string | null = null;
 let isSigningIn = false;
 
 export const initDriveAuth = (
@@ -14,13 +16,14 @@ export const initDriveAuth = (
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
+      const token = getSharedGoogleAccessToken();
+      if (token) {
+        if (onAuthSuccess) onAuthSuccess(user, token);
       } else if (!isSigningIn) {
         if (onAuthFailure) onAuthFailure();
       }
     } else {
-      cachedAccessToken = null;
+      setSharedGoogleAccessToken(null);
       if (onAuthFailure) onAuthFailure();
     }
   });
@@ -34,8 +37,8 @@ export const driveSignIn = async (): Promise<{ user: User; accessToken: string }
     if (!credential?.accessToken) {
       throw new Error("Impossible d'obtenir le jeton d'accès Google Drive.");
     }
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
+    setSharedGoogleAccessToken(credential.accessToken);
+    return { user: result.user, accessToken: credential.accessToken };
   } catch (error: any) {
     console.error("Google Drive Sign-In Error:", error);
     throw error;
@@ -45,15 +48,15 @@ export const driveSignIn = async (): Promise<{ user: User; accessToken: string }
 };
 
 export const getDriveAccessToken = (): string | null => {
-  return cachedAccessToken;
+  return getSharedGoogleAccessToken();
 };
 
 export const setDriveAccessToken = (token: string | null) => {
-  cachedAccessToken = token;
+  setSharedGoogleAccessToken(token);
 };
 
 export const logoutDrive = () => {
-  cachedAccessToken = null;
+  setSharedGoogleAccessToken(null);
 };
 
 const BACKUP_FILENAME = "SecondBrain_Backup.json";

@@ -1,13 +1,13 @@
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "./firebase";
+import { auth, getSharedGoogleAccessToken, setSharedGoogleAccessToken } from "./firebase";
 
 const provider = new GoogleAuthProvider();
-// Add required Google Calendar scopes
+// Add required Google Calendar and Google Drive scopes
 provider.addScope("https://www.googleapis.com/auth/calendar");
 provider.addScope("https://www.googleapis.com/auth/calendar.events");
+provider.addScope("https://www.googleapis.com/auth/drive.file");
+provider.addScope("https://www.googleapis.com/auth/drive");
 
-// In-memory token cache
-let cachedAccessToken: string | null = null;
 let isSigningIn = false;
 
 // Initialize auth state listener
@@ -17,14 +17,15 @@ export const initAuth = (
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
+      const token = getSharedGoogleAccessToken();
+      if (token) {
+        if (onAuthSuccess) onAuthSuccess(user, token);
       } else if (!isSigningIn) {
         // Token not cached yet (e.g. page refreshed)
         if (onAuthFailure) onAuthFailure();
       }
     } else {
-      cachedAccessToken = null;
+      setSharedGoogleAccessToken(null);
       if (onAuthFailure) onAuthFailure();
     }
   });
@@ -40,8 +41,8 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
       throw new Error("Impossible d'obtenir le jeton d'accès Google.");
     }
 
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
+    setSharedGoogleAccessToken(credential.accessToken);
+    return { user: result.user, accessToken: credential.accessToken };
   } catch (error: any) {
     console.error("Google Sign-In Error:", error);
     throw error;
@@ -52,18 +53,18 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
 
 // Get current cached token
 export const getAccessToken = (): string | null => {
-  return cachedAccessToken;
+  return getSharedGoogleAccessToken();
 };
 
 // Set token manually (useful for callback syncs)
 export const setAccessToken = (token: string | null) => {
-  cachedAccessToken = token;
+  setSharedGoogleAccessToken(token);
 };
 
 // Sign out
 export const logout = async () => {
   await auth.signOut();
-  cachedAccessToken = null;
+  setSharedGoogleAccessToken(null);
 };
 
 // --- GOOGLE CALENDAR API CALLS ---
