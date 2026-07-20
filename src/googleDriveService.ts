@@ -1,9 +1,5 @@
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from "firebase/auth";
-import { initializeApp, getApps, getApp } from "firebase/app";
-import firebaseConfig from "../firebase-applet-config.json";
-
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from "firebase/auth";
+import { auth } from "./firebase";
 
 const provider = new GoogleAuthProvider();
 provider.addScope("https://www.googleapis.com/auth/drive.file");
