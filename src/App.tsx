@@ -62,6 +62,7 @@ import {
 import InteractiveModuleTable, { TableColumn } from "./components/InteractiveModuleTable";
 import FinanceCharts from "./components/FinanceCharts";
 import NetSavingsChart from "./components/NetSavingsChart";
+import SavingsTrendChart from "./components/SavingsTrendChart";
 import FocusSport from "./components/FocusSport";
 import SkinTrackerSection from "./components/SkinTrackerSection";
 import PerformanceCorrelations from "./components/PerformanceCorrelations";
@@ -158,7 +159,11 @@ import {
   CalendarDays,
   Star,
   Settings,
-  Save
+  Save,
+  Cloud,
+  CloudOff,
+  AlertTriangle,
+  Database
 } from "lucide-react";
 
 function Logo({ className = "w-8 h-8 text-indigo-500" }: { className?: string }) {
@@ -202,6 +207,26 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<"synced" | "syncing" | "local" | "error">("local");
   const [lastSyncedTime, setLastSyncedTime] = useState<Date | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Flag to block la_last_local_update_time updates during initialization or cloud downloads
+  const isInternalStateUpdateRef = useRef(true);
+
+  // Synchronization conflict state
+  const [syncConflict, setSyncConflict] = useState<{
+    localTime: Date;
+    cloudTime: Date;
+    localPayload: any;
+    cloudPayload: any;
+    onResolve: (choice: "local" | "cloud") => void;
+  } | null>(null);
+
+  // Initialize internal state updates bypass on boot
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      isInternalStateUpdateRef.current = false;
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // --- SECOND BRAIN COMMAND CENTER SHORTCUTS ---
   const [commandCenterOpen, setCommandCenterOpen] = useState(false);
@@ -1088,6 +1113,20 @@ export default function App() {
     }
   }, [isDarkMode]);
 
+  // Monitor local state changes and record last updated timestamp
+  useEffect(() => {
+    if (isInternalStateUpdateRef.current) {
+      return;
+    }
+    localStorage.setItem("la_last_local_update_time", new Date().toISOString());
+  }, [
+    dailyHabits, weeklyObjectives, transactions, stocks, budgets, salaires,
+    epargnes, actions30Jours, profilAmeliorations, skinTrackers, mealPlanners,
+    achatsMensuels, abonnements, formations, books, screenMedia, accounts,
+    links, channels, wishList, achatsCouteux, folders, journalEntries,
+    streakCount, monthlyGoals, editorialEvents, notificationInterval
+  ]);
+
   // --- LOCALSTORAGE SYNC EFFECT ---
   useEffect(() => {
     localStorage.setItem("mp_habits_v2", JSON.stringify(dailyHabits));
@@ -1420,6 +1459,7 @@ export default function App() {
 
   const loadStatePayload = (payload: any) => {
     if (!payload) return;
+    isInternalStateUpdateRef.current = true;
     try {
       if (payload.dailyHabits) setDailyHabits(payload.dailyHabits);
       if (payload.habitHistory) setHabitHistory(payload.habitHistory);
@@ -1455,6 +1495,10 @@ export default function App() {
       if (payload.notificationInterval !== undefined) setNotificationInterval(payload.notificationInterval);
     } catch (err) {
       console.error("Failed to unpack cloud sync payload:", err);
+    } finally {
+      setTimeout(() => {
+        isInternalStateUpdateRef.current = false;
+      }, 1000);
     }
   };
 
@@ -1462,27 +1506,85 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
-      if (user && localStorage.getItem("la_cloud_sync_enabled") === "true") {
-        setCloudSyncEnabled(true);
-        setSyncStatus("syncing");
-        try {
-          const docRef = doc(db, "user_sync", user.uid);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data && data.payload) {
-              loadStatePayload(data.payload);
-              setLastSyncedTime(data.updatedAt?.toDate() || new Date());
-              setSyncStatus("synced");
-              triggerToast("☁️ Données synchronisées avec le cloud !", "success");
-            }
-          }
-        } catch (error) {
-          console.error("Boot cloud sync failed:", error);
-          setSyncStatus("error");
+      if (user) {
+        const syncPref = localStorage.getItem("la_cloud_sync_enabled");
+        const shouldEnable = syncPref !== "false"; // Default to true if not explicitly turned off
+        
+        if (shouldEnable) {
+          setCloudSyncEnabled(true);
+          setSyncStatus("syncing");
+          localStorage.setItem("la_cloud_sync_enabled", "true");
           try {
-            handleFirestoreError(error, OperationType.GET, `user_sync/${user.uid}`);
-          } catch (e) {}
+            const docRef = doc(db, "user_sync", user.uid);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              if (data && data.payload) {
+                const firebaseTime = data.updatedAt?.toDate() || new Date();
+                const localTimeStr = localStorage.getItem("la_last_local_update_time");
+                const localTime = localTimeStr ? new Date(localTimeStr) : null;
+
+                // Version verification: If local storage has modifications that are newer than Firebase by > 5 seconds
+                if (localTime && firebaseTime && localTime.getTime() > firebaseTime.getTime() + 5000) {
+                  const localPayload = getCurrentStatePayload();
+                  setSyncConflict({
+                    localTime,
+                    cloudTime: firebaseTime,
+                    localPayload,
+                    cloudPayload: data.payload,
+                    onResolve: (choice) => {
+                      if (choice === "cloud") {
+                        loadStatePayload(data.payload);
+                        setLastSyncedTime(firebaseTime);
+                        setSyncStatus("synced");
+                        triggerToast("☁️ Données du Cloud chargées avec succès !", "success");
+                      } else {
+                        // User chose local: Overwrite cloud with local payload
+                        setSyncStatus("syncing");
+                        setDoc(docRef, {
+                          userId: user.uid,
+                          updatedAt: new Date(),
+                          payload: localPayload
+                        }).then(() => {
+                          setLastSyncedTime(new Date());
+                          setSyncStatus("synced");
+                          triggerToast("☁️ Données locales envoyées sur le Cloud !", "success");
+                        }).catch(err => {
+                          console.error("Conflict resolve local upload failed:", err);
+                          setSyncStatus("error");
+                        });
+                      }
+                      setSyncConflict(null);
+                    }
+                  });
+                } else {
+                  loadStatePayload(data.payload);
+                  setLastSyncedTime(firebaseTime);
+                  setSyncStatus("synced");
+                  triggerToast("☁️ Données chargées et synchronisées depuis le cloud !", "success");
+                }
+              }
+            } else {
+              // Push local data as base since it's a new cloud user
+              const payload = getCurrentStatePayload();
+              await setDoc(docRef, {
+                userId: user.uid,
+                updatedAt: new Date(),
+                payload: payload
+              });
+              setLastSyncedTime(new Date());
+              setSyncStatus("synced");
+              triggerToast("☁️ Compte cloud configuré et synchronisé avec succès !", "success");
+            }
+          } catch (error) {
+            console.error("Boot cloud sync failed:", error);
+            setSyncStatus("error");
+            try {
+              handleFirestoreError(error, OperationType.GET, `user_sync/${user.uid}`);
+            } catch (e) {}
+          }
+        } else {
+          setSyncStatus("local");
         }
       } else {
         setSyncStatus("local");
@@ -1548,9 +1650,55 @@ export default function App() {
           if (docSnap.exists()) {
             const data = docSnap.data();
             if (data && data.payload) {
-              loadStatePayload(data.payload);
-              setLastSyncedTime(data.updatedAt?.toDate() || new Date());
-              triggerToast("☁️ Synchronisation activée. Données chargées depuis le cloud !", "success");
+              const firebaseTime = data.updatedAt?.toDate() || new Date();
+              const localTimeStr = localStorage.getItem("la_last_local_update_time");
+              const localTime = localTimeStr ? new Date(localTimeStr) : null;
+
+              // Check version compatibility and conflicts
+              if (localTime && firebaseTime && localTime.getTime() > firebaseTime.getTime() + 5000) {
+                const localPayload = getCurrentStatePayload();
+                setSyncConflict({
+                  localTime,
+                  cloudTime: firebaseTime,
+                  localPayload,
+                  cloudPayload: data.payload,
+                  onResolve: (choice) => {
+                    if (choice === "cloud") {
+                      loadStatePayload(data.payload);
+                      setLastSyncedTime(firebaseTime);
+                      setCloudSyncEnabled(true);
+                      localStorage.setItem("la_cloud_sync_enabled", "true");
+                      setSyncStatus("synced");
+                      triggerToast("☁️ Synchronisation activée. Données chargées depuis le cloud !", "success");
+                    } else {
+                      // Keep local and overwrite the cloud with it
+                      setSyncStatus("syncing");
+                      setDoc(docRef, {
+                        userId: currentUser.uid,
+                        updatedAt: new Date(),
+                        payload: localPayload
+                      }).then(() => {
+                        setLastSyncedTime(new Date());
+                        setCloudSyncEnabled(true);
+                        localStorage.setItem("la_cloud_sync_enabled", "true");
+                        setSyncStatus("synced");
+                        triggerToast("☁️ Synchronisation activée. Données locales envoyées sur le cloud !", "success");
+                      }).catch(err => {
+                        console.error("Conflict resolve local upload failed:", err);
+                        setSyncStatus("error");
+                      });
+                    }
+                    setSyncConflict(null);
+                  }
+                });
+              } else {
+                loadStatePayload(data.payload);
+                setLastSyncedTime(firebaseTime);
+                setCloudSyncEnabled(true);
+                localStorage.setItem("la_cloud_sync_enabled", "true");
+                setSyncStatus("synced");
+                triggerToast("☁️ Synchronisation activée. Données chargées depuis le cloud !", "success");
+              }
             }
           } else {
             // New user on cloud, push local data as base
@@ -1561,11 +1709,11 @@ export default function App() {
               payload: payload
             });
             setLastSyncedTime(new Date());
+            setCloudSyncEnabled(true);
+            localStorage.setItem("la_cloud_sync_enabled", "true");
+            setSyncStatus("synced");
             triggerToast("☁️ Synchronisation activée. Données locales envoyées sur le cloud !", "success");
           }
-          setCloudSyncEnabled(true);
-          localStorage.setItem("la_cloud_sync_enabled", "true");
-          setSyncStatus("synced");
         }
       } catch (error) {
         console.error("Enabling cloud sync failed:", error);
@@ -1803,6 +1951,37 @@ export default function App() {
     // Masquer les flux financiers (Finance & Achats) et de divertissement (Lectures & Écrans)
     return categories.filter(cat => cat.id !== "finance" && cat.id !== "formation");
   }, [focusMode, categories]);
+
+  const handleTransferEpargneToAchat = (item: any) => {
+    const newAchat: any = {
+      id: "gen_" + Date.now() + Math.random().toString(36).substr(2, 5),
+      itemName: item.name || "Achat sans nom",
+      store: "",
+      estimatedPrice: item.targetAmount || 0,
+      targetDate: item.deadline || new Date().toISOString().split("T")[0],
+      priority: "Secondaire",
+      status: item.status === "Atteint" ? "Acheté" : "Économise"
+    };
+
+    setAchatsCouteux(prev => [newAchat, ...prev]);
+    setEpargnes(prev => prev.filter(e => e.id !== item.id));
+    triggerToast(`"${newAchat.itemName}" a été converti en Achat Coûteux avec succès !`, "success");
+  };
+
+  const handleTransferAchatToEpargne = (item: any) => {
+    const newEpargne: any = {
+      id: "gen_" + Date.now() + Math.random().toString(36).substr(2, 5),
+      name: item.itemName || "Projet sans nom",
+      targetAmount: item.estimatedPrice || 0,
+      currentAmount: item.status === "Acheté" ? (item.estimatedPrice || 0) : 0,
+      deadline: item.targetDate || new Date().toISOString().split("T")[0],
+      status: item.status === "Acheté" ? "Atteint" : "En cours"
+    };
+
+    setEpargnes(prev => [newEpargne, ...prev]);
+    setAchatsCouteux(prev => prev.filter(a => a.id !== item.id));
+    triggerToast(`"${newEpargne.name}" a été converti en Objectif d'Épargne avec succès !`, "success");
+  };
 
   const getModuleConfig = (moduleId: string) => {
     switch (moduleId) {
@@ -3079,6 +3258,60 @@ export default function App() {
         {/* WORKSPACE CONTENT SCROLL */}
         <main className="flex-1 p-8 overflow-y-auto space-y-8 w-full px-4 sm:px-6 lg:px-8">
 
+          {/* Cloud Sync Status Banner */}
+          {!cloudSyncEnabled ? (
+            <div id="cloud-sync-warning-banner" className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/30 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-300">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-xl text-amber-800 dark:text-amber-200 shrink-0">
+                  <CloudOff className="w-5 h-5 animate-bounce duration-1000" />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className="text-xs font-black text-amber-900 dark:text-amber-200 uppercase tracking-wide">
+                    Sauvegarde locale uniquement — Accès multi-appareil non configuré
+                  </h4>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed max-w-3xl">
+                    Vos modifications sont actuellement limitées à ce navigateur. Pour accéder à vos données depuis **n'importe quel appareil (smartphone, ordinateur)** ou navigateur en temps réel et éviter toute perte accidentelle, connectez votre compte Google et activez la synchronisation cloud.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSettingsModalOpen(true)}
+                className="px-4 py-2 bg-amber-900 hover:bg-amber-800 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-neutral-950 rounded-xl text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap self-start md:self-center shadow-xs flex items-center gap-1.5"
+              >
+                <Cloud className="w-3.5 h-3.5 text-amber-400 dark:text-neutral-900" />
+                Activer la Synchro Cloud
+              </button>
+            </div>
+          ) : firebaseUser && syncStatus === "synced" ? (
+            <div id="cloud-sync-success-banner" className="bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-200/40 dark:border-emerald-900/20 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in duration-300">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl text-emerald-800 dark:text-emerald-300 shrink-0">
+                  <CheckCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                    Synchronisation cloud active en temps réel
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                  </span>
+                  <span className="text-[10px] text-neutral-400 block font-mono">
+                    Compte : {firebaseUser.email} (Vos données sont disponibles sur tous vos appareils en vous connectant)
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 self-end sm:self-center">
+                <div className="text-[10px] font-mono text-neutral-400 text-right">
+                  Dernier enregistrement : {lastSyncedTime ? lastSyncedTime.toLocaleTimeString() : new Date().toLocaleTimeString()}
+                </div>
+                <button
+                  onClick={() => setSettingsModalOpen(true)}
+                  className="px-2.5 py-1 text-[10px] font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 bg-neutral-150/40 hover:bg-neutral-150 rounded-lg border border-neutral-200/50 transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Gérer
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {/* TAB 1: TABLEAU DE BORD (MAIN HOME CONTROLLER) - SIMPLIFIED RAPPELS & TACHES */}
           {activeMenu === "dashboard" && (
             <div className="space-y-8 animate-in fade-in duration-300">
@@ -3804,6 +4037,7 @@ export default function App() {
                             abonnements={abonnements}
                           />
                           <NetSavingsChart transactions={transactions} abonnements={abonnements} />
+                          <SavingsTrendChart transactions={transactions} abonnements={abonnements} />
                         </div>
                       ) : activeChartsSubTab === "correlations" ? (
                         <PerformanceCorrelations
@@ -3925,6 +4159,19 @@ export default function App() {
                           </div>
                         );
 
+                        const isEpargne = activeMenu === "epargnes";
+                        const isAchatCouteux = activeMenu === "achats_couteux";
+                        const onTransfer = isEpargne 
+                          ? handleTransferEpargneToAchat 
+                          : isAchatCouteux 
+                            ? handleTransferAchatToEpargne 
+                            : undefined;
+                        const transferLabel = isEpargne 
+                          ? "Vers Achat" 
+                          : isAchatCouteux 
+                            ? "Vers Épargne" 
+                            : undefined;
+
                         return (
                           <InteractiveModuleTable
                             title={config.title}
@@ -3937,6 +4184,8 @@ export default function App() {
                             onImport={config.onImport}
                             currencySymbol="MAD"
                             placeholderText={`Rechercher dans ${config.title.toLowerCase()}...`}
+                            onTransfer={onTransfer}
+                            transferLabel={transferLabel}
                           />
                         );
                       })()}
@@ -4085,6 +4334,105 @@ export default function App() {
         isSyncing={isSyncing}
         onForceSync={handleForceSync}
       />
+
+      {/* SYNC CONFLICT RESOLUTION MODAL */}
+      <AnimatePresence>
+        {syncConflict && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                // Clicking outside does NOT dismiss, as resolution is required
+              }}
+              className="absolute inset-0 bg-neutral-950/75 backdrop-blur-md"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="relative w-full max-w-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xl rounded-3xl overflow-hidden p-6 space-y-6 text-neutral-800 dark:text-neutral-200 animate-in fade-in zoom-in duration-200"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-900/30 text-amber-600 dark:text-amber-400 shrink-0">
+                  <AlertTriangle className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="space-y-1.5 flex-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 block font-mono">Conflit de Synchronisation Multi-Appareil</span>
+                  <h3 className="text-lg font-black text-neutral-900 dark:text-white leading-tight">Différence de versions détectée</h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                    Vos données locales sur ce navigateur ont des modifications plus récentes que celles stockées sur votre espace Cloud. Choisissez quelle version conserver pour éviter d'écraser vos modifications récentes.
+                  </p>
+                </div>
+              </div>
+
+              {/* Grid comparing local vs cloud versions */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Local Version Card */}
+                <div className="p-4 rounded-2xl border-2 border-indigo-500/20 bg-indigo-50/10 dark:bg-indigo-950/10 space-y-3 relative flex flex-col justify-between">
+                  <span className="absolute top-3 right-3 text-[9px] bg-indigo-600 text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    Local (Plus Récent)
+                  </span>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-neutral-900 dark:text-white pt-4">
+                      <Settings className="w-4 h-4 text-indigo-500" />
+                      <span className="text-xs font-black">Navigateur Actuel</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500 block font-mono">
+                      Dernière modification : {syncConflict.localTime.toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                    Conserve les données de cet appareil et met à jour le Cloud avec celles-ci. Recommandé si vous venez d'apporter des modifications.
+                  </p>
+                  <button
+                    onClick={() => syncConflict.onResolve("local")}
+                    className="w-full mt-2 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer text-center"
+                  >
+                    Conserver Version Locale
+                  </button>
+                </div>
+
+                {/* Cloud Version Card */}
+                <div className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-950/30 space-y-3 relative flex flex-col justify-between">
+                  <span className="absolute top-3 right-3 text-[9px] bg-neutral-500 text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    Cloud
+                  </span>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-neutral-900 dark:text-white pt-4">
+                      <Database className="w-4 h-4 text-neutral-500" />
+                      <span className="text-xs font-black">Espace Firebase Cloud</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500 block font-mono">
+                      Dernière modification : {syncConflict.cloudTime.toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                    Remplace les données de cet appareil par celles stockées sur votre espace Cloud. Attention, les modifications non enregistrées de cet appareil seront perdues.
+                  </p>
+                  <button
+                    onClick={() => syncConflict.onResolve("cloud")}
+                    className="w-full mt-2 py-2 px-4 bg-neutral-150 hover:bg-neutral-250 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-750 dark:text-neutral-300 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer text-center"
+                  >
+                    Charger Version Cloud
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <span className="text-[10px] text-neutral-400 font-mono">
+                  LIFE ARCHITECT • Version Engine V2.1
+                </span>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* GLOBAL TOAST NOTIFICATION CONTAINER */}
       <AnimatePresence>

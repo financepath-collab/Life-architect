@@ -16,7 +16,8 @@ import {
   FileSpreadsheet,
   AlertCircle,
   PieChart,
-  ExternalLink
+  ExternalLink,
+  ArrowLeftRight
 } from "lucide-react";
 
 export interface TableColumn {
@@ -38,6 +39,8 @@ interface InteractiveModuleTableProps {
   onImport: (items: any[]) => void;
   placeholderText?: string;
   currencySymbol?: string; // e.g. "MAD"
+  onTransfer?: (item: any) => void;
+  transferLabel?: string;
 }
 
 export default function InteractiveModuleTable({
@@ -50,7 +53,9 @@ export default function InteractiveModuleTable({
   onDelete,
   onImport,
   placeholderText = "Rechercher...",
-  currencySymbol = "MAD"
+  currencySymbol = "MAD",
+  onTransfer,
+  transferLabel
 }: InteractiveModuleTableProps) {
   // State variables
   const [searchTerm, setSearchTerm] = useState("");
@@ -881,6 +886,16 @@ export default function InteractiveModuleTable({
                   
                   <td className="px-4 py-3.5 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1.5">
+                      {onTransfer && (
+                        <button
+                          onClick={() => onTransfer(item)}
+                          className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-all flex items-center gap-1 cursor-pointer border border-indigo-100 dark:border-indigo-900/30"
+                          title={transferLabel || "Convertir"}
+                        >
+                          <ArrowLeftRight className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-bold hidden sm:inline">{transferLabel || "Convertir"}</span>
+                        </button>
+                      )}
                       <button
                         onClick={() => openEditModal(item)}
                         className="p-1.5 text-neutral-400 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors"
