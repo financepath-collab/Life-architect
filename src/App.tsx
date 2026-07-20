@@ -88,6 +88,14 @@ import CommandCenterModal from "./components/CommandCenterModal";
 import BudgetOptimizer from "./components/BudgetOptimizer";
 import SettingsModal from "./components/SettingsModal";
 import LifeGoalsSection from "./components/LifeGoalsSection";
+import {
+  initDriveAuth,
+  driveSignIn,
+  getDriveAccessToken,
+  saveToDrive,
+  loadFromDrive,
+  logoutDrive
+} from "./googleDriveService";
 import { auth, db, handleFirestoreError, OperationType } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -207,6 +215,14 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<"synced" | "syncing" | "local" | "error">("local");
   const [lastSyncedTime, setLastSyncedTime] = useState<Date | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // --- GOOGLE DRIVE STATES & HANDLERS ---
+  const [driveAccessToken, setDriveAccessTokenState] = useState<string | null>(null);
+  const [isDriveLoading, setIsDriveLoading] = useState<boolean>(false);
+  const [driveLastSynced, setDriveLastSynced] = useState<Date | null>(() => {
+    const saved = localStorage.getItem("mp_drive_last_synced");
+    return saved ? new Date(saved) : null;
+  });
 
   // Flag to block la_last_local_update_time updates during initialization or cloud downloads
   const isInternalStateUpdateRef = useRef(true);
@@ -1775,6 +1791,94 @@ export default function App() {
       setIsSyncing(false);
     }
   };
+
+  // --- GOOGLE DRIVE SYNC ENGINE HANDLERS ---
+  const handleConnectDrive = async () => {
+    setIsDriveLoading(true);
+    try {
+      const result = await driveSignIn();
+      if (result) {
+        setDriveAccessTokenState(result.accessToken);
+        triggerToast("✅ Google Drive connecté avec succès !", "success");
+      }
+    } catch (error) {
+      console.error("Failed to connect Drive:", error);
+      triggerToast("❌ Échec de la connexion à Google Drive. Veuillez ouvrir l'application dans un nouvel onglet si vous êtes dans un iframe.", "error");
+    } finally {
+      setIsDriveLoading(false);
+    }
+  };
+
+  const handleDisconnectDrive = () => {
+    logoutDrive();
+    setDriveAccessTokenState(null);
+    triggerToast("ℹ️ Google Drive déconnecté.", "info");
+  };
+
+  const handleBackupToDrive = async () => {
+    const token = driveAccessToken || getDriveAccessToken();
+    if (!token) {
+      triggerToast("⚠️ Veuillez connecter votre Google Drive d'abord.", "error");
+      return;
+    }
+    
+    setIsDriveLoading(true);
+    try {
+      const payload = getCurrentStatePayload();
+      await saveToDrive(token, payload);
+      const now = new Date();
+      setDriveLastSynced(now);
+      localStorage.setItem("mp_drive_last_synced", now.toISOString());
+      triggerToast("📁 Données sauvegardées avec succès sur votre Google Drive !", "success");
+    } catch (error) {
+      console.error("Backup to Google Drive failed:", error);
+      triggerToast("❌ Échec de la sauvegarde sur Google Drive.", "error");
+    } finally {
+      setIsDriveLoading(false);
+    }
+  };
+
+  const handleRestoreFromDrive = async () => {
+    const token = driveAccessToken || getDriveAccessToken();
+    if (!token) {
+      triggerToast("⚠️ Veuillez connecter votre Google Drive d'abord.", "error");
+      return;
+    }
+    
+    const confirmRestore = window.confirm(
+      "Êtes-vous sûr de vouloir restaurer les données depuis Google Drive ? Vos données actuelles seront remplacées par la version de sauvegarde de votre Google Drive."
+    );
+    if (!confirmRestore) return;
+
+    setIsDriveLoading(true);
+    try {
+      const payload = await loadFromDrive(token);
+      if (payload) {
+        loadStatePayload(payload);
+        triggerToast("🔄 Données restaurées avec succès depuis Google Drive !", "success");
+      } else {
+        triggerToast("ℹ️ Aucun fichier de sauvegarde trouvé sur votre Google Drive.", "error");
+      }
+    } catch (error) {
+      console.error("Restore from Google Drive failed:", error);
+      triggerToast("❌ Échec de la restauration depuis Google Drive.", "error");
+    } finally {
+      setIsDriveLoading(false);
+    }
+  };
+
+  // Listen to Google Drive auth changes
+  useEffect(() => {
+    const unsubscribe = initDriveAuth(
+      (user, token) => {
+        setDriveAccessTokenState(token);
+      },
+      () => {
+        setDriveAccessTokenState(null);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   // Habit toggling
   const toggleHabit = (id: string) => {
@@ -4356,6 +4460,13 @@ export default function App() {
         lastSyncedTime={lastSyncedTime}
         isSyncing={isSyncing}
         onForceSync={handleForceSync}
+        isDriveConnected={!!driveAccessToken}
+        isDriveLoading={isDriveLoading}
+        onConnectDrive={handleConnectDrive}
+        onDisconnectDrive={handleDisconnectDrive}
+        onBackupToDrive={handleBackupToDrive}
+        onRestoreFromDrive={handleRestoreFromDrive}
+        driveLastSynced={driveLastSynced}
       />
 
       {/* SYNC CONFLICT RESOLUTION MODAL */}

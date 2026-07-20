@@ -20,12 +20,19 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   cloudSyncEnabled: boolean;
-  onToggleCloudSync: (enabled: boolean) => Promise<void>;
+  onToggleCloudSync: (enabled: boolean) => Promise<void> | void;
   firebaseUser: FirebaseUser | null;
   syncStatus: "synced" | "syncing" | "local" | "error";
   lastSyncedTime: Date | null;
   isSyncing: boolean;
-  onForceSync: () => Promise<void>;
+  onForceSync: () => Promise<void> | void;
+  isDriveConnected: boolean;
+  isDriveLoading: boolean;
+  onConnectDrive: () => Promise<void> | void;
+  onDisconnectDrive: () => void;
+  onBackupToDrive: () => Promise<void> | void;
+  onRestoreFromDrive: () => Promise<void> | void;
+  driveLastSynced: Date | null;
 }
 
 export default function SettingsModal({
@@ -37,7 +44,14 @@ export default function SettingsModal({
   syncStatus,
   lastSyncedTime,
   isSyncing,
-  onForceSync
+  onForceSync,
+  isDriveConnected,
+  isDriveLoading,
+  onConnectDrive,
+  onDisconnectDrive,
+  onBackupToDrive,
+  onRestoreFromDrive,
+  driveLastSynced
 }: SettingsModalProps) {
   
   if (!isOpen) return null;
@@ -241,6 +255,78 @@ export default function SettingsModal({
                       Synchro : {lastSyncedTime.toLocaleTimeString()}
                     </span>
                   )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section: Google Drive Storage & Backup */}
+          <div className="space-y-3">
+            <span className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-wider block font-mono">
+              3. Stockage Google Drive (Fichiers de Sauvegarde)
+            </span>
+            
+            <div className="p-4 bg-neutral-50 dark:bg-zinc-950/40 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                    <Database className="w-4 h-4 text-amber-500" />
+                    Sauvegarde sur Google Drive
+                  </span>
+                  <p className="text-[10px] text-neutral-400 max-w-[220px] leading-relaxed">
+                    Stockez, importez ou exportez vos données directement sous forme de fichier JSON sécurisé dans votre Google Drive.
+                  </p>
+                </div>
+                
+                {isDriveConnected ? (
+                  <button
+                    onClick={onDisconnectDrive}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-900/40 rounded-xl text-[10px] font-bold transition-all cursor-pointer select-none"
+                  >
+                    Déconnecter
+                  </button>
+                ) : (
+                  <button
+                    disabled={isDriveLoading}
+                    onClick={onConnectDrive}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer select-none"
+                  >
+                    Connecter Drive
+                  </button>
+                )}
+              </div>
+
+              {isDriveConnected && (
+                <div className="pt-3 border-t border-neutral-200/50 dark:border-neutral-800 space-y-3">
+                  <div className="flex gap-2">
+                    <button
+                      disabled={isDriveLoading}
+                      onClick={onBackupToDrive}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer select-none"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isDriveLoading ? "animate-spin" : ""}`} />
+                      Exporter vers Drive
+                    </button>
+                    <button
+                      disabled={isDriveLoading}
+                      onClick={onRestoreFromDrive}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-neutral-800 dark:text-neutral-100 rounded-xl text-[10px] font-bold transition-all cursor-pointer border border-neutral-200/50 dark:border-neutral-800 select-none"
+                    >
+                      Importer depuis Drive
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500">
+                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      DRIVE CONNECTÉ
+                    </span>
+                    {driveLastSynced && (
+                      <span className="text-neutral-400">
+                        Sauvegarde : {driveLastSynced.toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
