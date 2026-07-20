@@ -1504,13 +1504,22 @@ export default function App() {
 
   // Auth State Listener & Boot Sync loader
   useEffect(() => {
+    console.group("🔑 [Firebase Auth State Listener Initialization]");
+    const currentDomain = window.location.hostname;
+    console.log("📍 Domaine actuel de l'application :", currentDomain);
+    console.log("ℹ️ Si vous rencontrez l'erreur 'auth/unauthorized-domain', vous devez ajouter ce domaine (" + currentDomain + ") aux 'Domaines autorisés' dans votre Console Firebase (Authentification -> Paramètres -> Domaines autorisés).");
+    console.groupEnd();
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("🔐 [onAuthStateChanged] Changement de l'état d'authentification détecté :", user ? `Connecté (${user.email})` : "Non connecté");
       setFirebaseUser(user);
       if (user) {
+        console.log("🔄 Début du traitement de synchronisation Cloud pour l'utilisateur...");
         const syncPref = localStorage.getItem("la_cloud_sync_enabled");
         const shouldEnable = syncPref !== "false"; // Default to true if not explicitly turned off
         
         if (shouldEnable) {
+          console.log("📦 Synchronisation automatique active, chargement des données depuis Firestore...");
           setCloudSyncEnabled(true);
           setSyncStatus("syncing");
           localStorage.setItem("la_cloud_sync_enabled", "true");
@@ -1518,14 +1527,18 @@ export default function App() {
             const docRef = doc(db, "user_sync", user.uid);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
+              console.log("📄 Sauvegarde existante trouvée sur Firestore.");
               const data = docSnap.data();
               if (data && data.payload) {
                 const firebaseTime = data.updatedAt?.toDate() || new Date();
                 const localTimeStr = localStorage.getItem("la_last_local_update_time");
                 const localTime = localTimeStr ? new Date(localTimeStr) : null;
 
+                console.log("📅 Comparaison des horodatages - Cloud:", firebaseTime, "Local:", localTime);
+
                 // Version verification: If local storage has modifications that are newer than Firebase by > 5 seconds
                 if (localTime && firebaseTime && localTime.getTime() > firebaseTime.getTime() + 5000) {
+                  console.warn("⚠️ Conflit détecté : Les données locales sont plus récentes que celles du Cloud. Préparation du sélecteur de résolution...");
                   const localPayload = getCurrentStatePayload();
                   setSyncConflict({
                     localTime,
@@ -1533,6 +1546,7 @@ export default function App() {
                     localPayload,
                     cloudPayload: data.payload,
                     onResolve: (choice) => {
+                      console.log(`⚖️ Résolution du conflit : Choix = [${choice}]`);
                       if (choice === "cloud") {
                         loadStatePayload(data.payload);
                         setLastSyncedTime(firebaseTime);
@@ -1550,7 +1564,7 @@ export default function App() {
                           setSyncStatus("synced");
                           triggerToast("☁️ Données locales envoyées sur le Cloud !", "success");
                         }).catch(err => {
-                          console.error("Conflict resolve local upload failed:", err);
+                          console.error("❌ Échec lors de la résolution du conflit vers le Cloud :", err);
                           setSyncStatus("error");
                         });
                       }
@@ -1558,6 +1572,7 @@ export default function App() {
                     }
                   });
                 } else {
+                  console.log("✅ Données du Cloud fraîches. Chargement en cours...");
                   loadStatePayload(data.payload);
                   setLastSyncedTime(firebaseTime);
                   setSyncStatus("synced");
@@ -1565,6 +1580,7 @@ export default function App() {
                 }
               }
             } else {
+              console.log("🆕 Aucune sauvegarde Firestore existante. Initialisation du document avec les données locales actuelles...");
               // Push local data as base since it's a new cloud user
               const payload = getCurrentStatePayload();
               await setDoc(docRef, {
@@ -1577,20 +1593,27 @@ export default function App() {
               triggerToast("☁️ Compte cloud configuré et synchronisé avec succès !", "success");
             }
           } catch (error) {
-            console.error("Boot cloud sync failed:", error);
+            console.error("❌ Échec lors de l'initialisation de la synchronisation cloud :", error);
             setSyncStatus("error");
             try {
               handleFirestoreError(error, OperationType.GET, `user_sync/${user.uid}`);
             } catch (e) {}
           }
         } else {
+          console.log("ℹ️ Synchronisation automatique inactive (désactivée par préférence utilisateur).");
           setSyncStatus("local");
         }
       } else {
+        console.log("ℹ️ Aucun utilisateur authentifié. Fonctionnement en mode local.");
         setSyncStatus("local");
       }
+    }, (error) => {
+      console.error("🚨 [onAuthStateChanged - Firebase Auth Error] :", error);
     });
-    return () => unsubscribe();
+    return () => {
+      console.log("🔌 Nettoyage du listener Firebase onAuthStateChanged.");
+      unsubscribe();
+    };
   }, []);
 
   // Save Data to Firebase Firestore

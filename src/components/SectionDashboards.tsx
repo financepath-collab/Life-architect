@@ -6,6 +6,7 @@ import {
   Plus, Trash2, Dumbbell, Play, Pause, ExternalLink, GraduationCap, Link2, 
   BookOpenCheck, CheckSquare, Coffee, ChevronRight, Activity
 } from "lucide-react";
+import MonthlyExpenseAnalysisCard from "./MonthlyExpenseAnalysisCard";
 import { 
   Account, FinanceBudget, FinanceEpargne, Abonnement, StockEntry, FinanceTransaction,
   DailyHabit, Action30Jours, WeeklyObjective, ProfilAmelioration, PossibiliteGoal, JournalEntry,
@@ -338,6 +339,9 @@ export function FinanceSectionDashboard({
           </div>
         </div>
       </div>
+
+      {/* Pie Chart and Category Breakdown Analysis Card */}
+      <MonthlyExpenseAnalysisCard transactions={transactions} abonnements={abonnements} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Enveloppes Budgétaires Status */}

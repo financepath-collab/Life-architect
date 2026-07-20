@@ -58,6 +58,92 @@ const CustomChartTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+const normalizeCategory = (rawCat: string): string => {
+  if (!rawCat) return "Autres";
+  const normTx = rawCat.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const mappings: { [key: string]: string } = {
+    alimentation: "Alimentation",
+    courses: "Alimentation",
+    supermarche: "Alimentation",
+    carrefour: "Alimentation",
+    bim: "Alimentation",
+    nourriture: "Alimentation",
+    resto: "Alimentation",
+    restaurant: "Alimentation",
+    repas: "Alimentation",
+    cafe: "Alimentation",
+    café: "Alimentation",
+
+    equipement: "Équipement & Matériel",
+    materiel: "Équipement & Matériel",
+    bureau: "Équipement & Matériel",
+    mobilier: "Équipement & Matériel",
+    shure: "Équipement & Matériel",
+    sony: "Équipement & Matériel",
+    camera: "Équipement & Matériel",
+    clavier: "Équipement & Matériel",
+    souris: "Équipement & Matériel",
+    macbook: "Équipement & Matériel",
+    pc: "Équipement & Matériel",
+    ordinateur: "Équipement & Matériel",
+
+    logiciel: "Logiciels & SaaS",
+    logiciels: "Logiciels & SaaS",
+    saas: "Logiciels & SaaS",
+    adobe: "Logiciels & SaaS",
+    canva: "Logiciels & SaaS",
+    chatgpt: "Logiciels & SaaS",
+    openai: "Logiciels & SaaS",
+    hosting: "Logiciels & SaaS",
+    hostinger: "Logiciels & SaaS",
+    cloud: "Logiciels & SaaS",
+    subscriptions: "Logiciels & SaaS",
+    abonnement: "Logiciels & SaaS",
+    abonnements: "Logiciels & SaaS",
+    vpn: "Logiciels & SaaS",
+
+    marketing: "Marketing & Publicité",
+    publicite: "Marketing & Publicité",
+    pub: "Marketing & Publicité",
+    ads: "Marketing & Publicité",
+    sponsor: "Marketing & Publicité",
+    sponsoring: "Marketing & Publicité",
+    google_ads: "Marketing & Publicité",
+    facebook_ads: "Marketing & Publicité",
+    tiktok_ads: "Marketing & Publicité",
+
+    transport: "Transport & Carburant",
+    carburant: "Transport & Carburant",
+    essence: "Transport & Carburant",
+    gazole: "Transport & Carburant",
+    autoroute: "Transport & Carburant",
+    peage: "Transport & Carburant",
+    uber: "Transport & Carburant",
+    taxi: "Transport & Carburant",
+    train: "Transport & Carburant",
+    vol: "Transport & Carburant",
+
+    loisir: "Loisirs & Sorties",
+    loisirs: "Loisirs & Sorties",
+    sortie: "Loisirs & Sorties",
+    sorties: "Loisirs & Sorties",
+    cinema: "Loisirs & Sorties",
+    voyage: "Loisirs & Sorties",
+    hotel: "Loisirs & Sorties",
+    vacances: "Loisirs & Sorties",
+    netflix: "Loisirs & Sorties",
+    spotify: "Loisirs & Sorties"
+  };
+
+  for (const [key, value] of Object.entries(mappings)) {
+    if (normTx.includes(key)) {
+      return value;
+    }
+  }
+  return rawCat; // fallback
+};
+
 interface MonthlyExpenseAnalysisCardProps {
   transactions: FinanceTransaction[];
   abonnements?: Abonnement[];
@@ -116,7 +202,8 @@ export default function MonthlyExpenseAnalysisCard({
     if (monthTransactions.length > 0) {
       monthTransactions.forEach(t => {
         const amt = t.amount || 0;
-        const cat = t.category || "Autre";
+        const rawCat = t.category || "Autre";
+        const cat = normalizeCategory(rawCat);
         categoryExpenses[cat] = (categoryExpenses[cat] || 0) + amt;
         totalExpense += amt;
       });
