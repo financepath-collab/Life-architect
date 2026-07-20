@@ -73,6 +73,8 @@ export default function EditorialCalendarSection({
   // View mode: 'calendar' or 'list' or 'kanban'
   const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'kanban'>('calendar');
 
+  const isIframe = typeof window !== "undefined" && window.self !== window.top;
+
   // Google Calendar Integration State
   const [googleUser, setGoogleUser] = useState<User | null>(null);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
@@ -210,7 +212,14 @@ export default function EditorialCalendarSection({
       }
     } catch (err: any) {
       console.error(err);
-      setSyncStatusMsg({ type: "error", text: `Connexion échouée : ${err.message}` });
+      if (isIframe) {
+        setSyncStatusMsg({ 
+          type: "error", 
+          text: "Échec : Les navigateurs bloquent la connexion Google dans un iframe. Ouvrez l'application dans un nouvel onglet pour vous connecter." 
+        });
+      } else {
+        setSyncStatusMsg({ type: "error", text: `Connexion échouée : ${err.message}` });
+      }
     } finally {
       setIsSyncing(false);
     }
@@ -1125,19 +1134,26 @@ export default function EditorialCalendarSection({
 
           <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
             {!googleUser ? (
-              <button
-                onClick={handleGoogleSignInClick}
-                disabled={isSyncing}
-                className="flex items-center gap-2.5 bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-zinc-800 text-neutral-700 dark:text-neutral-200 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-3xs cursor-pointer select-none disabled:opacity-50"
-              >
-                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-4 h-4">
-                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-                </svg>
-                <span>{isSyncing ? "Connexion..." : "Se connecter avec Google"}</span>
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleGoogleSignInClick}
+                  disabled={isSyncing}
+                  className="flex items-center gap-2.5 bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-zinc-800 text-neutral-700 dark:text-neutral-200 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-3xs cursor-pointer select-none disabled:opacity-50"
+                >
+                  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-4 h-4">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                  </svg>
+                  <span>{isSyncing ? "Connexion..." : "Se connecter avec Google"}</span>
+                </button>
+                {isIframe && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold leading-normal max-w-xs bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 p-2 rounded-lg">
+                    ⚠️ **Hors cadre requis :** Ouvrez l'application dans un nouvel onglet (bouton en haut à droite) pour autoriser Google Calendar.
+                  </p>
+                )}
+              </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-2 bg-neutral-100 dark:bg-zinc-850 px-3 py-1.5 rounded-xl border border-neutral-200/50 dark:border-neutral-700/50">

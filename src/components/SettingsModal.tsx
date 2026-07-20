@@ -42,11 +42,19 @@ export default function SettingsModal({
   
   if (!isOpen) return null;
 
+  const isIframe = typeof window !== "undefined" && window.self !== window.top;
+
   const handleLoginClick = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Login failed:", e);
+      // Show alerts or messages specifically for blocked popup/iframe context
+      if (isIframe) {
+        alert("La connexion a échoué. Les navigateurs bloquent l'authentification Google au sein des cadres (iframes) de prévisualisation. Veuillez ouvrir l'application dans un nouvel onglet en cliquant sur le bouton en haut à droite avant de vous connecter.");
+      } else {
+        alert("La connexion Google a échoué : " + (e.message || e));
+      }
     }
   };
 
@@ -160,6 +168,16 @@ export default function SettingsModal({
                   <Cloud className="w-4 h-4 text-emerald-400" />
                   Connexion Google
                 </button>
+                {isIframe && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 rounded-xl text-left mt-2 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                    <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-normal font-bold">
+                      ⚠️ **Note importante :** L'application est actuellement intégrée dans un cadre (iframe) de prévisualisation. Les navigateurs bloquent la communication des popups de connexion dans ce mode. 
+                    </p>
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 leading-normal font-medium mt-1">
+                      Pour vous connecter, cliquez sur le bouton **« Ouvrir dans un nouvel onglet »** (en haut à droite de l'aperçu) ou utilisez le lien direct de l'application.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
