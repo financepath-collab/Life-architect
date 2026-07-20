@@ -1518,6 +1518,41 @@ export default function App() {
     }
   };
 
+  const checkIfHasLocalUserData = () => {
+    const keysToCheck = [
+      "mp_habits_v2",
+      "mp_transactions_v2",
+      "mp_weekly_objectives_v2",
+      "mp_stocks_v2",
+      "mp_budgets_v2",
+      "mp_salaires_v2",
+      "mp_epargnes_v2",
+      "mp_actions30_v2",
+      "mp_profil_v2",
+      "mp_possibilites_v2",
+      "mp_skin_v2",
+      "mp_sport_exercises",
+      "mp_meal_v2",
+      "mp_achats_v2",
+      "mp_abonnements_v2",
+      "mp_formations_v2",
+      "mp_books_v3",
+      "mp_screenmedia_v3",
+      "mp_accounts_v2",
+      "mp_links_v2",
+      "mp_channels_v2",
+      "mp_wishlist_v2",
+      "mp_achats_couteux_v2",
+      "mp_monthly_goals_v2",
+      "mp_project_folders_v1",
+      "life_architect_journal"
+    ];
+    return keysToCheck.some(key => {
+      const val = localStorage.getItem(key);
+      return val !== null && val !== "" && val !== "[]" && val !== "{}";
+    });
+  };
+
   // Auth State Listener & Boot Sync loader
   useEffect(() => {
     console.group("🔑 [Firebase Auth State Listener Initialization]");
@@ -1547,10 +1582,13 @@ export default function App() {
               const data = docSnap.data();
               if (data && data.payload) {
                 const firebaseTime = data.updatedAt?.toDate() || new Date();
+                
+                // Only detect conflict if this device actually contains user data
+                const hasLocalData = checkIfHasLocalUserData();
                 const localTimeStr = localStorage.getItem("la_last_local_update_time");
-                const localTime = localTimeStr ? new Date(localTimeStr) : null;
+                const localTime = (hasLocalData && localTimeStr) ? new Date(localTimeStr) : null;
 
-                console.log("📅 Comparaison des horodatages - Cloud:", firebaseTime, "Local:", localTime);
+                console.log("📅 Comparaison des horodatages - Cloud:", firebaseTime, "Local:", localTime, "A des données locales :", hasLocalData);
 
                 // Version verification: If local storage has modifications that are newer than Firebase by > 5 seconds
                 if (localTime && firebaseTime && localTime.getTime() > firebaseTime.getTime() + 5000) {
@@ -1660,7 +1698,8 @@ export default function App() {
 
   // Debounced auto-sync hook on state mutations
   useEffect(() => {
-    if (!cloudSyncEnabled || !firebaseUser) return;
+    // CRITICAL: Only allow auto-sync to Firestore if we are fully synced, and NOT during initial state loading or internal updates!
+    if (!cloudSyncEnabled || !firebaseUser || syncStatus !== "synced" || isInternalStateUpdateRef.current) return;
     
     const delayDebounceFn = setTimeout(() => {
       saveDataToFirebase();
@@ -1672,7 +1711,7 @@ export default function App() {
     epargnes, actions30Jours, profilAmeliorations, skinTrackers, mealPlanners,
     achatsMensuels, abonnements, formations, books, screenMedia, accounts,
     links, channels, wishList, achatsCouteux, folders, journalEntries,
-    cloudSyncEnabled, firebaseUser
+    cloudSyncEnabled, firebaseUser, syncStatus
   ]);
 
   // Toggle Cloud Sync handler
@@ -1690,8 +1729,11 @@ export default function App() {
             const data = docSnap.data();
             if (data && data.payload) {
               const firebaseTime = data.updatedAt?.toDate() || new Date();
+              
+              // Only detect conflict if this device actually contains user data
+              const hasLocalData = checkIfHasLocalUserData();
               const localTimeStr = localStorage.getItem("la_last_local_update_time");
-              const localTime = localTimeStr ? new Date(localTimeStr) : null;
+              const localTime = (hasLocalData && localTimeStr) ? new Date(localTimeStr) : null;
 
               // Check version compatibility and conflicts
               if (localTime && firebaseTime && localTime.getTime() > firebaseTime.getTime() + 5000) {

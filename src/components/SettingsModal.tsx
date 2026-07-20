@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   X, 
   Settings, 
@@ -57,17 +57,47 @@ export default function SettingsModal({
   if (!isOpen) return null;
 
   const isIframe = typeof window !== "undefined" && window.self !== window.top;
+  const [authError, setAuthError] = useState<{ code: string; message: string; hostname: string } | null>(null);
 
   const handleLoginClick = async () => {
+    setAuthError(null);
+    console.log("[Firebase Auth] Beginning signInWithPopup with Google provider...");
     try {
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("[Firebase Auth] signInWithPopup successfully completed! User:", result.user?.email);
     } catch (e: any) {
-      console.error("Login failed:", e);
-      // Show alerts or messages specifically for blocked popup/iframe context
-      if (isIframe) {
-        alert("La connexion a échoué. Les navigateurs bloquent l'authentification Google au sein des cadres (iframes) de prévisualisation. Veuillez ouvrir l'application dans un nouvel onglet en cliquant sur le bouton en haut à droite avant de vous connecter.");
+      const errCode = e.code || "";
+      const errMessage = e.message || "";
+      const currentHostname = typeof window !== "undefined" ? window.location.hostname : "";
+      
+      console.group("[Firebase Auth] Google Sign-In Error Diagnostics");
+      console.error("Error Object:", e);
+      console.error("Error Code:", errCode);
+      console.error("Error Message:", errMessage);
+      console.error("Current Domain (window.location.hostname):", currentHostname);
+      console.error("Is embedded in Iframe:", isIframe);
+      console.groupEnd();
+
+      if (errCode === "auth/unauthorized-domain" || errMessage.includes("unauthorized-domain")) {
+        console.warn("[Firebase Auth] Detected auth/unauthorized-domain error! Displaying helpful user diagnostic panel.");
+        setAuthError({
+          code: "auth/unauthorized-domain",
+          message: errMessage,
+          hostname: currentHostname
+        });
+      } else if (errCode === "auth/configuration-not-found" || errMessage.includes("configuration-not-found")) {
+        console.warn("[Firebase Auth] Detected auth/configuration-not-found error! Displaying helpful user diagnostic panel.");
+        setAuthError({
+          code: "auth/configuration-not-found",
+          message: errMessage,
+          hostname: currentHostname
+        });
       } else {
-        alert("La connexion Google a échoué : " + (e.message || e));
+        if (isIframe) {
+          alert("La connexion a échoué. Les navigateurs bloquent l'authentification Google au sein des cadres (iframes) de prévisualisation. Veuillez ouvrir l'application dans un nouvel onglet en cliquant sur le bouton en haut à droite avant de vous connecter.");
+        } else {
+          alert("La connexion Google a échoué : " + (errMessage || e));
+        }
       }
     }
   };
@@ -182,6 +212,48 @@ export default function SettingsModal({
                   <Cloud className="w-4 h-4 text-emerald-400" />
                   Connexion Google
                 </button>
+
+                {authError && (
+                  <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 rounded-2xl text-left space-y-3 mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex items-start gap-2 text-rose-800 dark:text-rose-400">
+                      <Shield className="w-4 h-4 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider font-mono">
+                          {authError.code === "auth/unauthorized-domain" ? "Domaine Non Autorisé" : "Configuration Manquante"}
+                        </p>
+                        <p className="text-[10.5px] mt-1 leading-normal text-rose-700 dark:text-rose-300">
+                          {authError.code === "auth/unauthorized-domain" 
+                            ? `Le domaine "${authError.hostname}" n'est pas autorisé dans la console Firebase.`
+                            : `L'authentification Google n'est pas configurée dans la console Firebase.`}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 bg-white dark:bg-zinc-950 rounded-xl border border-rose-100 dark:border-rose-950 text-[10px] text-neutral-600 dark:text-neutral-400 space-y-2 leading-relaxed">
+                      <p className="font-extrabold text-neutral-800 dark:text-neutral-200">Comment résoudre ce problème :</p>
+                      <ol className="list-decimal list-inside space-y-1.5 font-sans">
+                        <li>Allez sur la <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline font-bold">Console Firebase</a></li>
+                        <li>Ouvrez le projet : <strong className="font-mono text-rose-600 dark:text-rose-400 font-bold bg-neutral-100 dark:bg-zinc-900 px-1 py-0.5 rounded">gen-lang-client-0385167527</strong></li>
+                        <li>Dans le menu latéral, cliquez sur <strong className="font-bold">Authentication</strong></li>
+                        {authError.code === "auth/unauthorized-domain" ? (
+                          <>
+                            <li>Allez dans l'onglet <strong className="font-bold">Paramètres</strong> (ou <i>Settings</i>)</li>
+                            <li>Sélectionnez <strong className="font-bold">Domaines autorisés</strong> dans la liste</li>
+                            <li>Cliquez sur <strong className="font-bold">Ajouter un domaine</strong> et ajoutez : <code className="font-mono bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold select-all">{authError.hostname}</code></li>
+                          </>
+                        ) : (
+                          <>
+                            <li>Allez dans l'onglet <strong className="font-bold">Sign-in method</strong></li>
+                            <li>Cliquez sur <strong className="font-bold">Ajouter un fournisseur</strong> et sélectionnez <strong className="font-bold">Google</strong></li>
+                            <li>Activez Google, renseignez l'adresse e-mail d'assistance et enregistrez</li>
+                          </>
+                        )}
+                        <li>Actualisez la page et reconnectez-vous !</li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+
                 {isIframe && (
                   <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 rounded-xl text-left mt-2 animate-in fade-in slide-in-from-bottom-1 duration-200">
                     <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-normal font-bold">
