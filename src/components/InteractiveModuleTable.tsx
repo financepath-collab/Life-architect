@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { motion } from "motion/react";
 import { 
   Plus, 
   Search, 
@@ -817,9 +818,12 @@ export default function InteractiveModuleTable({
                 </td>
               </tr>
             ) : (
-              processedData.map((item) => (
-                <tr 
+              processedData.map((item, index) => (
+                <motion.tr 
                   key={item.id} 
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3), ease: "easeOut" }}
                   className="hover:bg-neutral-50/50 transition-colors text-neutral-700"
                 >
                   {columns.map(col => {
@@ -912,7 +916,7 @@ export default function InteractiveModuleTable({
                       </button>
                     </div>
                   </td>
-                </tr>
+                </motion.tr>
               ))
             )}
           </tbody>
