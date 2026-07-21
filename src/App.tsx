@@ -228,6 +228,28 @@ export default function App() {
     return saved ? new Date(saved) : null;
   });
 
+  // --- GITHUB GIST STATES ---
+  const [githubAutoSync, setGithubAutoSync] = useState<boolean>(() => {
+    return localStorage.getItem("github_auto_sync") === "true";
+  });
+  const [githubToken, setGithubToken] = useState<string>(() => {
+    return localStorage.getItem("github_token") || "";
+  });
+  const [githubGistId, setGithubGistId] = useState<string>(() => {
+    return localStorage.getItem("github_gist_id") || "";
+  });
+  const [githubUsername, setGithubUsername] = useState<string>(() => {
+    return localStorage.getItem("github_username") || "";
+  });
+  const [githubAvatar, setGithubAvatar] = useState<string>(() => {
+    return localStorage.getItem("github_avatar") || "";
+  });
+  const [githubLastSynced, setGithubLastSynced] = useState<Date | null>(() => {
+    const saved = localStorage.getItem("github_last_synced");
+    return saved ? new Date(saved) : null;
+  });
+  const [githubIsLoading, setGithubIsLoading] = useState<boolean>(false);
+
   // Flag to block la_last_local_update_time updates during initialization or cloud downloads
   const isInternalStateUpdateRef = useRef(true);
 
@@ -1170,6 +1192,27 @@ export default function App() {
     streakCount, monthlyGoals, editorialEvents, notificationInterval
   ]);
 
+  // --- GITHUB AUTO-SYNC EFFECT ---
+  useEffect(() => {
+    if (!githubAutoSync || !githubToken || !githubGistId || isInternalStateUpdateRef.current) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      console.log("[GitHub Gist Sync] Executing debounced auto-sync...");
+      handleBackupToGithub();
+    }, 12000); // Debounce for 12 seconds to bundle multiple rapid updates together
+
+    return () => clearTimeout(timer);
+  }, [
+    dailyHabits, weeklyObjectives, transactions, stocks, budgets, salaires,
+    epargnes, actions30Jours, profilAmeliorations, skinTrackers, mealPlanners,
+    achatsMensuels, abonnements, formations, books, screenMedia, accounts,
+    links, channels, wishList, achatsCouteux, folders, journalEntries,
+    streakCount, monthlyGoals, editorialEvents, notificationInterval,
+    githubAutoSync, githubToken, githubGistId
+  ]);
+
   // --- LOCALSTORAGE SYNC EFFECT ---
   useEffect(() => {
     localStorage.setItem("mp_habits_v2", JSON.stringify(dailyHabits));
@@ -1982,6 +2025,204 @@ export default function App() {
     );
     return () => unsubscribe();
   }, []);
+
+  // --- GITHUB GIST SYNC HANDLERS ---
+  const handleConnectGithub = async (token: string): Promise<boolean> => {
+    setGithubIsLoading(true);
+    try {
+      // 1. Verify token & get user details
+      const userRes = await fetch("https://api.github.com/user", {
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github.v3+json"
+        }
+      });
+      if (!userRes.ok) {
+        throw new Error("Token GitHub invalide ou expiré.");
+      }
+      const userData = await userRes.json();
+      const username = userData.login;
+      const avatarUrl = userData.avatar_url;
+
+      // 2. Search for existing Gist containing second_brain_backup.json
+      const listRes = await fetch("https://api.github.com/gists", {
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github.v3+json"
+        }
+      });
+      
+      let gistId = "";
+      if (listRes.ok) {
+        const gists = await listRes.json();
+        const existingGist = gists.find((g: any) => 
+          g.files && g.files["second_brain_backup.json"]
+        );
+        if (existingGist) {
+          gistId = existingGist.id;
+          triggerToast(`🔗 Compte GitHub connecté ! Gist de sauvegarde détecté et lié.`, "success");
+        }
+      }
+
+      // 3. Create a new Gist if none was found
+      if (!gistId) {
+        const createRes = await fetch("https://api.github.com/gists", {
+          method: "POST",
+          headers: {
+            "Authorization": `token ${token}`,
+            "Content-Type": "application/json",
+            "Accept": "application/vnd.github.v3+json"
+          },
+          body: JSON.stringify({
+            description: "Backup Second Brain - FinancePath",
+            public: false,
+            files: {
+              "second_brain_backup.json": {
+                content: JSON.stringify(getCurrentStatePayload(), null, 2)
+              }
+            }
+          })
+        });
+        
+        if (!createRes.ok) {
+          throw new Error("Impossible de créer le Gist secret.");
+        }
+        const newGist = await createRes.json();
+        gistId = newGist.id;
+        triggerToast("🚀 Compte GitHub connecté ! Un nouveau Gist secret a été créé automatiquement.", "success");
+      }
+
+      // 4. Save to state and storage
+      setGithubToken(token);
+      setGithubGistId(gistId);
+      setGithubUsername(username);
+      setGithubAvatar(avatarUrl);
+      
+      localStorage.setItem("github_token", token);
+      localStorage.setItem("github_gist_id", gistId);
+      localStorage.setItem("github_username", username);
+      localStorage.setItem("github_avatar", avatarUrl);
+      
+      const now = new Date();
+      setGithubLastSynced(now);
+      localStorage.setItem("github_last_synced", now.toISOString());
+
+      return true;
+    } catch (err: any) {
+      console.error("GitHub Connection Error:", err);
+      triggerToast(`❌ Erreur de connexion GitHub : ${err.message || err}`, "error");
+      return false;
+    } finally {
+      setGithubIsLoading(false);
+    }
+  };
+
+  const handleDisconnectGithub = () => {
+    setGithubToken("");
+    setGithubGistId("");
+    setGithubUsername("");
+    setGithubAvatar("");
+    setGithubAutoSync(false);
+    setGithubLastSynced(null);
+    
+    localStorage.removeItem("github_token");
+    localStorage.removeItem("github_gist_id");
+    localStorage.removeItem("github_username");
+    localStorage.removeItem("github_avatar");
+    localStorage.removeItem("github_auto_sync");
+    localStorage.removeItem("github_last_synced");
+    
+    triggerToast("ℹ️ Compte GitHub déconnecté.", "info");
+  };
+
+  const handleToggleGithubAutoSync = (enabled: boolean) => {
+    setGithubAutoSync(enabled);
+    localStorage.setItem("github_auto_sync", enabled ? "true" : "false");
+    triggerToast(
+      enabled 
+        ? "🚀 Synchronisation automatique GitHub activée (sauvegarde toutes les 12s après modifs) !" 
+        : "ℹ️ Synchronisation automatique GitHub désactivée.", 
+      "info"
+    );
+  };
+
+  const handleBackupToGithub = async (forceToken?: string, forceGistId?: string) => {
+    const activeToken = forceToken || githubToken;
+    const activeGistId = forceGistId || githubGistId;
+    if (!activeToken || !activeGistId) return;
+    
+    setGithubIsLoading(true);
+    try {
+      const payload = getCurrentStatePayload();
+      const res = await fetch(`https://api.github.com/gists/${activeGistId}`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `token ${activeToken}`,
+          "Content-Type": "application/json",
+          "Accept": "application/vnd.github.v3+json"
+        },
+        body: JSON.stringify({
+          description: "Backup Second Brain - FinancePath",
+          files: {
+            "second_brain_backup.json": {
+              content: JSON.stringify(payload, null, 2)
+            }
+          }
+        })
+      });
+      
+      if (!res.ok) throw new Error("Impossible de mettre à jour le Gist");
+      
+      const now = new Date();
+      setGithubLastSynced(now);
+      localStorage.setItem("github_last_synced", now.toISOString());
+      triggerToast("🚀 Sauvegarde réussie sur votre GitHub Gist !", "success");
+    } catch (error) {
+      console.error("GitHub Backup error:", error);
+      triggerToast("❌ Échec de la sauvegarde sur GitHub Gist.", "error");
+    } finally {
+      setGithubIsLoading(false);
+    }
+  };
+
+  const handleRestoreFromGithub = async () => {
+    if (!githubToken || !githubGistId) {
+      triggerToast("⚠️ Veuillez d'abord connecter votre GitHub.", "error");
+      return;
+    }
+    
+    const confirmRestore = window.confirm(
+      "Êtes-vous sûr de vouloir restaurer les données depuis GitHub Gist ? Vos données locales actuelles seront écrasées."
+    );
+    if (!confirmRestore) return;
+
+    setGithubIsLoading(true);
+    try {
+      const res = await fetch(`https://api.github.com/gists/${githubGistId}`, {
+        headers: {
+          "Authorization": `token ${githubToken}`,
+          "Accept": "application/vnd.github.v3+json"
+        }
+      });
+      
+      if (!res.ok) throw new Error("Gist introuvable ou jeton expiré");
+      
+      const gist = await res.json();
+      const file = gist.files["second_brain_backup.json"];
+      if (!file || !file.content) {
+        throw new Error("Aucune sauvegarde Second Brain trouvée dans ce Gist.");
+      }
+      
+      const payload = JSON.parse(file.content);
+      loadStatePayload(payload);
+      triggerToast("✨ Vos données ont été importées et restaurées avec succès depuis GitHub !", "success");
+    } catch (error: any) {
+      console.error("GitHub Restore error:", error);
+      triggerToast(`❌ Échec de la restauration : ${error.message || error}`, "error");
+    } finally {
+      setGithubIsLoading(false);
+    }
+  };
 
   // Habit toggling
   const toggleHabit = (id: string) => {
@@ -4603,6 +4844,18 @@ export default function App() {
         abonnements={abonnements}
         stocks={stocks}
         journalEntries={journalEntries}
+        githubAutoSync={githubAutoSync}
+        githubToken={githubToken}
+        githubGistId={githubGistId}
+        githubUsername={githubUsername}
+        githubAvatar={githubAvatar}
+        githubLastSynced={githubLastSynced}
+        githubIsLoading={githubIsLoading}
+        onConnectGithub={handleConnectGithub}
+        onDisconnectGithub={handleDisconnectGithub}
+        onToggleGithubAutoSync={handleToggleGithubAutoSync}
+        onBackupToGithub={() => handleBackupToGithub()}
+        onRestoreFromGithub={handleRestoreFromGithub}
       />
 
       {/* SYNC CONFLICT RESOLUTION MODAL */}
