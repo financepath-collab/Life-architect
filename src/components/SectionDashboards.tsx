@@ -7,10 +7,12 @@ import {
   BookOpenCheck, CheckSquare, Coffee, ChevronRight, Activity
 } from "lucide-react";
 import MonthlyExpenseAnalysisCard from "./MonthlyExpenseAnalysisCard";
+import MonthlyNetIncomeWidget from "./MonthlyNetIncomeWidget";
 import { 
   Account, FinanceBudget, FinanceEpargne, Abonnement, StockEntry, FinanceTransaction,
   DailyHabit, Action30Jours, WeeklyObjective, ProfilAmelioration, PossibiliteGoal, JournalEntry,
-  SkinTracker, MealPlanner, ProjectFolder, EditorialEvent, BookItem, ScreenMediaItem, Formation
+  SkinTracker, MealPlanner, ProjectFolder, EditorialEvent, BookItem, ScreenMediaItem, Formation,
+  FinanceSalaire
 } from "../types";
 import { 
   ResponsiveContainer, 
@@ -76,11 +78,12 @@ interface FinanceDashProps {
   abonnements: Abonnement[];
   stocks: StockEntry[];
   transactions: FinanceTransaction[];
+  salaires?: FinanceSalaire[];
   onNavigate: (moduleId: string) => void;
 }
 
 export function FinanceSectionDashboard({ 
-  accounts, budgets, epargnes, abonnements, stocks, transactions, onNavigate 
+  accounts, budgets, epargnes, abonnements, stocks, transactions, salaires, onNavigate 
 }: FinanceDashProps) {
   // Calculations
   const totalAccountBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
@@ -342,6 +345,14 @@ export function FinanceSectionDashboard({
 
       {/* Pie Chart and Category Breakdown Analysis Card */}
       <MonthlyExpenseAnalysisCard transactions={transactions} abonnements={abonnements} />
+
+      {/* Monthly Net Income Widget (Calculates automatically subtracting recurring expenses/subscriptions and monthly costs/budgets from revenues) */}
+      <MonthlyNetIncomeWidget
+        budgets={budgets}
+        abonnements={abonnements}
+        transactions={transactions}
+        salaires={salaires}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Enveloppes Budgétaires Status */}

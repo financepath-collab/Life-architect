@@ -71,6 +71,7 @@ import FormationsSection from "./components/FormationsSection";
 import CareerSection from "./components/CareerSection";
 import ProjectFoldersSection from "./components/ProjectFoldersSection";
 import AlertsBanner from "./components/AlertsBanner";
+import { HabitsSummaryCard } from "./components/HabitsSummaryCard";
 import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
 import MonthlyPerformanceCard from "./components/MonthlyPerformanceCard";
 import MonthlyExpenseAnalysisCard from "./components/MonthlyExpenseAnalysisCard";
@@ -201,6 +202,9 @@ export default function App() {
   });
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem("la_theme") === "dark";
+  });
+  const [autoDarkTheme, setAutoDarkTheme] = useState<boolean>(() => {
+    return localStorage.getItem("la_auto_dark_theme") === "true";
   });
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem("la_is_unlocked") === "true";
@@ -1129,6 +1133,29 @@ export default function App() {
     }
   }, [isDarkMode]);
 
+  // Save autoDarkTheme setting to localStorage
+  useEffect(() => {
+    localStorage.setItem("la_auto_dark_theme", autoDarkTheme ? "true" : "false");
+  }, [autoDarkTheme]);
+
+  // Local Time check for Auto Dark Mode
+  useEffect(() => {
+    if (!autoDarkTheme) return;
+
+    const checkLocalTimeAndSetTheme = () => {
+      const currentHour = new Date().getHours();
+      // Auto dark mode between 19h (7 PM) and 7h (7 AM)
+      const isNight = currentHour >= 19 || currentHour < 7;
+      if (isDarkMode !== isNight) {
+        setIsDarkMode(isNight);
+      }
+    };
+
+    checkLocalTimeAndSetTheme();
+    const interval = setInterval(checkLocalTimeAndSetTheme, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [autoDarkTheme, isDarkMode]);
+
   // Monitor local state changes and record last updated timestamp
   useEffect(() => {
     if (isInternalStateUpdateRef.current) {
@@ -1710,8 +1737,8 @@ export default function App() {
 
   // Debounced auto-sync hook on state mutations
   useEffect(() => {
-    // CRITICAL: Only allow auto-sync to Firestore if we are fully synced, and NOT during initial state loading or internal updates!
-    if (!cloudSyncEnabled || !firebaseUser || syncStatus !== "synced" || isInternalStateUpdateRef.current) return;
+    // CRITICAL: Prevent auto-sync only during initial state loading, internal updates, or if we are actively syncing
+    if (!cloudSyncEnabled || !firebaseUser || syncStatus === "syncing" || isInternalStateUpdateRef.current) return;
     
     const delayDebounceFn = setTimeout(() => {
       saveDataToFirebase();
@@ -1723,7 +1750,7 @@ export default function App() {
     epargnes, actions30Jours, profilAmeliorations, skinTrackers, mealPlanners,
     achatsMensuels, abonnements, formations, books, screenMedia, accounts,
     links, channels, wishList, achatsCouteux, folders, journalEntries,
-    cloudSyncEnabled, firebaseUser, syncStatus
+    cloudSyncEnabled, firebaseUser
   ]);
 
   // Online / Reconnection Auto-Sync listener
@@ -3312,7 +3339,13 @@ export default function App() {
 
             {/* Theme Toggle Button */}
             <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
+              onClick={() => {
+                if (autoDarkTheme) {
+                  setAutoDarkTheme(false);
+                  triggerToast("Mode automatique désactivé suite à un changement manuel", "info");
+                }
+                setIsDarkMode(!isDarkMode);
+              }}
               className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0"
               title={isDarkMode ? "Passer au mode clair" : "Passer au mode sombre professionnel"}
             >
@@ -4037,6 +4070,12 @@ export default function App() {
 
               </div>
 
+              {/* Habits Weekly Visual Summary Card */}
+              <HabitsSummaryCard 
+                dailyHabits={dailyHabits} 
+                habitHistory={habitHistory} 
+              />
+
             </div>
           )}
 
@@ -4145,6 +4184,7 @@ export default function App() {
                       abonnements={abonnements}
                       stocks={stocks}
                       transactions={transactions}
+                      salaires={salaires}
                       onNavigate={handleMenuClick}
                     />
                   ) : activeMenu === "productivity_dash" ? (
@@ -4543,6 +4583,17 @@ export default function App() {
         onBackupToDrive={handleBackupToDrive}
         onRestoreFromDrive={handleRestoreFromDrive}
         driveLastSynced={driveLastSynced}
+        autoDarkTheme={autoDarkTheme}
+        onToggleAutoDarkTheme={(enabled: boolean) => {
+          setAutoDarkTheme(enabled);
+          if (enabled) {
+            triggerToast("Mode sombre automatique activé (19h00 - 7h00)", "success");
+            const currentHour = new Date().getHours();
+            setIsDarkMode(currentHour >= 19 || currentHour < 7);
+          } else {
+            triggerToast("Mode sombre automatique désactivé", "info");
+          }
+        }}
       />
 
       {/* SYNC CONFLICT RESOLUTION MODAL */}

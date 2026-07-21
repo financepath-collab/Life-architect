@@ -10,7 +10,9 @@ import {
   Shield, 
   Database,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  Moon,
+  Sun
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { User as FirebaseUser, signInWithPopup, signOut } from "firebase/auth";
@@ -33,6 +35,8 @@ interface SettingsModalProps {
   onBackupToDrive: () => Promise<void> | void;
   onRestoreFromDrive: () => Promise<void> | void;
   driveLastSynced: Date | null;
+  autoDarkTheme: boolean;
+  onToggleAutoDarkTheme: (enabled: boolean) => void;
 }
 
 export default function SettingsModal({
@@ -51,7 +55,9 @@ export default function SettingsModal({
   onDisconnectDrive,
   onBackupToDrive,
   onRestoreFromDrive,
-  driveLastSynced
+  driveLastSynced,
+  autoDarkTheme,
+  onToggleAutoDarkTheme
 }: SettingsModalProps) {
   
   if (!isOpen) return null;
@@ -401,6 +407,41 @@ export default function SettingsModal({
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Section: Mode Sombre Automatique */}
+          <div className="space-y-3">
+            <span className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-wider block font-mono">
+              4. Mode Sombre Automatique (Heure Locale)
+            </span>
+            
+            <div className="p-4 bg-neutral-50 dark:bg-zinc-950/40 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                    {autoDarkTheme ? (
+                      <Moon className="w-4 h-4 text-indigo-500" />
+                    ) : (
+                      <Sun className="w-4 h-4 text-neutral-400" />
+                    )}
+                    Thème Sombre Automatique
+                  </span>
+                  <p className="text-[10px] text-neutral-400 max-w-[220px] leading-relaxed">
+                    Active le mode sombre automatiquement entre 19h00 et 7h00 en fonction de votre heure locale.
+                  </p>
+                </div>
+                
+                {/* Custom Toggle Switch */}
+                <button
+                  onClick={() => onToggleAutoDarkTheme(!autoDarkTheme)}
+                  className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer focus:outline-none ${
+                    autoDarkTheme ? "bg-indigo-500" : "bg-neutral-300 dark:bg-zinc-700"
+                  }`}
+                >
+                  <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${autoDarkTheme ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
+              </div>
             </div>
           </div>
 
