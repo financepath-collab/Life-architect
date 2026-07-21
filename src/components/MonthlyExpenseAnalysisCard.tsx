@@ -478,6 +478,269 @@ export default function MonthlyExpenseAnalysisCard({
         </div>
       </div>
 
+      <div className="border-t border-neutral-100 dark:border-neutral-800/80 my-2" />
+
+      {/* Règle de Budget Automatisée (50/30/20) */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-indigo-500/10 text-indigo-500 rounded-xl">
+            <Coins className="w-4 h-4" />
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-neutral-900 dark:text-neutral-50 uppercase tracking-wider">
+              Règle Budgétaire Classique 50 / 30 / 20
+            </h4>
+            <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-semibold uppercase tracking-wider">
+              Analyse automatique de la répartition par rapport à la règle d'or financière
+            </p>
+          </div>
+        </div>
+
+        {/* 50/30/20 Calculation logic and UI */}
+        {(() => {
+          // 1. Calculate Monthly Income for the selected month
+          let income = transactions
+            .filter(t => t.type === "Revenue" && t.date && t.date.startsWith(selectedMonth))
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+          
+          // Fallback if no revenue is logged
+          if (income === 0) {
+            const defaultIncomes: { [key: string]: number } = {
+              "2026-07": 37700,
+              "2026-06": 29500,
+              "2026-05": 31000,
+              "2026-04": 26200,
+              "2026-03": 28000,
+              "2026-02": 24500
+            };
+            income = defaultIncomes[selectedMonth] || 30000;
+          }
+
+          let besoins = 0; // Needs (50%)
+          let envies = 0;  // Wants (30%)
+          let epargne = 0; // Savings (20%)
+
+          // Active subscriptions also count as Needs
+          const activeSubCost = abonnements
+            .filter(a => a.status === "Actif")
+            .reduce((sum, a) => sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
+
+          const monthExpenses = transactions.filter(
+            t => t.type === "Dépense" && t.date && t.date.startsWith(selectedMonth)
+          );
+
+          if (monthExpenses.length > 0) {
+            monthExpenses.forEach(t => {
+              const amt = t.amount || 0;
+              const rawCat = t.category || "Autre";
+              const cat = normalizeCategory(rawCat);
+
+              const catLower = cat.toLowerCase();
+              if (
+                catLower.includes("alimentation") ||
+                catLower.includes("transport") ||
+                catLower.includes("carburant") ||
+                catLower.includes("logiciel") ||
+                catLower.includes("saas") ||
+                catLower.includes("abonnement") ||
+                catLower.includes("logement") ||
+                catLower.includes("serveurs") ||
+                catLower.includes("facture") ||
+                catLower.includes("bureau") ||
+                catLower.includes("marketing") ||
+                catLower.includes("publicité")
+              ) {
+                besoins += amt;
+              } else if (
+                catLower.includes("loisir") ||
+                catLower.includes("sortie") ||
+                catLower.includes("cadeaux") ||
+                catLower.includes("shopping") ||
+                catLower.includes("équipement") ||
+                catLower.includes("matériel") ||
+                catLower.includes("voyage") ||
+                catLower.includes("restaurant") ||
+                catLower.includes("café") ||
+                catLower.includes("netflix") ||
+                catLower.includes("spotify")
+              ) {
+                envies += amt;
+              } else if (
+                catLower.includes("épargne") ||
+                catLower.includes("cagnottes") ||
+                catLower.includes("bourse") ||
+                catLower.includes("invest") ||
+                catLower.includes("stock") ||
+                catLower.includes("crypto")
+              ) {
+                epargne += amt;
+              } else {
+                besoins += amt;
+              }
+            });
+          } else {
+            const defaultExpenses: { [key: string]: number } = {
+              "2026-07": 4420,
+              "2026-06": 22800,
+              "2026-05": 21000,
+              "2026-04": 15400,
+              "2026-03": 19500,
+              "2026-02": 16800
+            };
+            const simulatedTotal = defaultExpenses[selectedMonth] || 15000;
+            besoins = simulatedTotal * 0.55;
+            envies = simulatedTotal * 0.30;
+            epargne = simulatedTotal * 0.15;
+          }
+
+          if (activeSubCost > 0) {
+            besoins += activeSubCost;
+          }
+
+          const totalExpenses = besoins + envies + epargne;
+          const remainingIncome = income - totalExpenses;
+          const totalSavings = Math.max(0, epargne + remainingIncome);
+
+          const besoinsPct = income > 0 ? (besoins / income) * 100 : 0;
+          const enviesPct = income > 0 ? (envies / income) * 100 : 0;
+          const epargnePct = income > 0 ? (totalSavings / income) * 100 : 0;
+
+          const idealBesoins = income * 0.50;
+          const idealEnvies = income * 0.30;
+          const idealEpargne = income * 0.20;
+
+          return (
+            <div className="space-y-4 bg-neutral-50/50 dark:bg-zinc-950/20 p-4 border border-neutral-200/40 dark:border-neutral-800/40 rounded-2xl">
+              <div className="space-y-3">
+                {/* Real split bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-neutral-800 dark:text-neutral-200">Votre Répartition Réelle</span>
+                    <span className="font-mono text-neutral-400 dark:text-neutral-500 text-[10px] font-bold">
+                      Sur {income.toLocaleString("fr-FR")} MAD de revenus
+                    </span>
+                  </div>
+                  <div className="w-full bg-neutral-200 dark:bg-neutral-800 h-4 rounded-full overflow-hidden flex">
+                    <div 
+                      className="bg-neutral-900 dark:bg-zinc-400 h-full transition-all duration-500 flex items-center justify-center text-[8px] font-black text-white dark:text-neutral-950"
+                      style={{ width: `${Math.min(100, besoinsPct)}%` }}
+                      title={`Besoins: ${besoinsPct.toFixed(1)}%`}
+                    >
+                      {besoinsPct > 10 && `${besoinsPct.toFixed(0)}%`}
+                    </div>
+                    <div 
+                      className="bg-neutral-500 dark:bg-zinc-600 h-full transition-all duration-500 flex items-center justify-center text-[8px] font-black text-white"
+                      style={{ width: `${Math.min(100 - besoinsPct, enviesPct)}%` }}
+                      title={`Envies: ${enviesPct.toFixed(1)}%`}
+                    >
+                      {enviesPct > 10 && `${enviesPct.toFixed(0)}%`}
+                    </div>
+                    <div 
+                      className="bg-emerald-600 h-full transition-all duration-500 flex items-center justify-center text-[8px] font-black text-white"
+                      style={{ width: `${Math.min(100 - besoinsPct - enviesPct, epargnePct)}%` }}
+                      title={`Épargne: ${epargnePct.toFixed(1)}%`}
+                    >
+                      {epargnePct > 10 && `${epargnePct.toFixed(0)}%`}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ideal split bar */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs font-bold text-neutral-500">
+                    <span>Cible Conseillée (50% / 30% / 20%)</span>
+                    <span>Répartition Recommandée</span>
+                  </div>
+                  <div className="w-full bg-neutral-200 dark:bg-neutral-800 h-3.5 rounded-full overflow-hidden flex opacity-85">
+                    <div className="bg-neutral-800/40 dark:bg-zinc-400/30 h-full w-[50%] flex items-center justify-center text-[8px] font-extrabold text-neutral-700 dark:text-neutral-300">
+                      50% Besoins
+                    </div>
+                    <div className="bg-neutral-500/40 h-full w-[30%] flex items-center justify-center text-[8px] font-extrabold text-neutral-700 dark:text-neutral-300">
+                      30% Envies
+                    </div>
+                    <div className="bg-emerald-600/40 h-full w-[20%] flex items-center justify-center text-[8px] font-extrabold text-emerald-800 dark:text-emerald-200">
+                      20% Épargne
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Side by side comparison metrics */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                {/* Needs metric */}
+                <div className="p-3 bg-white dark:bg-zinc-900 border border-neutral-200/60 dark:border-neutral-800/60 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-neutral-400 uppercase">Besoins (Cible 50%)</span>
+                    {besoinsPct <= 50 ? (
+                      <span className="text-[8px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-xs font-mono">SOUS CONTRÔLE</span>
+                    ) : (
+                      <span className="text-[8px] font-black bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-xs font-mono">DÉPASSÉ</span>
+                    )}
+                  </div>
+                  <div className="font-mono">
+                    <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                      {Math.round(besoins).toLocaleString("fr-FR")} MAD
+                    </span>
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-bold ml-1">
+                      ({besoinsPct.toFixed(0)}%)
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-neutral-400 dark:text-neutral-500 leading-tight">
+                    Cible : {Math.round(idealBesoins).toLocaleString("fr-FR")} MAD. {besoinsPct <= 50 ? "Excellent respect des besoins vitaux." : "Vos coûts fixes sont un peu élevés."}
+                  </p>
+                </div>
+
+                {/* Wants metric */}
+                <div className="p-3 bg-white dark:bg-zinc-900 border border-neutral-200/60 dark:border-neutral-800/60 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-neutral-400 uppercase">Envies (Cible 30%)</span>
+                    {enviesPct <= 30 ? (
+                      <span className="text-[8px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-xs font-mono font-bold">OK</span>
+                    ) : (
+                      <span className="text-[8px] font-black bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-xs font-mono font-bold font-mono">VIGILANCE</span>
+                    )}
+                  </div>
+                  <div className="font-mono">
+                    <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                      {Math.round(envies).toLocaleString("fr-FR")} MAD
+                    </span>
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-bold ml-1">
+                      ({enviesPct.toFixed(0)}%)
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-neutral-400 dark:text-neutral-500 leading-tight">
+                    Cible : {Math.round(idealEnvies).toLocaleString("fr-FR")} MAD. {enviesPct <= 30 ? "Budget de plaisir maîtrisé." : "Attention aux dépenses discrétionnaires."}
+                  </p>
+                </div>
+
+                {/* Savings metric */}
+                <div className="p-3 bg-white dark:bg-zinc-900 border border-neutral-200/60 dark:border-neutral-800/60 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-neutral-400 uppercase">Épargne (Cible 20%)</span>
+                    {epargnePct >= 20 ? (
+                      <span className="text-[8px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-xs font-mono font-bold font-mono">OBJECTIF ATTEINT</span>
+                    ) : (
+                      <span className="text-[8px] font-black bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-400 px-1.5 py-0.5 rounded-xs font-mono font-bold font-mono font-mono">A RENFORCER</span>
+                    )}
+                  </div>
+                  <div className="font-mono">
+                    <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                      {Math.round(totalSavings).toLocaleString("fr-FR")} MAD
+                    </span>
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-bold ml-1">
+                      ({epargnePct.toFixed(0)}%)
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-neutral-400 dark:text-neutral-500 leading-tight">
+                    Cible : {Math.round(idealEpargne).toLocaleString("fr-FR")} MAD. {epargnePct >= 20 ? "Excellente discipline d'épargne." : "Essayez de réduire vos extras."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
     </div>
   );
 }

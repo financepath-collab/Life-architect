@@ -97,6 +97,7 @@ import {
   loadFromDrive,
   logoutDrive
 } from "./googleDriveService";
+import { dbStore } from "./indexedDBStore";
 import { auth, db, handleFirestoreError, OperationType, isOfflineError } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -209,6 +210,7 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem("la_is_unlocked") === "true";
   });
+  const [isDbLoaded, setIsDbLoaded] = useState<boolean>(false);
 
   // --- CLOUD SYNC & SETTINGS STATES ---
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -335,12 +337,155 @@ export default function App() {
     onResolve: (choice: "local" | "cloud") => void;
   } | null>(null);
 
-  // Initialize internal state updates bypass on boot
+  // Initialize and load all datasets asynchronously from IndexedDB, migrating from localStorage if needed
   useEffect(() => {
-    const timer = setTimeout(() => {
-      isInternalStateUpdateRef.current = false;
-    }, 2000);
-    return () => clearTimeout(timer);
+    const loadAllData = async () => {
+      isInternalStateUpdateRef.current = true;
+      try {
+        async function fetchAndMigrate<T>(key: string, defaultValue: T, isNumber = false, isBoolean = false): Promise<T> {
+          const value = await dbStore.getItem<T>(key);
+          if (value !== null) {
+            return value;
+          }
+          const localVal = localStorage.getItem(key);
+          if (localVal !== null) {
+            try {
+              let parsed: any;
+              if (isBoolean) {
+                parsed = localVal === "true";
+              } else if (isNumber) {
+                parsed = parseInt(localVal, 10);
+              } else {
+                parsed = JSON.parse(localVal);
+              }
+              await dbStore.setItem(key, parsed);
+              return parsed as T;
+            } catch (e) {
+              console.warn(`Failed to migrate key "${key}" from localStorage:`, e);
+            }
+          }
+          return defaultValue;
+        }
+
+        const habits = await fetchAndMigrate<DailyHabit[]>("mp_habits_v2", INITIAL_HABITS);
+        const history = await fetchAndMigrate<Record<string, string[]>>("mp_habit_history_v2", {});
+        const objectives = await fetchAndMigrate<WeeklyObjective[]>("mp_weekly_objectives_v2", INITIAL_WEEKLY_OBJECTIVES);
+        const trans = await fetchAndMigrate<FinanceTransaction[]>("mp_transactions_v2", INITIAL_TRANSACTIONS);
+        const stk = await fetchAndMigrate<StockEntry[]>("mp_stocks_v2", INITIAL_STOCKS);
+        const bdg = await fetchAndMigrate<FinanceBudget[]>("mp_budgets_v2", INITIAL_BUDGETS);
+        const sal = await fetchAndMigrate<FinanceSalaire[]>("mp_salaires_v2", INITIAL_SALAIRES);
+        const epa = await fetchAndMigrate<FinanceEpargne[]>("mp_epargnes_v2", INITIAL_EPARGNES);
+        const acts30 = await fetchAndMigrate<Action30Jours[]>("mp_actions30_v2", INITIAL_ACTIONS_30_JOURS);
+        const prof = await fetchAndMigrate<ProfilAmelioration[]>("mp_profil_v2", INITIAL_PROFIL_AMELIORATIONS);
+        const poss = await fetchAndMigrate<PossibiliteGoal[]>("mp_possibilites_v2", INITIAL_POSSIBILITES_GOALS);
+        const skins = await fetchAndMigrate<SkinTracker[]>("mp_skin_v2", INITIAL_SKIN_TRACKERS);
+        const meals = await fetchAndMigrate<MealPlanner[]>("mp_meal_v2", INITIAL_MEAL_PLANNERS);
+        
+        const defaultExercises = [
+          { id: "ex_1", name: "Échauffement Articulaire & Cardio", desc: "Rotations des bras, genoux hauts et jumping jacks doux.", duration: "5 min", completed: false },
+          { id: "ex_2", name: "Squats de l'Atlas", desc: "Descente contrôlée, fesses en arrière, poids sur les talons.", duration: "5 min (3 séries x 15)", completed: false },
+          { id: "ex_3", name: "Pompes Solides (Push-ups)", desc: "Gainage parfait, coudes à 45 degrés. Sur les genoux si besoin.", duration: "5 min (3 séries x 12)", completed: false },
+          { id: "ex_4", name: "Fentes Alternées", desc: "Fente avant droite puis gauche, angle de 90° pour chaque genou.", duration: "5 min (3 séries x 10/jambe)", completed: false },
+          { id: "ex_5", name: "Gainage Planche Royale", desc: "Appui sur les avant-bras, coudes alignés, abdos et fessiers contractés.", duration: "5 min (4 x 45s de travail)", completed: false },
+          { id: "ex_6", name: "Étirements & Retour au Calme", desc: "Respiration profonde, étirement des quadriceps, du dos et des épaules.", duration: "5 min", completed: false },
+        ];
+        const exercises = await fetchAndMigrate<any[]>("mp_sport_exercises", defaultExercises);
+        const sportHist = await fetchAndMigrate<string[]>("mp_sport_history", ["2026-07-01", "2026-07-03", "2026-07-05", "2026-07-08", "2026-07-10"]);
+        
+        const achats = await fetchAndMigrate<AchatMensuel[]>("mp_achats_v2", INITIAL_ACHATS_MENSUELS);
+        const abons = await fetchAndMigrate<Abonnement[]>("mp_abonnements_v2", INITIAL_ABONNEMENTS);
+        const forms = await fetchAndMigrate<Formation[]>("mp_formations_v2", INITIAL_FORMATIONS);
+        const bk = await fetchAndMigrate<BookItem[]>("mp_books_v3", INITIAL_BOOKS);
+        const media = await fetchAndMigrate<ScreenMediaItem[]>("mp_screenmedia_v3", INITIAL_SCREENMEDIA);
+        const acc = await fetchAndMigrate<Account[]>("mp_accounts_v2", INITIAL_ACCOUNTS);
+        const lk = await fetchAndMigrate<ResourceLink[]>("mp_links_v2", INITIAL_RESOURCELINKS);
+        const chan = await fetchAndMigrate<ChannelInfo[]>("mp_channels_v2", INITIAL_CHANNELS);
+        const wish = await fetchAndMigrate<WishListItem[]>("mp_wishlist_v2", INITIAL_WISHLIST);
+        const couteux = await fetchAndMigrate<AchatCouteuxItem[]>("mp_achats_couteux_v2", INITIAL_ACHATS_COUTEUX);
+        const mGoals = await fetchAndMigrate<MonthlyGoal[]>("mp_monthly_goals_v2", INITIAL_MONTHLY_GOALS);
+        const edEvents = await fetchAndMigrate<EditorialEvent[]>("mp_editorial_events_v2", INITIAL_EDITORIAL_EVENTS);
+        const fold = await fetchAndMigrate<ProjectFolder[]>("mp_project_folders_v1", INITIAL_PROJECT_FOLDERS);
+        const snooze = await fetchAndMigrate<Record<string, number>>("mp_snoozed_alerts_v2", {});
+        
+        const defaultJournal: JournalEntry[] = [
+          {
+            id: "j_1",
+            date: "2026-07-16",
+            title: "Lancement de la nouvelle structure de vie",
+            content: "Aujourd'hui, j'ai optimisé mes trackers de discipline et de projets. Je me sens motivé à bloc. Les finances sont sous contrôle, j'ai budgétisé toutes les charges du mois. L'objectif de la semaine est d'être hyper constant sur ma routine de sport.",
+            mood: "Excellent",
+            tags: "Discipline, Finances, Organisation"
+          },
+          {
+            id: "j_2",
+            date: "2026-07-15",
+            title: "Session de révisions & Analyse de marché",
+            content: "Excellente progression sur la formation en production cinématographique. J'ai aussi analysé le comportement du cours de bourse sur la BVC. Patience et rigueur sont les maîtres mots de cette transition.",
+            mood: "Bon",
+            tags: "Apprentissage, Bourse"
+          }
+        ];
+        const journal = await fetchAndMigrate<JournalEntry[]>("life_architect_journal", defaultJournal);
+        const streak = await fetchAndMigrate<number>("mp_streak_count_v2", 7, true);
+        
+        const reminderEnabled = await fetchAndMigrate<boolean>("mp_morning_reminder_enabled", true, false, true);
+        const reminderTime = await fetchAndMigrate<string>("mp_morning_reminder_time", "09:00");
+        const reminderText = await fetchAndMigrate<string>("mp_morning_reminder_text", "C'est l'heure de consulter vos objectifs hebdomadaires prioritaires pour démarrer votre journée en force !");
+        const notifInterval = await fetchAndMigrate<number>("mp_notification_interval", 15, true);
+        const notifiedH = await fetchAndMigrate<Record<string, string>>("mp_notified_habits", {});
+
+        // Now update state with all fetched values
+        setDailyHabits(habits);
+        setHabitHistory(history);
+        setWeeklyObjectives(objectives);
+        setTransactions(trans);
+        setStocks(stk);
+        setBudgets(bdg);
+        setSalaires(sal);
+        setEpargnes(epa);
+        setActions30Jours(acts30);
+        setProfilAmeliorations(prof);
+        setPossibilitesGoals(poss);
+        setSkinTrackers(skins);
+        setMealPlanners(meals);
+        setSportExercises(exercises);
+        setSportHistory(sportHist);
+        setAchatsMensuels(achats);
+        setAbonnements(abons);
+        setFormations(forms);
+        setBooks(bk);
+        setScreenMedia(media);
+        setAccounts(acc);
+        setLinks(lk);
+        setChannels(chan);
+        setWishList(wish);
+        setAchatsCouteux(couteux);
+        setMonthlyGoals(mGoals);
+        setEditorialEvents(edEvents);
+        setFolders(fold);
+        setSnoozedAlerts(snooze);
+        setJournalEntries(journal);
+        setStreakCount(streak);
+        
+        setMorningReminderEnabled(reminderEnabled);
+        setMorningReminderTime(reminderTime);
+        setMorningReminderText(reminderText);
+        setNotificationInterval(notifInterval);
+        
+        notifiedHabitsRef.current = notifiedH;
+        setNotifiedHabits(notifiedH);
+
+        // All data is successfully loaded from IndexedDB
+        setIsDbLoaded(true);
+        isInternalStateUpdateRef.current = false;
+      } catch (error) {
+        console.error("IndexedDB critical boot load failed:", error);
+        setIsDbLoaded(true); // Fallback
+        isInternalStateUpdateRef.current = false;
+      }
+    };
+
+    loadAllData();
   }, []);
 
   // --- SECOND BRAIN COMMAND CENTER SHORTCUTS ---
@@ -519,16 +664,22 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem("mp_morning_reminder_enabled", morningReminderEnabled.toString());
-  }, [morningReminderEnabled]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_morning_reminder_enabled", morningReminderEnabled);
+    }
+  }, [morningReminderEnabled, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_morning_reminder_time", morningReminderTime);
-  }, [morningReminderTime]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_morning_reminder_time", morningReminderTime);
+    }
+  }, [morningReminderTime, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_morning_reminder_text", morningReminderText);
-  }, [morningReminderText]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_morning_reminder_text", morningReminderText);
+    }
+  }, [morningReminderText, isDbLoaded]);
 
   useEffect(() => {
     try {
@@ -573,8 +724,10 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem("mp_notification_interval", notificationInterval.toString());
-  }, [notificationInterval]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_notification_interval", notificationInterval);
+    }
+  }, [notificationInterval, isDbLoaded]);
 
   const [manualCheckFeedback, setManualCheckFeedback] = useState<string | null>(null);
 
@@ -833,8 +986,10 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem("mp_sport_history", JSON.stringify(sportHistory));
-  }, [sportHistory]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_sport_history", sportHistory);
+    }
+  }, [sportHistory, isDbLoaded]);
 
   const toggleSportDay = (dateStr: string) => {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -944,8 +1099,10 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem("mp_project_folders_v1", JSON.stringify(folders));
-  }, [folders]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_project_folders_v1", folders);
+    }
+  }, [folders, isDbLoaded]);
 
   const [snoozedAlerts, setSnoozedAlerts] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem("mp_snoozed_alerts_v2");
@@ -968,8 +1125,10 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem("mp_snoozed_alerts_v2", JSON.stringify(snoozedAlerts));
-  }, [snoozedAlerts]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_snoozed_alerts_v2", snoozedAlerts);
+    }
+  }, [snoozedAlerts, isDbLoaded]);
 
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() => {
     try {
@@ -998,8 +1157,10 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem("life_architect_journal", JSON.stringify(journalEntries));
-  }, [journalEntries]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("life_architect_journal", journalEntries);
+    }
+  }, [journalEntries, isDbLoaded]);
 
 
 
@@ -1265,14 +1426,18 @@ export default function App() {
     streakCount, monthlyGoals, editorialEvents, notificationInterval
   ]);
 
-  // --- LOCALSTORAGE SYNC EFFECT ---
+  // --- INDEXEDDB SYNC EFFECTS ---
   useEffect(() => {
-    localStorage.setItem("mp_habits_v2", JSON.stringify(dailyHabits));
-  }, [dailyHabits]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_habits_v2", dailyHabits);
+    }
+  }, [dailyHabits, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_habit_history_v2", JSON.stringify(habitHistory));
-  }, [habitHistory]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_habit_history_v2", habitHistory);
+    }
+  }, [habitHistory, isDbLoaded]);
 
   // Sync today's active habits state to the persistent habitHistory
   useEffect(() => {
@@ -1291,44 +1456,64 @@ export default function App() {
   }, [dailyHabits]);
 
   useEffect(() => {
-    localStorage.setItem("mp_weekly_objectives_v2", JSON.stringify(weeklyObjectives));
-  }, [weeklyObjectives]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_weekly_objectives_v2", weeklyObjectives);
+    }
+  }, [weeklyObjectives, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_transactions_v2", JSON.stringify(transactions));
-  }, [transactions]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_transactions_v2", transactions);
+    }
+  }, [transactions, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_stocks_v2", JSON.stringify(stocks));
-  }, [stocks]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_stocks_v2", stocks);
+    }
+  }, [stocks, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_budgets_v2", JSON.stringify(budgets));
-  }, [budgets]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_budgets_v2", budgets);
+    }
+  }, [budgets, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_salaires_v2", JSON.stringify(salaires));
-  }, [salaires]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_salaires_v2", salaires);
+    }
+  }, [salaires, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_epargnes_v2", JSON.stringify(epargnes));
-  }, [epargnes]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_epargnes_v2", epargnes);
+    }
+  }, [epargnes, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_actions30_v2", JSON.stringify(actions30Jours));
-  }, [actions30Jours]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_actions30_v2", actions30Jours);
+    }
+  }, [actions30Jours, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_profil_v2", JSON.stringify(profilAmeliorations));
-  }, [profilAmeliorations]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_profil_v2", profilAmeliorations);
+    }
+  }, [profilAmeliorations, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_possibilites_v2", JSON.stringify(possibilitesGoals));
-  }, [possibilitesGoals]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_possibilites_v2", possibilitesGoals);
+    }
+  }, [possibilitesGoals, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_skin_v2", JSON.stringify(skinTrackers));
-  }, [skinTrackers]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_skin_v2", skinTrackers);
+    }
+  }, [skinTrackers, isDbLoaded]);
 
   // Sync state configurations to the Web Worker whenever settings change
   useEffect(() => {
@@ -1481,110 +1666,144 @@ export default function App() {
   }, [sportExercises]);
 
   useEffect(() => {
-    localStorage.setItem("mp_sport_exercises", JSON.stringify(sportExercises));
-  }, [sportExercises]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_sport_exercises", sportExercises);
+    }
+  }, [sportExercises, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_meal_v2", JSON.stringify(mealPlanners));
-  }, [mealPlanners]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_meal_v2", mealPlanners);
+    }
+  }, [mealPlanners, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("la_focus_mode", String(focusMode));
-  }, [focusMode]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("la_focus_mode", focusMode);
+    }
+  }, [focusMode, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_achats_v2", JSON.stringify(achatsMensuels));
-  }, [achatsMensuels]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_achats_v2", achatsMensuels);
+    }
+  }, [achatsMensuels, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_abonnements_v2", JSON.stringify(abonnements));
-  }, [abonnements]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_abonnements_v2", abonnements);
+    }
+  }, [abonnements, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_formations_v2", JSON.stringify(formations));
-  }, [formations]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_formations_v2", formations);
+    }
+  }, [formations, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_books_v3", JSON.stringify(books));
-  }, [books]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_books_v3", books);
+    }
+  }, [books, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_screenmedia_v3", JSON.stringify(screenMedia));
-  }, [screenMedia]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_screenmedia_v3", screenMedia);
+    }
+  }, [screenMedia, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_accounts_v2", JSON.stringify(accounts));
-  }, [accounts]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_accounts_v2", accounts);
+    }
+  }, [accounts, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_links_v2", JSON.stringify(links));
-  }, [links]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_links_v2", links);
+    }
+  }, [links, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_channels_v2", JSON.stringify(channels));
-  }, [channels]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_channels_v2", channels);
+    }
+  }, [channels, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_wishlist_v2", JSON.stringify(wishList));
-  }, [wishList]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_wishlist_v2", wishList);
+    }
+  }, [wishList, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_achats_couteux_v2", JSON.stringify(achatsCouteux));
-  }, [achatsCouteux]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_achats_couteux_v2", achatsCouteux);
+    }
+  }, [achatsCouteux, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_streak_count_v2", streakCount.toString());
-  }, [streakCount]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_streak_count_v2", streakCount);
+    }
+  }, [streakCount, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_monthly_goals_v2", JSON.stringify(monthlyGoals));
-  }, [monthlyGoals]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_monthly_goals_v2", monthlyGoals);
+    }
+  }, [monthlyGoals, isDbLoaded]);
 
   useEffect(() => {
-    localStorage.setItem("mp_editorial_events_v2", JSON.stringify(editorialEvents));
-  }, [editorialEvents]);
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_editorial_events_v2", editorialEvents);
+    }
+  }, [editorialEvents, isDbLoaded]);
 
 
 
 
   // --- UTILITY ACTION HANDLERS ---
 
-  const forceManualBackup = () => {
+  const forceManualBackup = async () => {
     try {
-      localStorage.setItem("mp_habits_v2", JSON.stringify(dailyHabits));
-      localStorage.setItem("mp_habit_history_v2", JSON.stringify(habitHistory));
-      localStorage.setItem("mp_weekly_objectives_v2", JSON.stringify(weeklyObjectives));
-      localStorage.setItem("mp_transactions_v2", JSON.stringify(transactions));
-      localStorage.setItem("mp_stocks_v2", JSON.stringify(stocks));
-      localStorage.setItem("mp_budgets_v2", JSON.stringify(budgets));
-      localStorage.setItem("mp_salaires_v2", JSON.stringify(salaires));
-      localStorage.setItem("mp_epargnes_v2", JSON.stringify(epargnes));
-      localStorage.setItem("mp_actions30_v2", JSON.stringify(actions30Jours));
-      localStorage.setItem("mp_profil_v2", JSON.stringify(profilAmeliorations));
-      localStorage.setItem("mp_possibilites_v2", JSON.stringify(possibilitesGoals));
-      localStorage.setItem("mp_skin_v2", JSON.stringify(skinTrackers));
-      localStorage.setItem("mp_sport_exercises", JSON.stringify(sportExercises));
-      localStorage.setItem("mp_sport_history", JSON.stringify(sportHistory));
-      localStorage.setItem("mp_meal_v2", JSON.stringify(mealPlanners));
-      localStorage.setItem("la_focus_mode", String(focusMode));
-      localStorage.setItem("mp_achats_v2", JSON.stringify(achatsMensuels));
-      localStorage.setItem("mp_abonnements_v2", JSON.stringify(abonnements));
-      localStorage.setItem("mp_formations_v2", JSON.stringify(formations));
-      localStorage.setItem("mp_books_v3", JSON.stringify(books));
-      localStorage.setItem("mp_screenmedia_v3", JSON.stringify(screenMedia));
-      localStorage.setItem("mp_accounts_v2", JSON.stringify(accounts));
-      localStorage.setItem("mp_links_v2", JSON.stringify(links));
-      localStorage.setItem("mp_channels_v2", JSON.stringify(channels));
-      localStorage.setItem("mp_wishlist_v2", JSON.stringify(wishList));
-      localStorage.setItem("mp_achats_couteux_v2", JSON.stringify(achatsCouteux));
-      localStorage.setItem("mp_streak_count_v2", streakCount.toString());
-      localStorage.setItem("mp_monthly_goals_v2", JSON.stringify(monthlyGoals));
-      localStorage.setItem("mp_editorial_events_v2", JSON.stringify(editorialEvents));
-      localStorage.setItem("mp_project_folders_v1", JSON.stringify(folders));
-      localStorage.setItem("mp_notified_habits", JSON.stringify(notifiedHabitsRef.current));
-      localStorage.setItem("mp_notification_interval", notificationInterval.toString());
+      await Promise.all([
+        dbStore.setItem("mp_habits_v2", dailyHabits),
+        dbStore.setItem("mp_habit_history_v2", habitHistory),
+        dbStore.setItem("mp_weekly_objectives_v2", weeklyObjectives),
+        dbStore.setItem("mp_transactions_v2", transactions),
+        dbStore.setItem("mp_stocks_v2", stocks),
+        dbStore.setItem("mp_budgets_v2", budgets),
+        dbStore.setItem("mp_salaires_v2", salaires),
+        dbStore.setItem("mp_epargnes_v2", epargnes),
+        dbStore.setItem("mp_actions30_v2", actions30Jours),
+        dbStore.setItem("mp_profil_v2", profilAmeliorations),
+        dbStore.setItem("mp_possibilites_v2", possibilitesGoals),
+        dbStore.setItem("mp_skin_v2", skinTrackers),
+        dbStore.setItem("mp_sport_exercises", sportExercises),
+        dbStore.setItem("mp_sport_history", sportHistory),
+        dbStore.setItem("mp_meal_v2", mealPlanners),
+        dbStore.setItem("la_focus_mode", focusMode),
+        dbStore.setItem("mp_achats_v2", achatsMensuels),
+        dbStore.setItem("mp_abonnements_v2", abonnements),
+        dbStore.setItem("mp_formations_v2", formations),
+        dbStore.setItem("mp_books_v3", books),
+        dbStore.setItem("mp_screenmedia_v3", screenMedia),
+        dbStore.setItem("mp_accounts_v2", accounts),
+        dbStore.setItem("mp_links_v2", links),
+        dbStore.setItem("mp_channels_v2", channels),
+        dbStore.setItem("mp_wishlist_v2", wishList),
+        dbStore.setItem("mp_achats_couteux_v2", achatsCouteux),
+        dbStore.setItem("mp_streak_count_v2", streakCount),
+        dbStore.setItem("mp_monthly_goals_v2", monthlyGoals),
+        dbStore.setItem("mp_editorial_events_v2", editorialEvents),
+        dbStore.setItem("mp_project_folders_v1", folders),
+        dbStore.setItem("mp_notified_habits", notifiedHabitsRef.current),
+        dbStore.setItem("mp_notification_interval", notificationInterval)
+      ]);
       
-      triggerToast("📁 Toutes les données ont été synchronisées avec succès !", "success");
+      triggerToast("📁 Toutes les données ont été sauvegardées dans IndexedDB avec succès !", "success");
     } catch (error) {
       console.error("Manual backup failed:", error);
       triggerToast("❌ Échec de la sauvegarde locale des données.", "error");
