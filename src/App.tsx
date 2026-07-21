@@ -227,6 +227,9 @@ export default function App() {
     const saved = localStorage.getItem("mp_drive_last_synced");
     return saved ? new Date(saved) : null;
   });
+  const [driveAutoSync, setDriveAutoSync] = useState<boolean>(() => {
+    return localStorage.getItem("la_drive_auto_sync") === "true";
+  });
 
   // --- GITHUB GIST STATES ---
   const [githubAutoSync, setGithubAutoSync] = useState<boolean>(() => {
@@ -249,6 +252,76 @@ export default function App() {
     return saved ? new Date(saved) : null;
   });
   const [githubIsLoading, setGithubIsLoading] = useState<boolean>(false);
+
+  // Web Worker for non-blocking backup processes
+  const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    // Instantiate background Web Worker with Vite-compatible ES module syntax
+    const worker = new Worker(new URL("./backupWorker.ts", import.meta.url), {
+      type: "module",
+    });
+    workerRef.current = worker;
+
+    worker.onmessage = (e: MessageEvent) => {
+      const { type, target, timestamp, error, isSilent } = e.data;
+
+      if (type === "SYNC_START") {
+        if (!isSilent) {
+          if (target === "drive") setIsDriveLoading(true);
+          if (target === "github") setGithubIsLoading(true);
+        }
+      } else if (type === "SYNC_SUCCESS") {
+        if (target === "drive") {
+          setIsDriveLoading(false);
+          const date = new Date(timestamp);
+          setDriveLastSynced(date);
+          localStorage.setItem("mp_drive_last_synced", date.toISOString());
+          if (!isSilent) {
+            triggerToast("📁 Données sauvegardées avec succès sur votre Google Drive !", "success");
+          }
+        } else if (target === "github") {
+          setGithubIsLoading(false);
+          const date = new Date(timestamp);
+          setGithubLastSynced(date);
+          localStorage.setItem("github_last_synced", date.toISOString());
+          if (!isSilent) {
+            triggerToast("🚀 Sauvegarde réussie sur votre GitHub Gist !", "success");
+          }
+        }
+      } else if (type === "SYNC_ERROR") {
+        if (target === "drive") {
+          setIsDriveLoading(false);
+          if (!isSilent) {
+            triggerToast(`❌ Échec de la sauvegarde Google Drive : ${error}`, "error");
+          }
+        } else if (target === "github") {
+          setGithubIsLoading(false);
+          if (!isSilent) {
+            triggerToast(`❌ Échec de la sauvegarde GitHub Gist : ${error}`, "error");
+          }
+        }
+      }
+    };
+
+    // Keep the worker configuration in sync initially
+    worker.postMessage({
+      type: "CONFIGURE",
+      data: {
+        githubToken,
+        githubGistId,
+        driveToken: driveAccessToken || getDriveAccessToken(),
+        githubAutoSync,
+        driveAutoSync,
+      },
+    });
+
+    return () => {
+      worker.terminate();
+    };
+  }, []);
+
+
 
   // Flag to block la_last_local_update_time updates during initialization or cloud downloads
   const isInternalStateUpdateRef = useRef(true);
@@ -1192,27 +1265,6 @@ export default function App() {
     streakCount, monthlyGoals, editorialEvents, notificationInterval
   ]);
 
-  // --- GITHUB AUTO-SYNC EFFECT ---
-  useEffect(() => {
-    if (!githubAutoSync || !githubToken || !githubGistId || isInternalStateUpdateRef.current) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      console.log("[GitHub Gist Sync] Executing debounced auto-sync...");
-      handleBackupToGithub();
-    }, 12000); // Debounce for 12 seconds to bundle multiple rapid updates together
-
-    return () => clearTimeout(timer);
-  }, [
-    dailyHabits, weeklyObjectives, transactions, stocks, budgets, salaires,
-    epargnes, actions30Jours, profilAmeliorations, skinTrackers, mealPlanners,
-    achatsMensuels, abonnements, formations, books, screenMedia, accounts,
-    links, channels, wishList, achatsCouteux, folders, journalEntries,
-    streakCount, monthlyGoals, editorialEvents, notificationInterval,
-    githubAutoSync, githubToken, githubGistId
-  ]);
-
   // --- LOCALSTORAGE SYNC EFFECT ---
   useEffect(() => {
     localStorage.setItem("mp_habits_v2", JSON.stringify(dailyHabits));
@@ -1277,6 +1329,40 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("mp_skin_v2", JSON.stringify(skinTrackers));
   }, [skinTrackers]);
+
+  // Sync state configurations to the Web Worker whenever settings change
+  useEffect(() => {
+    if (workerRef.current) {
+      workerRef.current.postMessage({
+        type: "CONFIGURE",
+        data: {
+          githubToken,
+          githubGistId,
+          driveToken: driveAccessToken || getDriveAccessToken(),
+          githubAutoSync,
+          driveAutoSync,
+        },
+      });
+    }
+  }, [githubToken, githubGistId, driveAccessToken, githubAutoSync, driveAutoSync]);
+
+  // Send state updates to the Web Worker for background debouncing and serialization
+  useEffect(() => {
+    if (isInternalStateUpdateRef.current || !workerRef.current) {
+      return;
+    }
+    const payload = getCurrentStatePayload();
+    workerRef.current.postMessage({
+      type: "UPDATE_PAYLOAD",
+      data: payload,
+    });
+  }, [
+    dailyHabits, weeklyObjectives, transactions, stocks, budgets, salaires,
+    epargnes, actions30Jours, profilAmeliorations, skinTrackers, mealPlanners,
+    achatsMensuels, abonnements, formations, books, screenMedia, accounts,
+    links, channels, wishList, achatsCouteux, folders, journalEntries,
+    streakCount, monthlyGoals, editorialEvents, notificationInterval
+  ]);
 
   // Refs for tracking previous states to prevent bidirectional sync infinite loops
   const prevSportExercisesRef = useRef(sportExercises);
@@ -1958,29 +2044,36 @@ export default function App() {
   const handleDisconnectDrive = () => {
     logoutDrive();
     setDriveAccessTokenState(null);
+    setDriveAutoSync(false);
+    localStorage.removeItem("la_drive_auto_sync");
     triggerToast("ℹ️ Google Drive déconnecté.", "info");
   };
 
-  const handleBackupToDrive = async () => {
+  const handleToggleDriveAutoSync = (enabled: boolean) => {
+    setDriveAutoSync(enabled);
+    localStorage.setItem("la_drive_auto_sync", enabled ? "true" : "false");
+    triggerToast(
+      enabled 
+        ? "🚀 Synchronisation automatique Google Drive activée (sauvegarde toutes les 15s après modifs) !" 
+        : "ℹ️ Synchronisation automatique Google Drive désactivée.", 
+      "info"
+    );
+  };
+
+  const handleBackupToDrive = async (isSilent = false) => {
     const token = driveAccessToken || getDriveAccessToken();
     if (!token) {
-      triggerToast("⚠️ Veuillez connecter votre Google Drive d'abord.", "error");
+      if (!isSilent) {
+        triggerToast("⚠️ Veuillez connecter votre Google Drive d'abord.", "error");
+      }
       return;
     }
     
-    setIsDriveLoading(true);
-    try {
-      const payload = getCurrentStatePayload();
-      await saveToDrive(token, payload);
-      const now = new Date();
-      setDriveLastSynced(now);
-      localStorage.setItem("mp_drive_last_synced", now.toISOString());
-      triggerToast("📁 Données sauvegardées avec succès sur votre Google Drive !", "success");
-    } catch (error) {
-      console.error("Backup to Google Drive failed:", error);
-      triggerToast("❌ Échec de la sauvegarde sur Google Drive.", "error");
-    } finally {
-      setIsDriveLoading(false);
+    if (workerRef.current) {
+      workerRef.current.postMessage({
+        type: "FORCE_BACKUP",
+        data: { target: "drive" }
+      });
     }
   };
 
@@ -2149,39 +2242,16 @@ export default function App() {
   const handleBackupToGithub = async (forceToken?: string, forceGistId?: string) => {
     const activeToken = forceToken || githubToken;
     const activeGistId = forceGistId || githubGistId;
-    if (!activeToken || !activeGistId) return;
+    if (!activeToken || !activeGistId) {
+      triggerToast("⚠️ Configuration GitHub incomplète ou non connectée.", "error");
+      return;
+    }
     
-    setGithubIsLoading(true);
-    try {
-      const payload = getCurrentStatePayload();
-      const res = await fetch(`https://api.github.com/gists/${activeGistId}`, {
-        method: "PATCH",
-        headers: {
-          "Authorization": `token ${activeToken}`,
-          "Content-Type": "application/json",
-          "Accept": "application/vnd.github.v3+json"
-        },
-        body: JSON.stringify({
-          description: "Backup Second Brain - FinancePath",
-          files: {
-            "second_brain_backup.json": {
-              content: JSON.stringify(payload, null, 2)
-            }
-          }
-        })
+    if (workerRef.current) {
+      workerRef.current.postMessage({
+        type: "FORCE_BACKUP",
+        data: { target: "github" }
       });
-      
-      if (!res.ok) throw new Error("Impossible de mettre à jour le Gist");
-      
-      const now = new Date();
-      setGithubLastSynced(now);
-      localStorage.setItem("github_last_synced", now.toISOString());
-      triggerToast("🚀 Sauvegarde réussie sur votre GitHub Gist !", "success");
-    } catch (error) {
-      console.error("GitHub Backup error:", error);
-      triggerToast("❌ Échec de la sauvegarde sur GitHub Gist.", "error");
-    } finally {
-      setGithubIsLoading(false);
     }
   };
 
@@ -4824,6 +4894,8 @@ export default function App() {
         onBackupToDrive={handleBackupToDrive}
         onRestoreFromDrive={handleRestoreFromDrive}
         driveLastSynced={driveLastSynced}
+        driveAutoSync={driveAutoSync}
+        onToggleDriveAutoSync={handleToggleDriveAutoSync}
         autoDarkTheme={autoDarkTheme}
         onToggleAutoDarkTheme={(enabled: boolean) => {
           setAutoDarkTheme(enabled);

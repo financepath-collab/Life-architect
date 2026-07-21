@@ -49,6 +49,8 @@ interface SettingsModalProps {
   onBackupToDrive: () => Promise<void> | void;
   onRestoreFromDrive: () => Promise<void> | void;
   driveLastSynced: Date | null;
+  driveAutoSync?: boolean;
+  onToggleDriveAutoSync?: (enabled: boolean) => void;
   autoDarkTheme: boolean;
   onToggleAutoDarkTheme: (enabled: boolean) => void;
   
@@ -95,6 +97,8 @@ export default function SettingsModal({
   onBackupToDrive,
   onRestoreFromDrive,
   driveLastSynced,
+  driveAutoSync = false,
+  onToggleDriveAutoSync = () => {},
   autoDarkTheme,
   onToggleAutoDarkTheme,
   accounts = [],
@@ -551,6 +555,26 @@ export default function SettingsModal({
 
               {isDriveConnected && (
                 <div className="pt-3 border-t border-neutral-200/50 dark:border-neutral-800 space-y-3">
+                  {/* Toggle auto-sync for Drive */}
+                  <div className="flex items-center justify-between p-2.5 bg-neutral-100/40 dark:bg-zinc-950/20 rounded-xl border border-neutral-200/20 dark:border-neutral-800/20">
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 block">
+                        Sauvegarde Automatique Drive
+                      </span>
+                      <span className="text-[9.5px] text-neutral-400 block leading-tight">
+                        Sauvegarde en tâche de fond 15s après chaque modification.
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => onToggleDriveAutoSync(!driveAutoSync)}
+                      className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer focus:outline-none ${
+                        driveAutoSync ? "bg-amber-500" : "bg-neutral-300 dark:bg-zinc-700"
+                      }`}
+                    >
+                      <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${driveAutoSync ? "translate-x-5" : "translate-x-0"}`} />
+                    </button>
+                  </div>
+
                   <div className="flex gap-2">
                     <button
                       disabled={isDriveLoading}
