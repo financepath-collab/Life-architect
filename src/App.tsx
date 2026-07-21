@@ -4594,6 +4594,15 @@ export default function App() {
             triggerToast("Mode sombre automatique désactivé", "info");
           }
         }}
+        accounts={accounts}
+        transactions={transactions}
+        dailyHabits={dailyHabits}
+        weeklyObjectives={weeklyObjectives}
+        budgets={budgets}
+        epargnes={epargnes}
+        abonnements={abonnements}
+        stocks={stocks}
+        journalEntries={journalEntries}
       />
 
       {/* SYNC CONFLICT RESOLUTION MODAL */}

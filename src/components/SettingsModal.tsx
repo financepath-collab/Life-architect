@@ -12,11 +12,24 @@ import {
   CheckCircle,
   HelpCircle,
   Moon,
-  Sun
+  Sun,
+  Download,
+  FileSpreadsheet
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { User as FirebaseUser, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "../firebase";
+import { 
+  Account, 
+  FinanceTransaction, 
+  DailyHabit, 
+  WeeklyObjective, 
+  FinanceBudget, 
+  FinanceEpargne, 
+  Abonnement, 
+  StockEntry, 
+  JournalEntry 
+} from "../types";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -37,6 +50,17 @@ interface SettingsModalProps {
   driveLastSynced: Date | null;
   autoDarkTheme: boolean;
   onToggleAutoDarkTheme: (enabled: boolean) => void;
+  
+  // Data props for CSV Export
+  accounts?: Account[];
+  transactions?: FinanceTransaction[];
+  dailyHabits?: DailyHabit[];
+  weeklyObjectives?: WeeklyObjective[];
+  budgets?: FinanceBudget[];
+  epargnes?: FinanceEpargne[];
+  abonnements?: Abonnement[];
+  stocks?: StockEntry[];
+  journalEntries?: JournalEntry[];
 }
 
 export default function SettingsModal({
@@ -57,13 +81,120 @@ export default function SettingsModal({
   onRestoreFromDrive,
   driveLastSynced,
   autoDarkTheme,
-  onToggleAutoDarkTheme
+  onToggleAutoDarkTheme,
+  accounts = [],
+  transactions = [],
+  dailyHabits = [],
+  weeklyObjectives = [],
+  budgets = [],
+  epargnes = [],
+  abonnements = [],
+  stocks = [],
+  journalEntries = []
 }: SettingsModalProps) {
   
   if (!isOpen) return null;
 
   const isIframe = typeof window !== "undefined" && window.self !== window.top;
   const [authError, setAuthError] = useState<{ code: string; message: string; hostname: string } | null>(null);
+
+  // CSV Export states & logic
+  const [selectedExportModule, setSelectedExportModule] = useState<string>("accounts");
+  const [exportFeedback, setExportFeedback] = useState<string | null>(null);
+
+  const handleExportCSV = () => {
+    let dataToExport: any[] = [];
+    let filename = "";
+
+    switch (selectedExportModule) {
+      case "accounts":
+        dataToExport = accounts;
+        filename = `comptes_bancaires_${new Date().toISOString().slice(0, 10)}.csv`;
+        break;
+      case "transactions":
+        dataToExport = transactions;
+        filename = `transactions_${new Date().toISOString().slice(0, 10)}.csv`;
+        break;
+      case "dailyHabits":
+        dataToExport = dailyHabits;
+        filename = `habitudes_quotidiennes_${new Date().toISOString().slice(0, 10)}.csv`;
+        break;
+      case "weeklyObjectives":
+        dataToExport = weeklyObjectives;
+        filename = `objectifs_hebdomadaires_${new Date().toISOString().slice(0, 10)}.csv`;
+        break;
+      case "budgets":
+        dataToExport = budgets;
+        filename = `budgets_et_limites_${new Date().toISOString().slice(0, 10)}.csv`;
+        break;
+      case "epargnes":
+        dataToExport = epargnes;
+        filename = `objectifs_epargne_${new Date().toISOString().slice(0, 10)}.csv`;
+        break;
+      case "abonnements":
+        dataToExport = abonnements;
+        filename = `abonnements_${new Date().toISOString().slice(0, 10)}.csv`;
+        break;
+      case "stocks":
+        dataToExport = stocks;
+        filename = `portefeuille_actions_${new Date().toISOString().slice(0, 10)}.csv`;
+        break;
+      case "journalEntries":
+        dataToExport = journalEntries;
+        filename = `journal_de_bord_${new Date().toISOString().slice(0, 10)}.csv`;
+        break;
+      default:
+        break;
+    }
+
+    if (!dataToExport || dataToExport.length === 0) {
+      setExportFeedback("Aucune donnée disponible à exporter dans ce module.");
+      setTimeout(() => setExportFeedback(null), 4000);
+      return;
+    }
+
+    try {
+      // Build a beautiful CSV with robust escaping
+      const headers = Object.keys(dataToExport[0]);
+      const csvRows = [
+        headers.join(","),
+        ...dataToExport.map(row => 
+          headers.map(fieldName => {
+            const val = row[fieldName];
+            let cellStr = "";
+            if (val === null || val === undefined) {
+              cellStr = "";
+            } else if (typeof val === "object") {
+              cellStr = JSON.stringify(val);
+            } else {
+              cellStr = String(val);
+            }
+            // Escape double quotes and surround with double quotes
+            return `"${cellStr.replace(/"/g, '""')}"`;
+          }).join(",")
+        )
+      ];
+
+      const csvContent = csvRows.join("\r\n");
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setExportFeedback(`Export réussi ! ${dataToExport.length} lignes téléchargées.`);
+      setTimeout(() => setExportFeedback(null), 4000);
+    } catch (err: any) {
+      console.error("Export error:", err);
+      setExportFeedback("Une erreur est survenue lors de l'exportation.");
+      setTimeout(() => setExportFeedback(null), 4000);
+    }
+  };
 
   const handleLoginClick = async () => {
     setAuthError(null);
@@ -442,6 +573,58 @@ export default function SettingsModal({
                   <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${autoDarkTheme ? "translate-x-5" : "translate-x-0"}`} />
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Section: Export CSV des Modules */}
+          <div className="space-y-3">
+            <span className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-wider block font-mono">
+              5. Centre d'Exportation CSV des Modules
+            </span>
+            
+            <div className="p-4 bg-neutral-50 dark:bg-zinc-950/40 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl space-y-4">
+              <div className="space-y-1">
+                <span className="text-xs font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                  Exporter les données au format CSV
+                </span>
+                <p className="text-[10px] text-neutral-400 leading-relaxed">
+                  Générez et téléchargez instantanément un fichier CSV formaté pour n'importe quel module de votre Second Brain afin de réaliser des analyses externes ou sauvegardes rapides.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+                <select
+                  value={selectedExportModule}
+                  onChange={(e) => setSelectedExportModule(e.target.value)}
+                  className="flex-1 bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-neutral-300 focus:ring-1 focus:ring-neutral-200"
+                >
+                  <option value="accounts">Comptes Bancaires ({accounts.length})</option>
+                  <option value="transactions">Transactions Financières ({transactions.length})</option>
+                  <option value="dailyHabits">Habitudes Quotidiennes ({dailyHabits.length})</option>
+                  <option value="weeklyObjectives">Objectifs Hebdomadaires ({weeklyObjectives.length})</option>
+                  <option value="budgets">Budgets & Limites ({budgets.length})</option>
+                  <option value="epargnes">Objectifs d'Épargne ({epargnes.length})</option>
+                  <option value="abonnements">Abonnements Actifs ({abonnements.length})</option>
+                  <option value="stocks">Portefeuille Actions ({stocks.length})</option>
+                  <option value="journalEntries">Journal de Bord (Second Brain) ({journalEntries.length})</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={handleExportCSV}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Exporter en CSV
+                </button>
+              </div>
+
+              {exportFeedback && (
+                <div className="text-[10px] font-bold font-mono text-center p-2 bg-neutral-100 dark:bg-zinc-900 border border-neutral-200/50 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-300 animate-in fade-in duration-250">
+                  {exportFeedback}
+                </div>
+              )}
             </div>
           </div>
 
