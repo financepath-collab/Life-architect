@@ -98,6 +98,7 @@ import {
   logoutDrive
 } from "./googleDriveService";
 import { dbStore } from "./indexedDBStore";
+import { mergePayloads } from "./utils/syncUtils";
 import { auth, db, handleFirestoreError, OperationType, isOfflineError } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -1412,14 +1413,46 @@ export default function App() {
     return () => clearInterval(interval);
   }, [autoDarkTheme, isDarkMode]);
 
+  const prevModulesRef = useRef<any>({});
+
   // Monitor local state changes and record last updated timestamp
   useEffect(() => {
+    const current = {
+      dailyHabits, habitHistory, weeklyObjectives, transactions, stocks, budgets, salaires,
+      epargnes, actions30Jours, profilAmeliorations, skinTrackers, mealPlanners,
+      achatsMensuels, abonnements, formations, books, screenMedia, accounts,
+      links, channels, wishList, achatsCouteux, folders, journalEntries,
+      streakCount, monthlyGoals, editorialEvents, notificationInterval
+    };
+
     if (isInternalStateUpdateRef.current) {
+      prevModulesRef.current = current;
       return;
     }
-    localStorage.setItem("la_last_local_update_time", new Date().toISOString());
+
+    const now = new Date().toISOString();
+    const savedTimestampsStr = localStorage.getItem("la_module_timestamps") || "{}";
+    const savedTimestamps = JSON.parse(savedTimestampsStr);
+    let updated = false;
+
+    Object.keys(current).forEach((key) => {
+      const prevVal = prevModulesRef.current[key];
+      const currVal = (current as any)[key];
+      
+      if (prevVal !== undefined && JSON.stringify(prevVal) !== JSON.stringify(currVal)) {
+        savedTimestamps[key] = now;
+        updated = true;
+      }
+    });
+
+    if (updated || !localStorage.getItem("la_module_timestamps")) {
+      localStorage.setItem("la_module_timestamps", JSON.stringify(savedTimestamps));
+    }
+
+    prevModulesRef.current = current;
+    localStorage.setItem("la_last_local_update_time", now);
   }, [
-    dailyHabits, weeklyObjectives, transactions, stocks, budgets, salaires,
+    dailyHabits, habitHistory, weeklyObjectives, transactions, stocks, budgets, salaires,
     epargnes, actions30Jours, profilAmeliorations, skinTrackers, mealPlanners,
     achatsMensuels, abonnements, formations, books, screenMedia, accounts,
     links, channels, wishList, achatsCouteux, folders, journalEntries,
@@ -1812,6 +1845,8 @@ export default function App() {
 
   // --- CLOUD SYNC ENGINE (FIREBASE PERSISTENCE WITH LOCALSTORAGE FALLBACK) ---
   const getCurrentStatePayload = () => {
+    const savedTimestampsStr = localStorage.getItem("la_module_timestamps") || "{}";
+    const moduleTimestamps = JSON.parse(savedTimestampsStr);
     return {
       dailyHabits,
       habitHistory,
@@ -1845,6 +1880,7 @@ export default function App() {
       folders,
       journalEntries,
       notificationInterval,
+      moduleTimestamps
     };
   };
 
@@ -1852,6 +1888,9 @@ export default function App() {
     if (!payload) return;
     isInternalStateUpdateRef.current = true;
     try {
+      if (payload.moduleTimestamps) {
+        localStorage.setItem("la_module_timestamps", JSON.stringify(payload.moduleTimestamps));
+      }
       if (payload.dailyHabits) setDailyHabits(payload.dailyHabits);
       if (payload.habitHistory) setHabitHistory(payload.habitHistory);
       if (payload.weeklyObjectives) setWeeklyObjectives(payload.weeklyObjectives);
@@ -1976,7 +2015,23 @@ export default function App() {
                     cloudPayload: data.payload,
                     onResolve: (choice) => {
                       console.log(`⚖️ Résolution du conflit : Choix = [${choice}]`);
-                      if (choice === "cloud") {
+                      if (choice === "merge") {
+                        const { mergedPayload, mergedModules } = mergePayloads(localPayload, data.payload);
+                        loadStatePayload(mergedPayload);
+                        setSyncStatus("syncing");
+                        setDoc(docRef, {
+                          userId: user.uid,
+                          updatedAt: new Date(),
+                          payload: mergedPayload
+                        }).then(() => {
+                          setLastSyncedTime(new Date());
+                          setSyncStatus("synced");
+                          triggerToast(`🔄 Fusion réussie ! ${mergedModules.length} modules mis à jour depuis le Cloud.`, "success");
+                        }).catch(err => {
+                          console.error("❌ Échec de la sauvegarde fusionnée vers le Cloud :", err);
+                          setSyncStatus("error");
+                        });
+                      } else if (choice === "cloud") {
                         loadStatePayload(data.payload);
                         setLastSyncedTime(firebaseTime);
                         setSyncStatus("synced");
@@ -2141,7 +2196,25 @@ export default function App() {
                   localPayload,
                   cloudPayload: data.payload,
                   onResolve: (choice) => {
-                    if (choice === "cloud") {
+                    if (choice === "merge") {
+                      const { mergedPayload, mergedModules } = mergePayloads(localPayload, data.payload);
+                      loadStatePayload(mergedPayload);
+                      setSyncStatus("syncing");
+                      setDoc(docRef, {
+                        userId: currentUser.uid,
+                        updatedAt: new Date(),
+                        payload: mergedPayload
+                      }).then(() => {
+                        setLastSyncedTime(new Date());
+                        setCloudSyncEnabled(true);
+                        localStorage.setItem("la_cloud_sync_enabled", "true");
+                        setSyncStatus("synced");
+                        triggerToast(`🔄 Fusion réussie ! ${mergedModules.length} modules mis à jour.`, "success");
+                      }).catch(err => {
+                        console.error("Conflict resolve merge upload failed:", err);
+                        setSyncStatus("error");
+                      });
+                    } else if (choice === "cloud") {
                       loadStatePayload(data.payload);
                       setLastSyncedTime(firebaseTime);
                       setCloudSyncEnabled(true);
@@ -5183,6 +5256,28 @@ export default function App() {
                     Vos données locales sur ce navigateur ont des modifications plus récentes que celles stockées sur votre espace Cloud. Choisissez quelle version conserver pour éviter d'écraser vos modifications récentes.
                   </p>
                 </div>
+              </div>
+
+              {/* Premium Reconciliation Fusion Card */}
+              <div className="p-4 rounded-2xl border border-emerald-500/30 dark:border-emerald-800/40 bg-emerald-50/10 dark:bg-emerald-950/10 space-y-3 relative flex flex-col justify-between">
+                <span className="absolute top-3 right-3 text-[9px] bg-emerald-600 text-white px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-emerald-200" /> Recommandé
+                </span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-neutral-900 dark:text-white pt-2">
+                    <Sparkles className="w-4 h-4 text-emerald-500 animate-pulse" />
+                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">Fusionner Intelligemment (Reconciliation)</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed font-medium">
+                  Fusionne les données par module. Si vous avez modifié vos transactions financières sur un appareil et vos tâches sur un autre, <strong>les deux sont conservées et fusionnées</strong> au lieu de s'écraser.
+                </p>
+                <button
+                  onClick={() => syncConflict.onResolve("merge")}
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer text-center"
+                >
+                  Fusionner et Harmoniser les Appareils
+                </button>
               </div>
 
               {/* Grid comparing local vs cloud versions */}

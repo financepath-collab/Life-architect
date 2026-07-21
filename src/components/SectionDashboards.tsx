@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import MonthlyExpenseAnalysisCard from "./MonthlyExpenseAnalysisCard";
 import MonthlyNetIncomeWidget from "./MonthlyNetIncomeWidget";
+import MonthlySavingsGaugeCard from "./MonthlySavingsGaugeCard";
 import { 
   Account, FinanceBudget, FinanceEpargne, Abonnement, StockEntry, FinanceTransaction,
   DailyHabit, Action30Jours, WeeklyObjective, ProfilAmelioration, PossibiliteGoal, JournalEntry,
@@ -345,6 +346,13 @@ export function FinanceSectionDashboard({
 
       {/* Pie Chart and Category Breakdown Analysis Card */}
       <MonthlyExpenseAnalysisCard transactions={transactions} abonnements={abonnements} />
+
+      {/* Monthly Savings Goal Progress Gauge Card */}
+      <MonthlySavingsGaugeCard
+        transactions={transactions}
+        abonnements={abonnements}
+        salaires={salaires}
+      />
 
       {/* Monthly Net Income Widget (Calculates automatically subtracting recurring expenses/subscriptions and monthly costs/budgets from revenues) */}
       <MonthlyNetIncomeWidget
