@@ -79,6 +79,7 @@ import MonthlyComparisonCard from "./components/MonthlyComparisonCard";
 import MonthlyGoalsSection from "./components/MonthlyGoalsSection";
 import EditorialCalendarSection from "./components/EditorialCalendarSection";
 import CentralCalendar from "./components/CentralCalendar";
+import WeeklyCategoryStatsCard from "./components/WeeklyCategoryStatsCard";
 import WeatherWidget from "./components/WeatherWidget";
 import DisciplineHeatmap from "./components/DisciplineHeatmap";
 import Actions30JoursSection from "./components/Actions30JoursSection";
@@ -4603,6 +4604,13 @@ export default function App() {
                 </div>
 
               </div>
+
+              {/* Weekly Category Habits Stats Gauges */}
+              <WeeklyCategoryStatsCard 
+                dailyHabits={dailyHabits} 
+                habitHistory={habitHistory} 
+                onNavigateToHabits={() => handleNavigateToModule("habits")}
+              />
 
               {/* Habits Weekly Visual Summary Card */}
               <HabitsSummaryCard 
