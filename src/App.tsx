@@ -234,28 +234,6 @@ export default function App() {
     return localStorage.getItem("la_drive_auto_sync") === "true";
   });
 
-  // --- GITHUB GIST STATES ---
-  const [githubAutoSync, setGithubAutoSync] = useState<boolean>(() => {
-    return localStorage.getItem("github_auto_sync") === "true";
-  });
-  const [githubToken, setGithubToken] = useState<string>(() => {
-    return localStorage.getItem("github_token") || "";
-  });
-  const [githubGistId, setGithubGistId] = useState<string>(() => {
-    return localStorage.getItem("github_gist_id") || "";
-  });
-  const [githubUsername, setGithubUsername] = useState<string>(() => {
-    return localStorage.getItem("github_username") || "";
-  });
-  const [githubAvatar, setGithubAvatar] = useState<string>(() => {
-    return localStorage.getItem("github_avatar") || "";
-  });
-  const [githubLastSynced, setGithubLastSynced] = useState<Date | null>(() => {
-    const saved = localStorage.getItem("github_last_synced");
-    return saved ? new Date(saved) : null;
-  });
-  const [githubIsLoading, setGithubIsLoading] = useState<boolean>(false);
-
   // Web Worker for non-blocking backup processes
   const workerRef = useRef<Worker | null>(null);
 
@@ -272,7 +250,6 @@ export default function App() {
       if (type === "SYNC_START") {
         if (!isSilent) {
           if (target === "drive") setIsDriveLoading(true);
-          if (target === "github") setGithubIsLoading(true);
         }
       } else if (type === "SYNC_SUCCESS") {
         if (target === "drive") {
@@ -283,25 +260,12 @@ export default function App() {
           if (!isSilent) {
             triggerToast("📁 Données sauvegardées avec succès sur votre Google Drive !", "success");
           }
-        } else if (target === "github") {
-          setGithubIsLoading(false);
-          const date = new Date(timestamp);
-          setGithubLastSynced(date);
-          localStorage.setItem("github_last_synced", date.toISOString());
-          if (!isSilent) {
-            triggerToast("🚀 Sauvegarde réussie sur votre GitHub Gist !", "success");
-          }
         }
       } else if (type === "SYNC_ERROR") {
         if (target === "drive") {
           setIsDriveLoading(false);
           if (!isSilent) {
             triggerToast(`❌ Échec de la sauvegarde Google Drive : ${error}`, "error");
-          }
-        } else if (target === "github") {
-          setGithubIsLoading(false);
-          if (!isSilent) {
-            triggerToast(`❌ Échec de la sauvegarde GitHub Gist : ${error}`, "error");
           }
         }
       }
@@ -311,10 +275,7 @@ export default function App() {
     worker.postMessage({
       type: "CONFIGURE",
       data: {
-        githubToken,
-        githubGistId,
         driveToken: driveAccessToken || getDriveAccessToken(),
-        githubAutoSync,
         driveAutoSync,
       },
     });
@@ -1554,15 +1515,12 @@ export default function App() {
       workerRef.current.postMessage({
         type: "CONFIGURE",
         data: {
-          githubToken,
-          githubGistId,
           driveToken: driveAccessToken || getDriveAccessToken(),
-          githubAutoSync,
           driveAutoSync,
         },
       });
     }
-  }, [githubToken, githubGistId, driveAccessToken, githubAutoSync, driveAutoSync]);
+  }, [driveAccessToken, driveAutoSync]);
 
   // Send state updates to the Web Worker for background debouncing and serialization
   useEffect(() => {
@@ -1969,22 +1927,13 @@ export default function App() {
 
   // Auth State Listener & Boot Sync loader
   useEffect(() => {
-    console.group("🔑 [Firebase Auth State Listener Initialization]");
-    const currentDomain = window.location.hostname;
-    console.log("📍 Domaine actuel de l'application :", currentDomain);
-    console.log("ℹ️ Si vous rencontrez l'erreur 'auth/unauthorized-domain', vous devez ajouter ce domaine (" + currentDomain + ") aux 'Domaines autorisés' dans votre Console Firebase (Authentification -> Paramètres -> Domaines autorisés).");
-    console.groupEnd();
-
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log("🔐 [onAuthStateChanged] Changement de l'état d'authentification détecté :", user ? `Connecté (${user.email})` : "Non connecté");
       setFirebaseUser(user);
       if (user) {
-        console.log("🔄 Début du traitement de synchronisation Cloud pour l'utilisateur...");
         const syncPref = localStorage.getItem("la_cloud_sync_enabled");
         const shouldEnable = syncPref !== "false"; // Default to true if not explicitly turned off
         
         if (shouldEnable) {
-          console.log("📦 Synchronisation automatique active, chargement des données depuis Firestore...");
           setCloudSyncEnabled(true);
           setSyncStatus("syncing");
           localStorage.setItem("la_cloud_sync_enabled", "true");
@@ -1992,7 +1941,6 @@ export default function App() {
             const docRef = doc(db, "user_sync", user.uid);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-              console.log("📄 Sauvegarde existante trouvée sur Firestore.");
               const data = docSnap.data();
               if (data && data.payload) {
                 const firebaseTime = data.updatedAt?.toDate() || new Date();
@@ -2002,11 +1950,8 @@ export default function App() {
                 const localTimeStr = localStorage.getItem("la_last_local_update_time");
                 const localTime = (hasLocalData && localTimeStr) ? new Date(localTimeStr) : null;
 
-                console.log("📅 Comparaison des horodatages - Cloud:", firebaseTime, "Local:", localTime, "A des données locales :", hasLocalData);
-
                 // Version verification: If local storage has modifications that are newer than Firebase by > 5 seconds
                 if (localTime && firebaseTime && localTime.getTime() > firebaseTime.getTime() + 5000) {
-                  console.warn("⚠️ Conflit détecté : Les données locales sont plus récentes que celles du Cloud. Préparation du sélecteur de résolution...");
                   const localPayload = getCurrentStatePayload();
                   setSyncConflict({
                     localTime,
@@ -2014,7 +1959,6 @@ export default function App() {
                     localPayload,
                     cloudPayload: data.payload,
                     onResolve: (choice) => {
-                      console.log(`⚖️ Résolution du conflit : Choix = [${choice}]`);
                       if (choice === "merge") {
                         const { mergedPayload, mergedModules } = mergePayloads(localPayload, data.payload);
                         loadStatePayload(mergedPayload);
@@ -2056,7 +2000,6 @@ export default function App() {
                     }
                   });
                 } else {
-                  console.log("✅ Données du Cloud fraîches. Chargement en cours...");
                   loadStatePayload(data.payload);
                   setLastSyncedTime(firebaseTime);
                   setSyncStatus("synced");
@@ -2064,7 +2007,6 @@ export default function App() {
                 }
               }
             } else {
-              console.log("🆕 Aucune sauvegarde Firestore existante. Initialisation du document avec les données locales actuelles...");
               // Push local data as base since it's a new cloud user
               const payload = getCurrentStatePayload();
               await setDoc(docRef, {
@@ -2078,7 +2020,6 @@ export default function App() {
             }
           } catch (error: any) {
             if (isOfflineError(error)) {
-              console.warn("⚠️ Mode hors-ligne détecté lors de l'initialisation de la synchronisation cloud.");
               setSyncStatus("local");
               triggerToast("🌐 Mode hors-ligne - Données sauvegardées en local.", "info");
             } else {
@@ -2090,18 +2031,15 @@ export default function App() {
             }
           }
         } else {
-          console.log("ℹ️ Synchronisation automatique inactive (désactivée par préférence utilisateur).");
           setSyncStatus("local");
         }
       } else {
-        console.log("ℹ️ Aucun utilisateur authentifié. Fonctionnement en mode local.");
         setSyncStatus("local");
       }
     }, (error) => {
       console.error("🚨 [onAuthStateChanged - Firebase Auth Error] :", error);
     });
     return () => {
-      console.log("🔌 Nettoyage du listener Firebase onAuthStateChanged.");
       unsubscribe();
     };
   }, []);
@@ -2411,180 +2349,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- GITHUB GIST SYNC HANDLERS ---
-  const handleConnectGithub = async (token: string): Promise<boolean> => {
-    setGithubIsLoading(true);
-    try {
-      // 1. Verify token & get user details
-      const userRes = await fetch("https://api.github.com/user", {
-        headers: {
-          "Authorization": `token ${token}`,
-          "Accept": "application/vnd.github.v3+json"
-        }
-      });
-      if (!userRes.ok) {
-        throw new Error("Token GitHub invalide ou expiré.");
-      }
-      const userData = await userRes.json();
-      const username = userData.login;
-      const avatarUrl = userData.avatar_url;
 
-      // 2. Search for existing Gist containing second_brain_backup.json
-      const listRes = await fetch("https://api.github.com/gists", {
-        headers: {
-          "Authorization": `token ${token}`,
-          "Accept": "application/vnd.github.v3+json"
-        }
-      });
-      
-      let gistId = "";
-      if (listRes.ok) {
-        const gists = await listRes.json();
-        const existingGist = gists.find((g: any) => 
-          g.files && g.files["second_brain_backup.json"]
-        );
-        if (existingGist) {
-          gistId = existingGist.id;
-          triggerToast(`🔗 Compte GitHub connecté ! Gist de sauvegarde détecté et lié.`, "success");
-        }
-      }
-
-      // 3. Create a new Gist if none was found
-      if (!gistId) {
-        const createRes = await fetch("https://api.github.com/gists", {
-          method: "POST",
-          headers: {
-            "Authorization": `token ${token}`,
-            "Content-Type": "application/json",
-            "Accept": "application/vnd.github.v3+json"
-          },
-          body: JSON.stringify({
-            description: "Backup Second Brain - FinancePath",
-            public: false,
-            files: {
-              "second_brain_backup.json": {
-                content: JSON.stringify(getCurrentStatePayload(), null, 2)
-              }
-            }
-          })
-        });
-        
-        if (!createRes.ok) {
-          throw new Error("Impossible de créer le Gist secret.");
-        }
-        const newGist = await createRes.json();
-        gistId = newGist.id;
-        triggerToast("🚀 Compte GitHub connecté ! Un nouveau Gist secret a été créé automatiquement.", "success");
-      }
-
-      // 4. Save to state and storage
-      setGithubToken(token);
-      setGithubGistId(gistId);
-      setGithubUsername(username);
-      setGithubAvatar(avatarUrl);
-      
-      localStorage.setItem("github_token", token);
-      localStorage.setItem("github_gist_id", gistId);
-      localStorage.setItem("github_username", username);
-      localStorage.setItem("github_avatar", avatarUrl);
-      
-      const now = new Date();
-      setGithubLastSynced(now);
-      localStorage.setItem("github_last_synced", now.toISOString());
-
-      return true;
-    } catch (err: any) {
-      console.error("GitHub Connection Error:", err);
-      triggerToast(`❌ Erreur de connexion GitHub : ${err.message || err}`, "error");
-      return false;
-    } finally {
-      setGithubIsLoading(false);
-    }
-  };
-
-  const handleDisconnectGithub = () => {
-    setGithubToken("");
-    setGithubGistId("");
-    setGithubUsername("");
-    setGithubAvatar("");
-    setGithubAutoSync(false);
-    setGithubLastSynced(null);
-    
-    localStorage.removeItem("github_token");
-    localStorage.removeItem("github_gist_id");
-    localStorage.removeItem("github_username");
-    localStorage.removeItem("github_avatar");
-    localStorage.removeItem("github_auto_sync");
-    localStorage.removeItem("github_last_synced");
-    
-    triggerToast("ℹ️ Compte GitHub déconnecté.", "info");
-  };
-
-  const handleToggleGithubAutoSync = (enabled: boolean) => {
-    setGithubAutoSync(enabled);
-    localStorage.setItem("github_auto_sync", enabled ? "true" : "false");
-    triggerToast(
-      enabled 
-        ? "🚀 Synchronisation automatique GitHub activée (sauvegarde toutes les 12s après modifs) !" 
-        : "ℹ️ Synchronisation automatique GitHub désactivée.", 
-      "info"
-    );
-  };
-
-  const handleBackupToGithub = async (forceToken?: string, forceGistId?: string) => {
-    const activeToken = forceToken || githubToken;
-    const activeGistId = forceGistId || githubGistId;
-    if (!activeToken || !activeGistId) {
-      triggerToast("⚠️ Configuration GitHub incomplète ou non connectée.", "error");
-      return;
-    }
-    
-    if (workerRef.current) {
-      workerRef.current.postMessage({
-        type: "FORCE_BACKUP",
-        data: { target: "github" }
-      });
-    }
-  };
-
-  const handleRestoreFromGithub = async () => {
-    if (!githubToken || !githubGistId) {
-      triggerToast("⚠️ Veuillez d'abord connecter votre GitHub.", "error");
-      return;
-    }
-    
-    const confirmRestore = window.confirm(
-      "Êtes-vous sûr de vouloir restaurer les données depuis GitHub Gist ? Vos données locales actuelles seront écrasées."
-    );
-    if (!confirmRestore) return;
-
-    setGithubIsLoading(true);
-    try {
-      const res = await fetch(`https://api.github.com/gists/${githubGistId}`, {
-        headers: {
-          "Authorization": `token ${githubToken}`,
-          "Accept": "application/vnd.github.v3+json"
-        }
-      });
-      
-      if (!res.ok) throw new Error("Gist introuvable ou jeton expiré");
-      
-      const gist = await res.json();
-      const file = gist.files["second_brain_backup.json"];
-      if (!file || !file.content) {
-        throw new Error("Aucune sauvegarde Second Brain trouvée dans ce Gist.");
-      }
-      
-      const payload = JSON.parse(file.content);
-      loadStatePayload(payload);
-      triggerToast("✨ Vos données ont été importées et restaurées avec succès depuis GitHub !", "success");
-    } catch (error: any) {
-      console.error("GitHub Restore error:", error);
-      triggerToast(`❌ Échec de la restauration : ${error.message || error}`, "error");
-    } finally {
-      setGithubIsLoading(false);
-    }
-  };
 
   // Habit toggling
   const toggleHabit = (id: string) => {
@@ -5208,18 +4973,6 @@ export default function App() {
         abonnements={abonnements}
         stocks={stocks}
         journalEntries={journalEntries}
-        githubAutoSync={githubAutoSync}
-        githubToken={githubToken}
-        githubGistId={githubGistId}
-        githubUsername={githubUsername}
-        githubAvatar={githubAvatar}
-        githubLastSynced={githubLastSynced}
-        githubIsLoading={githubIsLoading}
-        onConnectGithub={handleConnectGithub}
-        onDisconnectGithub={handleDisconnectGithub}
-        onToggleGithubAutoSync={handleToggleGithubAutoSync}
-        onBackupToGithub={() => handleBackupToGithub()}
-        onRestoreFromGithub={handleRestoreFromGithub}
       />
 
       {/* SYNC CONFLICT RESOLUTION MODAL */}

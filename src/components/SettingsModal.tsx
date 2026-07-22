@@ -14,8 +14,7 @@ import {
   Moon,
   Sun,
   Download,
-  FileSpreadsheet,
-  Github
+  FileSpreadsheet
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { User as FirebaseUser, signInWithPopup, signOut } from "firebase/auth";
@@ -64,20 +63,6 @@ interface SettingsModalProps {
   abonnements?: Abonnement[];
   stocks?: StockEntry[];
   journalEntries?: JournalEntry[];
-
-  // GitHub backup props
-  githubAutoSync?: boolean;
-  githubToken?: string;
-  githubGistId?: string;
-  githubUsername?: string;
-  githubAvatar?: string;
-  githubLastSynced?: Date | null;
-  githubIsLoading?: boolean;
-  onConnectGithub?: (token: string) => Promise<boolean>;
-  onDisconnectGithub?: () => void;
-  onToggleGithubAutoSync?: (enabled: boolean) => void;
-  onBackupToGithub?: () => Promise<void>;
-  onRestoreFromGithub?: () => Promise<void>;
 }
 
 export default function SettingsModal({
@@ -109,19 +94,7 @@ export default function SettingsModal({
   epargnes = [],
   abonnements = [],
   stocks = [],
-  journalEntries = [],
-  githubAutoSync = false,
-  githubToken = "",
-  githubGistId = "",
-  githubUsername = "",
-  githubAvatar = "",
-  githubLastSynced = null,
-  githubIsLoading = false,
-  onConnectGithub = async () => false,
-  onDisconnectGithub = () => {},
-  onToggleGithubAutoSync = () => {},
-  onBackupToGithub = async () => {},
-  onRestoreFromGithub = async () => {}
+  journalEntries = []
 }: SettingsModalProps) {
   
   if (!isOpen) return null;
@@ -132,23 +105,6 @@ export default function SettingsModal({
   // CSV Export states & logic
   const [selectedExportModule, setSelectedExportModule] = useState<string>("accounts");
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
-
-  const [inputToken, setInputToken] = useState("");
-  const [githubError, setGithubError] = useState<string | null>(null);
-
-  const handleConnectGithubClick = async () => {
-    setGithubError(null);
-    if (!inputToken.trim()) {
-      setGithubError("Veuillez saisir votre Personal Access Token.");
-      return;
-    }
-    const success = await onConnectGithub(inputToken.trim());
-    if (success) {
-      setInputToken("");
-    } else {
-      setGithubError("Échec de la connexion. Vérifiez la validité de votre jeton et ses permissions (scope 'gist').");
-    }
-  };
 
   const handleExportCSV = () => {
     let dataToExport: any[] = [];
@@ -246,10 +202,8 @@ export default function SettingsModal({
 
   const handleLoginClick = async () => {
     setAuthError(null);
-    console.log("[Firebase Auth] Beginning signInWithPopup with Google provider...");
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      console.log("[Firebase Auth] signInWithPopup successfully completed! User:", result.user?.email);
+      await signInWithPopup(auth, googleProvider);
     } catch (e: any) {
       const errCode = e.code || "";
       const errMessage = e.message || "";
@@ -609,160 +563,10 @@ export default function SettingsModal({
             </div>
           </div>
 
-          {/* Section: Stockage GitHub Gist */}
-          <div className="space-y-3">
-            <span className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-wider block font-mono">
-              3.5. Sauvegarde Automatique sur GitHub Gist
-            </span>
-            
-            <div className="p-4 bg-neutral-50 dark:bg-zinc-950/40 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
-                    <Github className="w-4 h-4 text-zinc-800 dark:text-zinc-200" />
-                    Synchronisation GitHub Gist
-                  </span>
-                  <p className="text-[10px] text-neutral-400 max-w-[220px] leading-relaxed">
-                    Sauvegardez automatiquement vos données dans un Gist secret pour un stockage sécurisé et sans effort.
-                  </p>
-                </div>
-                
-                {githubToken ? (
-                  <button
-                    onClick={onDisconnectGithub}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-900/40 rounded-xl text-[10px] font-bold transition-all cursor-pointer select-none"
-                  >
-                    Déconnecter
-                  </button>
-                ) : null}
-              </div>
-
-              {!githubToken ? (
-                <div className="space-y-3 pt-2 border-t border-neutral-200/40 dark:border-neutral-800/60">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider font-mono">
-                      Personal Access Token (classic) :
-                    </label>
-                    <input
-                      type="password"
-                      value={inputToken}
-                      onChange={(e) => setInputToken(e.target.value)}
-                      placeholder="Saisissez votre jeton ghp_..."
-                      className="w-full bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-neutral-300 focus:ring-1 focus:ring-neutral-200"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <button
-                      disabled={githubIsLoading}
-                      onClick={handleConnectGithubClick}
-                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer select-none"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${githubIsLoading ? "animate-spin" : ""}`} />
-                      Connecter GitHub
-                    </button>
-
-                    <a
-                      href="https://github.com/settings/tokens/new?scopes=gist&description=Second%20Brain%20Backup"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[9.5px] font-bold text-blue-500 hover:underline text-center font-mono"
-                    >
-                      👉 Générer un jeton avec le scope "gist"
-                    </a>
-                  </div>
-
-                  {githubError && (
-                    <div className="p-2 bg-rose-50 dark:bg-rose-950/20 border border-rose-200/50 rounded-xl text-[10px] text-rose-700 dark:text-rose-300 font-mono text-center">
-                      {githubError}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="pt-3 border-t border-neutral-200/50 dark:border-neutral-800 space-y-4">
-                  {/* Account detail */}
-                  <div className="flex items-center gap-2.5 p-2.5 bg-neutral-100/60 dark:bg-zinc-950/40 rounded-xl border border-neutral-200/30 dark:border-neutral-800/40">
-                    {githubAvatar ? (
-                      <img
-                        src={githubAvatar}
-                        alt="GitHub Avatar"
-                        className="w-7 h-7 rounded-full border border-neutral-200 dark:border-neutral-700"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <div className="w-7 h-7 bg-neutral-800 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                        G
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 block truncate">
-                        @{githubUsername}
-                      </span>
-                      <span className="text-[8.5px] text-neutral-400 block truncate font-mono select-all">
-                        gist: {githubGistId}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Toggle auto-sync */}
-                  <div className="flex items-center justify-between p-2.5 bg-neutral-100/40 dark:bg-zinc-950/20 rounded-xl border border-neutral-200/20 dark:border-neutral-800/20">
-                    <div className="space-y-0.5">
-                      <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 block">
-                        Sauvegarde Automatique
-                      </span>
-                      <span className="text-[9.5px] text-neutral-400 block leading-tight">
-                        Sauvegarde en tâche de fond 12s après chaque modification.
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => onToggleGithubAutoSync(!githubAutoSync)}
-                      className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer focus:outline-none ${
-                        githubAutoSync ? "bg-emerald-500" : "bg-neutral-300 dark:bg-zinc-700"
-                      }`}
-                    >
-                      <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${githubAutoSync ? "translate-x-5" : "translate-x-0"}`} />
-                    </button>
-                  </div>
-
-                  {/* Manual trigger buttons */}
-                  <div className="flex gap-2">
-                    <button
-                      disabled={githubIsLoading}
-                      onClick={onBackupToGithub}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer select-none"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${githubIsLoading ? "animate-spin" : ""}`} />
-                      Sauvegarder
-                    </button>
-                    <button
-                      disabled={githubIsLoading}
-                      onClick={onRestoreFromGithub}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-neutral-800 dark:text-neutral-100 rounded-xl text-[10px] font-bold transition-all cursor-pointer border border-neutral-200/50 dark:border-neutral-800 select-none"
-                    >
-                      Restaurer / Importer
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500">
-                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      GITHUB SYNC ACTIF
-                    </span>
-                    {githubLastSynced && (
-                      <span className="text-neutral-400">
-                        Dernière : {githubLastSynced.toLocaleTimeString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Section: Mode Sombre Automatique */}
           <div className="space-y-3">
             <span className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-wider block font-mono">
-              4. Mode Sombre Automatique (Heure Locale)
+              3.5. Mode Sombre Automatique (Heure Locale)
             </span>
             
             <div className="p-4 bg-neutral-50 dark:bg-zinc-950/40 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl">

@@ -86,8 +86,8 @@ export async function testConnection() {
     const testDocRef = doc(db, "test", "connection");
     await getDoc(testDocRef);
   } catch (error) {
-    // Gracefully log offline or connection issues without crashing or triggering boot alerts
-    console.log("Firestore connection check info:", error);
+    // Gracefully handle connection check without console spam
+    console.debug("Firestore connection check info:", error);
   }
 }
 

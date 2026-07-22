@@ -32,9 +32,7 @@ export const initDriveAuth = (
 export const driveSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
   try {
     isSigningIn = true;
-    console.log("[Google Drive Service] Beginning signInWithPopup...");
     const result = await signInWithPopup(auth, provider);
-    console.log("[Google Drive Service] signInWithPopup succeeded! User:", result.user?.email);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
       throw new Error("Impossible d'obtenir le jeton d'accès Google Drive.");
@@ -42,12 +40,7 @@ export const driveSignIn = async (): Promise<{ user: User; accessToken: string }
     setSharedGoogleAccessToken(credential.accessToken);
     return { user: result.user, accessToken: credential.accessToken };
   } catch (error: any) {
-    console.group("[Google Drive Service] Sign-In Error Diagnostics");
-    console.error("Error Object:", error);
-    console.error("Error Code:", error?.code);
-    console.error("Error Message:", error?.message);
-    console.error("Current Domain:", typeof window !== "undefined" ? window.location.hostname : "unknown");
-    console.groupEnd();
+    console.error("Error signing in to Google Drive:", error);
     throw error;
   } finally {
     isSigningIn = false;

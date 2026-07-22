@@ -1,23 +1,16 @@
-// Web Worker for asynchronous background backups to Google Drive and GitHub Gist
+// Web Worker for asynchronous background backups to Google Drive
 
 interface WorkerConfig {
-  githubToken: string;
-  githubGistId: string;
   driveToken: string | null;
-  githubAutoSync: boolean;
   driveAutoSync: boolean;
 }
 
 let config: WorkerConfig = {
-  githubToken: "",
-  githubGistId: "",
   driveToken: null,
-  githubAutoSync: false,
   driveAutoSync: false
 };
 
 let latestPayload: any = null;
-let githubTimeoutId: any = null;
 let driveTimeoutId: any = null;
 
 const BACKUP_FILENAME = "SecondBrain_Backup.json";
@@ -97,24 +90,12 @@ self.onmessage = async (e: MessageEvent) => {
     config = { ...config, ...data };
     
     // Clear scheduled tasks if sync gets disabled
-    if (!config.githubAutoSync && githubTimeoutId) {
-      clearTimeout(githubTimeoutId);
-      githubTimeoutId = null;
-    }
     if (!config.driveAutoSync && driveTimeoutId) {
       clearTimeout(driveTimeoutId);
       driveTimeoutId = null;
     }
   } else if (type === "UPDATE_PAYLOAD") {
     latestPayload = data;
-
-    // Schedule GitHub Gist auto-sync if active
-    if (config.githubAutoSync && config.githubToken && config.githubGistId) {
-      if (githubTimeoutId) clearTimeout(githubTimeoutId);
-      githubTimeoutId = setTimeout(() => {
-        executeBackup("github", true);
-      }, 12000); // 12 seconds debounce
-    }
 
     // Schedule Google Drive auto-sync if active
     if (config.driveAutoSync && config.driveToken) {
@@ -124,12 +105,12 @@ self.onmessage = async (e: MessageEvent) => {
       }, 15000); // 15 seconds debounce
     }
   } else if (type === "FORCE_BACKUP") {
-    const { target } = data;
+    const { target = "drive" } = data || {};
     executeBackup(target, false);
   }
 };
 
-async function executeBackup(target: "github" | "drive", isSilent: boolean) {
+async function executeBackup(target: "drive", isSilent: boolean) {
   if (!latestPayload) {
     self.postMessage({
       type: "SYNC_ERROR",
@@ -146,62 +127,7 @@ async function executeBackup(target: "github" | "drive", isSilent: boolean) {
     let finalPayload = latestPayload;
     let mergedModulesList: string[] = [];
 
-    if (target === "github") {
-      if (!config.githubToken || !config.githubGistId) {
-        throw new Error("Configuration GitHub incomplète.");
-      }
-
-      // Fetch existing Gist first to merge
-      let remotePayload: any = null;
-      try {
-        const gistRes = await fetch(`https://api.github.com/gists/${config.githubGistId}`, {
-          headers: {
-            "Authorization": `token ${config.githubToken}`,
-            "Accept": "application/vnd.github.v3+json"
-          }
-        });
-        if (gistRes.ok) {
-          const gistData = await gistRes.json();
-          const backupFile = gistData.files?.["second_brain_backup.json"];
-          if (backupFile && backupFile.content) {
-            remotePayload = JSON.parse(backupFile.content);
-          }
-        }
-      } catch (e) {
-        console.warn("Could not fetch remote Gist for merging, proceeding with override...", e);
-      }
-
-      if (remotePayload) {
-        const { mergedPayload, mergedModules } = mergePayloads(latestPayload, remotePayload);
-        finalPayload = mergedPayload;
-        mergedModulesList = mergedModules;
-      }
-
-      // Large JSON stringify in the background worker thread (non-blocking)
-      const content = JSON.stringify(finalPayload, null, 2);
-
-      const res = await fetch(`https://api.github.com/gists/${config.githubGistId}`, {
-        method: "PATCH",
-        headers: {
-          "Authorization": `token ${config.githubToken}`,
-          "Content-Type": "application/json",
-          "Accept": "application/vnd.github.v3+json"
-        },
-        body: JSON.stringify({
-          description: "Backup Second Brain - FinancePath (Merged)",
-          files: {
-            "second_brain_backup.json": {
-              content
-            }
-          }
-        })
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Erreur API GitHub Gist: ${res.statusText || ""} ${errorText}`);
-      }
-    } else if (target === "drive") {
+    if (target === "drive") {
       if (!config.driveToken) {
         throw new Error("Jeton d'accès Google Drive absent.");
       }

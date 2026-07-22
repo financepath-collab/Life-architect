@@ -35,9 +35,7 @@ export const initAuth = (
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
   try {
     isSigningIn = true;
-    console.log("[Google Calendar Service] Beginning signInWithPopup...");
     const result = await signInWithPopup(auth, provider);
-    console.log("[Google Calendar Service] signInWithPopup succeeded! User:", result.user?.email);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
       throw new Error("Impossible d'obtenir le jeton d'accès Google.");
@@ -46,12 +44,7 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     setSharedGoogleAccessToken(credential.accessToken);
     return { user: result.user, accessToken: credential.accessToken };
   } catch (error: any) {
-    console.group("[Google Calendar Service] Sign-In Error Diagnostics");
-    console.error("Error Object:", error);
-    console.error("Error Code:", error?.code);
-    console.error("Error Message:", error?.message);
-    console.error("Current Domain:", typeof window !== "undefined" ? window.location.hostname : "unknown");
-    console.groupEnd();
+    console.error("Error signing in to Google Calendar:", error);
     throw error;
   } finally {
     isSigningIn = false;
