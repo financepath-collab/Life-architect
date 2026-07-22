@@ -138,6 +138,7 @@ import {
   GraduationCap, 
   Film, 
   Link2, 
+  Compass,
   Tv, 
   ChevronDown, 
   ChevronRight, 
@@ -2525,6 +2526,7 @@ export default function App() {
       icon: Award,
       items: [
         { id: "career_dash", label: "Dashboard Carrière", icon: LayoutDashboard, desc: "Indicateurs clés de carrière, taux de succès et suivi global." },
+        { id: "career_mobility", label: "Mobilité & EPM (Tour de Contrôle)", icon: Compass, desc: "Suivi multi-pays, seuils visa 2026, roadmap et dossiers de mobilité internationale." },
         { id: "career_pipeline", label: "Pipeline & Offres", icon: Briefcase, desc: "Suivi précis de vos opportunités d'emploi, entretiens et propositions." },
         { id: "career_companies", label: "Entreprises Cibles", icon: Target, desc: "Cartographie et classement des entreprises d'élite visées." },
         { id: "career_sites", label: "Portails Recrutement", icon: Globe, desc: "Plateformes de marché et profils professionnels suivis." },
@@ -2983,6 +2985,8 @@ export default function App() {
 
       case "career_dash":
         return { title: "Dashboard de Carrière", description: "Aperçu de vos candidatures, certifications obtenues et compétences cibles.", data: [], onAdd: () => {}, onEdit: () => {}, onDelete: () => {}, onImport: () => {}, columns: [] };
+      case "career_mobility":
+        return { title: "Tour de Contrôle - Mobilité Internationale EPM", description: "Plan de carrière Serrou Mohammed : suivi multi-pays, seuils salariaux visa 2026, feuille de route et documents.", data: [], onAdd: () => {}, onEdit: () => {}, onDelete: () => {}, onImport: () => {}, columns: [] };
       case "career_pipeline":
         return { title: "Pipeline & Offres d'Emploi", description: "Suivi détaillé de vos opportunités d'emploi, processus de recrutement et candidatures.", data: [], onAdd: () => {}, onEdit: () => {}, onDelete: () => {}, onImport: () => {}, columns: [] };
       case "career_companies":
@@ -4758,7 +4762,7 @@ export default function App() {
                       events={editorialEvents}
                       setEvents={setEditorialEvents}
                     />
-                  ) : ["career_dash", "career_pipeline", "career_sites", "career_companies", "career_skills", "career_certificates"].includes(activeMenu) ? (
+                  ) : ["career_dash", "career_mobility", "career_pipeline", "career_sites", "career_companies", "career_skills", "career_certificates"].includes(activeMenu) ? (
                     <CareerSection activeTab={activeMenu.replace("career_", "") as any} onNavigate={handleMenuClick} />
                   ) : activeMenu === "formations" ? (
                     <FormationsSection formations={formations} setFormations={setFormations} folders={folders} setFolders={setFolders} hideTabs={false} />

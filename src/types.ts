@@ -399,5 +399,28 @@ export interface CareerCertificate {
   notes?: string;
 }
 
+export interface MobilityCountryStatus {
+  country: string;
+  entryPath: string;
+  status: "En veille" | "Candidatures envoyées" | "En entretien" | "Offre reçue" | "Mis en pause";
+}
+
+export interface RoadmapPhase {
+  phase: string;
+  title: string;
+  items: { id: string; label: string; done: boolean }[];
+}
+
+export interface VisaDocGroup {
+  country: string;
+  docs: { id: string; label: string; done: boolean }[];
+}
+
+export interface MobilitySkillGroup {
+  category: string;
+  items: { id: string; label: string; done: boolean }[];
+}
+
+
 
 

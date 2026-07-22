@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { CareerSkill, RecruitmentSite, TargetCompany, JobOpportunity, CareerCertificate } from "../types";
+import { 
+  CareerSkill, 
+  RecruitmentSite, 
+  TargetCompany, 
+  JobOpportunity, 
+  CareerCertificate,
+  MobilityCountryStatus,
+  RoadmapPhase,
+  VisaDocGroup,
+  MobilitySkillGroup
+} from "../types";
 import { DEFAULT_RECRUITMENT_SITES } from "../data/recruitmentSitesData";
 import { 
   Briefcase, 
@@ -27,34 +37,254 @@ import {
   LayoutDashboard,
   Target,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Compass,
+  Plane,
+  FileText,
+  CheckSquare,
+  Globe2,
+  ShieldCheck,
+  ChevronRight,
+  ArrowRight
 } from "lucide-react";
 
+// --- MOBILITY DEFAULT DATA CONSTANTS (SERROU MOHAMMED - CARRIÈRE EPM FINANCE) ---
+const DEFAULT_MOBILITY_COUNTRIES: MobilityCountryStatus[] = [
+  { country: "Golfe (Dubaï / Abu Dhabi / Riyad)", entryPath: "Sponsor employeur direct", status: "En veille" },
+  { country: "France", entryPath: "Carte Talent — salarié qualifié", status: "Candidatures envoyées" },
+  { country: "Allemagne", entryPath: "EU Blue Card", status: "En veille" },
+  { country: "Pays-Bas / Belgique / Luxembourg", entryPath: "Highly Skilled Migrant / permis unique", status: "En veille" },
+  { country: "Singapour", entryPath: "Employment Pass + COMPASS", status: "En veille" },
+  { country: "Canada", entryPath: "Express Entry / PEQ", status: "Candidatures envoyées" },
+  { country: "Suisse", entryPath: "Permis employeur (quota)", status: "En veille" },
+  { country: "Royaume-Uni", entryPath: "Skilled Worker visa", status: "En veille" },
+  { country: "États-Unis", entryPath: "H-1B / transfert L-1", status: "En veille" },
+];
+
+const TARGET_MARKETS_REF = [
+  { country: "Golfe (UAE/KSA)", demand: "Très forte", entry: "Sponsor employeur direct", salaryThreshold: "25-40k USD net/an", difficulty: 1 },
+  { country: "France", demand: "Très forte", entry: "Carte Talent — salarié qualifié", salaryThreshold: "~39 582 €/an", difficulty: 2 },
+  { country: "Allemagne", demand: "Forte", entry: "EU Blue Card", salaryThreshold: "~50 700 €/an (45 934 € poste pénurie)", difficulty: 2 },
+  { country: "Pays-Bas / Belgique / Lux.", demand: "Forte", entry: "Highly Skilled Migrant / permis unique", salaryThreshold: "~45-55k €/an", difficulty: 2 },
+  { country: "Singapour", demand: "Forte (hub APAC)", entry: "Employment Pass + COMPASS", salaryThreshold: "6 200 SGD/mois (finance)", difficulty: 3 },
+  { country: "Suisse", demand: "Forte", entry: "Permis employeur (quota non-UE)", salaryThreshold: "Pas de seuil fixe, ~70-100k CHF", difficulty: 3 },
+  { country: "Royaume-Uni", demand: "Forte", entry: "Skilled Worker visa", salaryThreshold: "~£38 700/an", difficulty: 3 },
+  { country: "Canada", demand: "Forte", entry: "Express Entry / PEQ", salaryThreshold: "Score CRS, pas de seuil fixe", difficulty: 3 },
+  { country: "États-Unis", demand: "Forte en théorie", entry: "H-1B (loterie) ou transfert L-1", salaryThreshold: "~70-115k USD/an", difficulty: 5 },
+];
+
+const DEFAULT_MOBILITY_SKILLS: MobilitySkillGroup[] = [
+  {
+    category: "Anglais professionnel",
+    items: [
+      { id: "sk_eng_1", label: "Passer un test certifiant (IELTS/TOEFL/Versant) niveau C1", done: false },
+      { id: "sk_eng_2", label: "3 sessions/semaine de pratique orale (italki/Preply)", done: false },
+      { id: "sk_eng_3", label: "Simuler 2 entretiens techniques en anglais", done: false }
+    ]
+  },
+  {
+    category: "2e plateforme EPM",
+    items: [
+      { id: "sk_epm_1", label: "Choisir entre Board / OneStream / Oracle EPBCS selon le marché visé", done: false },
+      { id: "sk_epm_2", label: "Suivre la formation en ligne officielle", done: false },
+      { id: "sk_epm_3", label: "Obtenir la certification", done: false }
+    ]
+  },
+  {
+    category: "Data & intégration",
+    items: [
+      { id: "sk_data_1", label: "Formation Power Query avancé", done: false },
+      { id: "sk_data_2", label: "Bases API REST / intégration de données", done: false },
+      { id: "sk_data_3", label: "Petit projet perso d'intégration EPM ↔ source externe", done: false }
+    ]
+  },
+  {
+    category: "Gestion de projet",
+    items: [
+      { id: "sk_pm_1", label: "Certification légère PMP ou Scrum Master", done: false },
+      { id: "sk_pm_2", label: "Documenter 2 projets pilotés chez VISEO comme études de cas", done: false }
+    ]
+  },
+  {
+    category: "Visibilité digitale",
+    items: [
+      { id: "sk_vis_1", label: "Refonte CV version France/Europe", done: true },
+      { id: "sk_vis_2", label: "Refonte CV version internationale (anglais, sans photo)", done: false },
+      { id: "sk_vis_3", label: "Optimisation LinkedIn (mots-clés + Open to Work ciblé)", done: true },
+      { id: "sk_vis_4", label: "5 entretiens informationnels avec des expatriés EPM", done: false }
+    ]
+  }
+];
+
+const DEFAULT_MOBILITY_ROADMAP: RoadmapPhase[] = [
+  {
+    phase: "0–6 mois",
+    title: "Se rendre exportable",
+    items: [
+      { id: "rd_1_1", label: "Test d'anglais certifiant programmé", done: false },
+      { id: "rd_1_2", label: "CV et LinkedIn refaits", done: true },
+      { id: "rd_1_3", label: "Inscription communautés Anaplan / Pigment", done: true },
+      { id: "rd_1_4", label: "Veille active sur les offres lancée", done: true }
+    ]
+  },
+  {
+    phase: "6–18 mois",
+    title: "Candidater sur 3 fronts",
+    items: [
+      { id: "rd_2_1", label: "10-15 candidatures Europe continentale", done: false },
+      { id: "rd_2_2", label: "5-8 candidatures Golfe", done: false },
+      { id: "rd_2_3", label: "5 candidatures Singapour", done: false },
+      { id: "rd_2_4", label: "Dossier visa lancé dès offre obtenue", done: false }
+    ]
+  },
+  {
+    phase: "18–36 mois",
+    title: "Monter en séniorité",
+    items: [
+      { id: "rd_3_1", label: "Viser un rôle Senior/Lead EPM Consultant", done: false },
+      { id: "rd_3_2", label: "Piloter un projet complet en autonomie", done: false },
+      { id: "rd_3_3", label: "Explorer Express Entry Canada si pertinent", done: false },
+      { id: "rd_3_4", label: "Évaluer une piste transfert intra-groupe vers les USA", done: false }
+    ]
+  },
+  {
+    phase: "3–5 ans",
+    title: "Objectif long terme",
+    items: [
+      { id: "rd_4_1", label: "Devenir Manager / Practice Lead EPM", done: false },
+      { id: "rd_4_2", label: "Ou rejoindre une direction financière (FP&A Director)", done: false },
+      { id: "rd_4_3", label: "Envisager la résidence permanente / naturalisation", done: false }
+    ]
+  }
+];
+
+const DEFAULT_MOBILITY_VISA: VisaDocGroup[] = [
+  {
+    country: "France",
+    docs: [
+      { id: "v_fr_1", label: "Diplôme reconnu via ENIC-NARIC", done: false },
+      { id: "v_fr_2", label: "Contrat CDI/CDD ≥ 3 mois ≥ seuil salarial", done: false },
+      { id: "v_fr_3", label: "Passeport valide + photos", done: true },
+      { id: "v_fr_4", label: "Justificatif de logement", done: false }
+    ]
+  },
+  {
+    country: "Allemagne",
+    docs: [
+      { id: "v_de_1", label: "Diplôme reconnu (anabin / ZAB)", done: false },
+      { id: "v_de_2", label: "Contrat de travail signé ≥ seuil Blue Card", done: false },
+      { id: "v_de_3", label: "Assurance santé", done: false },
+      { id: "v_de_4", label: "Preuve de logement", done: false }
+    ]
+  },
+  {
+    country: "Golfe (UAE/KSA)",
+    docs: [
+      { id: "v_uae_1", label: "Diplôme légalisé / apostillé", done: false },
+      { id: "v_uae_2", label: "Contrat signé par l'employeur sponsor", done: false },
+      { id: "v_uae_3", label: "Visite médicale sur place", done: false },
+      { id: "v_uae_4", label: "Casier judiciaire", done: false }
+    ]
+  },
+  {
+    country: "Singapour",
+    docs: [
+      { id: "v_sg_1", label: "Qualifications vérifiées (screening MOM)", done: false },
+      { id: "v_sg_2", label: "Contrat + évaluation COMPASS", done: false },
+      { id: "v_sg_3", label: "Passeport valide", done: true }
+    ]
+  },
+  {
+    country: "Canada",
+    docs: [
+      { id: "v_ca_1", label: "Profil Express Entry créé (score CRS)", done: false },
+      { id: "v_ca_2", label: "Résultats de test de langue (IELTS/TEF)", done: false },
+      { id: "v_ca_3", label: "Évaluation des diplômes (ECA)", done: false },
+      { id: "v_ca_4", label: "Preuve de fonds", done: false }
+    ]
+  }
+];
+
 interface CareerSectionProps {
-  activeTab?: "dash" | "pipeline" | "skills" | "recruitment" | "companies" | "certificates" | "sites";
+  activeTab?: "dash" | "mobility" | "pipeline" | "skills" | "recruitment" | "companies" | "certificates" | "sites";
   onNavigate?: (moduleId: string) => void;
 }
 
 export default function CareerSection({ activeTab, onNavigate }: CareerSectionProps = {}) {
-  const [careerTab, setCareerTab] = useState<"dash" | "pipeline" | "skills" | "recruitment" | "companies" | "certificates">("dash");
+  const [careerTab, setCareerTab] = useState<"dash" | "mobility" | "pipeline" | "skills" | "recruitment" | "companies" | "certificates">("dash");
 
   useEffect(() => {
     if (activeTab) {
       if (activeTab === "sites") {
         setCareerTab("recruitment");
-      } else if (["dash", "pipeline", "skills", "recruitment", "companies", "certificates"].includes(activeTab)) {
+      } else if (["dash", "mobility", "pipeline", "skills", "recruitment", "companies", "certificates"].includes(activeTab)) {
         setCareerTab(activeTab as any);
       }
     }
   }, [activeTab]);
 
-  const handleTabChange = (tab: "dash" | "pipeline" | "skills" | "recruitment" | "companies" | "certificates") => {
+  const handleTabChange = (tab: "dash" | "mobility" | "pipeline" | "skills" | "recruitment" | "companies" | "certificates") => {
     setCareerTab(tab);
     if (onNavigate) {
       const mappedId = tab === "recruitment" ? "career_sites" : `career_${tab}`;
       onNavigate(mappedId);
     }
   };
+
+  // --- MOBILITY & TOUR DE CONTRÔLE STATE ---
+  const [mobilityCountries, setMobilityCountries] = useState<MobilityCountryStatus[]>(() => {
+    const saved = localStorage.getItem("mp_mobility_countries");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return DEFAULT_MOBILITY_COUNTRIES;
+  });
+
+  const [mobilitySkills, setMobilitySkills] = useState<MobilitySkillGroup[]>(() => {
+    const saved = localStorage.getItem("mp_mobility_skills");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return DEFAULT_MOBILITY_SKILLS;
+  });
+
+  const [mobilityRoadmap, setMobilityRoadmap] = useState<RoadmapPhase[]>(() => {
+    const saved = localStorage.getItem("mp_mobility_roadmap");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return DEFAULT_MOBILITY_ROADMAP;
+  });
+
+  const [mobilityVisa, setMobilityVisa] = useState<VisaDocGroup[]>(() => {
+    const saved = localStorage.getItem("mp_mobility_visa");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return DEFAULT_MOBILITY_VISA;
+  });
+
+  const [mobilityInnerTab, setMobilityInnerTab] = useState<"overview" | "board" | "skills" | "roadmap" | "visa" | "market">("overview");
+
+  useEffect(() => { localStorage.setItem("mp_mobility_countries", JSON.stringify(mobilityCountries)); }, [mobilityCountries]);
+  useEffect(() => { localStorage.setItem("mp_mobility_skills", JSON.stringify(mobilitySkills)); }, [mobilitySkills]);
+  useEffect(() => { localStorage.setItem("mp_mobility_roadmap", JSON.stringify(mobilityRoadmap)); }, [mobilityRoadmap]);
+  useEffect(() => { localStorage.setItem("mp_mobility_visa", JSON.stringify(mobilityVisa)); }, [mobilityVisa]);
+
+  // Calculations for global gauge & progress
+  const totalSkillActions = mobilitySkills.reduce((acc, g) => acc + g.items.length, 0);
+  const doneSkillActions = mobilitySkills.reduce((acc, g) => acc + g.items.filter(i => i.done).length, 0);
+
+  const totalRoadmapActions = mobilityRoadmap.reduce((acc, p) => acc + p.items.length, 0);
+  const doneRoadmapActions = mobilityRoadmap.reduce((acc, p) => acc + p.items.filter(i => i.done).length, 0);
+
+  const totalVisaActions = mobilityVisa.reduce((acc, v) => acc + v.docs.length, 0);
+  const doneVisaActions = mobilityVisa.reduce((acc, v) => acc + v.docs.filter(d => d.done).length, 0);
+
+  const globalTotalActions = totalSkillActions + totalRoadmapActions + totalVisaActions;
+  const globalDoneActions = doneSkillActions + doneRoadmapActions + doneVisaActions;
+  const globalProgressPct = globalTotalActions > 0 ? Math.round((globalDoneActions / globalTotalActions) * 100) : 0;
+
 
   // --- PERSISTENT DATA FOR CARRIÈRE PROFESSIONNELLE ---
   const [certificates, setCertificates] = useState<CareerCertificate[]>(() => {
@@ -464,6 +694,15 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
           <span>Dashboard</span>
         </button>
         <button
+          onClick={() => handleTabChange("mobility")}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide transition-all cursor-pointer select-none flex items-center gap-1.5 ${
+            careerTab === "mobility" ? "bg-emerald-600 text-white shadow-sm font-black" : "text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100/80 border border-emerald-200/60 font-bold"
+          }`}
+        >
+          <Compass className="w-3.5 h-3.5" />
+          <span>Mobilité & EPM ({globalProgressPct}%)</span>
+        </button>
+        <button
           onClick={() => handleTabChange("pipeline")}
           className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide transition-all cursor-pointer select-none ${
             careerTab === "pipeline" ? "bg-white text-zinc-950 shadow-xs" : "text-neutral-500 hover:text-zinc-950"
@@ -511,10 +750,443 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
       </div>
 
       {/* ==================================================== */}
+      {/* --- TAB: MOBILITÉ INTERNATIONALE & EPM (TOUR DE CONTRÔLE) --- */}
+      {/* ==================================================== */}
+      {careerTab === "mobility" && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          
+          {/* Header Card & Progress Gauge */}
+          <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-indigo-950 text-white rounded-3xl p-6 shadow-xl border border-zinc-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-2 z-10 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-[11px] font-black uppercase tracking-wider font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Tour de contrôle · Mobilité internationale
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+                Serrou Mohammed <span className="text-zinc-400 font-normal">· Plan EPM Finance</span>
+              </h2>
+              <p className="text-xs md:text-sm text-zinc-300 font-medium leading-relaxed">
+                Suivi vivant de votre recherche multi-pays : candidatures, compétences, échéances salariales et dossiers visa au même endroit.
+              </p>
+            </div>
+
+            {/* Circular Gauge */}
+            <div className="z-10 bg-zinc-900/90 border border-zinc-800/90 rounded-2xl p-4 flex items-center gap-4 shadow-inner min-w-[250px]">
+              <div className="relative w-16 h-16 flex items-center justify-center">
+                <svg className="w-16 h-16 transform -rotate-90">
+                  <circle cx="32" cy="32" r="26" stroke="currentColor" strokeWidth="6" className="text-zinc-800" fill="transparent" />
+                  <circle 
+                    cx="32" 
+                    cy="32" 
+                    r="26" 
+                    stroke="currentColor" 
+                    strokeWidth="6" 
+                    className="text-emerald-400 transition-all duration-700 ease-out" 
+                    fill="transparent" 
+                    strokeDasharray={163.3}
+                    strokeDashoffset={163.3 - (163.3 * globalProgressPct) / 100} 
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span className="absolute text-sm font-black font-mono text-white">{globalProgressPct}%</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block font-mono">Avancement Global</span>
+                <span className="text-xs font-bold text-emerald-400">{globalDoneActions} / {globalTotalActions} actions réalisées</span>
+                <span className="text-[10px] text-zinc-400 block mt-0.5">Compétences + Roadmap + Visas</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Inner Sub-navigation bar for Mobility */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-neutral-100 p-1.5 rounded-2xl border border-neutral-200/80">
+            {[
+              { id: "overview", label: "Vue d'ensemble", icon: LayoutDashboard },
+              { id: "board", label: "Statut par Destination (Board)", icon: Compass },
+              { id: "market", label: "Marchés Cibles 2026", icon: Globe },
+              { id: "skills", label: "Compétences & Dev", icon: Sparkles },
+              { id: "roadmap", label: "Feuille de Route (Horizons)", icon: MapPin },
+              { id: "visa", label: "Visas & Documents", icon: ShieldCheck }
+            ].map(subTab => {
+              const IconComp = subTab.icon;
+              const isActive = mobilityInnerTab === subTab.id;
+              return (
+                <button
+                  key={subTab.id}
+                  onClick={() => setMobilityInnerTab(subTab.id as any)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold tracking-tight transition-all cursor-pointer select-none flex items-center gap-1.5 ${
+                    isActive ? "bg-white text-zinc-950 shadow-xs font-black" : "text-neutral-600 hover:text-zinc-950 hover:bg-neutral-200/60"
+                  }`}
+                >
+                  <IconComp className="w-3.5 h-3.5" />
+                  <span>{subTab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* INNER VIEW: Vue d'ensemble OR Board */}
+          {(mobilityInnerTab === "overview" || mobilityInnerTab === "board") && (
+            <div className="space-y-6">
+              {/* Split-Flap Destination Board */}
+              <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 text-zinc-100 shadow-xl font-mono space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-zinc-800 pb-4 gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <h3 className="text-sm font-black text-emerald-400 uppercase tracking-widest">
+                      STATUT PAR DESTINATION — TOUR DE CONTRÔLE
+                    </h3>
+                  </div>
+                  <span className="text-[10px] text-zinc-400 uppercase tracking-widest bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-800">
+                    Sponsor & Visas 2026
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="text-zinc-500 border-b border-zinc-800 uppercase text-[10px] tracking-widest font-sans">
+                        <th className="py-2.5 px-3">Pays / Région</th>
+                        <th className="py-2.5 px-3">Voie d'entrée privilégiée</th>
+                        <th className="py-2.5 px-3 text-right">Statut Actuel</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/60">
+                      {mobilityCountries.map((c, idx) => {
+                        const getStatusBadge = (status: string) => {
+                          switch (status) {
+                            case "Offre reçue": return "bg-emerald-950 text-emerald-300 border-emerald-700/80";
+                            case "En entretien": return "bg-indigo-950 text-indigo-300 border-indigo-700/80";
+                            case "Candidatures envoyées": return "bg-amber-950 text-amber-300 border-amber-700/80";
+                            case "Mis en pause": return "bg-zinc-900 text-zinc-400 border-zinc-700";
+                            default: return "bg-zinc-900 text-zinc-300 border-zinc-800";
+                          }
+                        };
+                        return (
+                          <tr key={idx} className="hover:bg-zinc-900/50 transition-colors">
+                            <td className="py-3 px-3 font-bold text-white font-sans">{c.country}</td>
+                            <td className="py-3 px-3 text-zinc-400 text-[11px] font-sans">{c.entryPath}</td>
+                            <td className="py-3 px-3 text-right">
+                              <select
+                                value={c.status}
+                                onChange={(e) => {
+                                  const updated = [...mobilityCountries];
+                                  updated[idx].status = e.target.value as any;
+                                  setMobilityCountries(updated);
+                                }}
+                                className={`text-[11px] font-black uppercase px-2.5 py-1 rounded-lg border cursor-pointer ${getStatusBadge(c.status)} focus:outline-none`}
+                              >
+                                <option value="En veille" className="bg-zinc-900 text-white">En veille</option>
+                                <option value="Candidatures envoyées" className="bg-zinc-900 text-amber-300">Candidatures envoyées</option>
+                                <option value="En entretien" className="bg-zinc-900 text-indigo-300">En entretien</option>
+                                <option value="Offre reçue" className="bg-zinc-900 text-emerald-300">Offre reçue</option>
+                                <option value="Mis en pause" className="bg-zinc-900 text-zinc-400">Mis en pause</option>
+                              </select>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* INNER VIEW: Market Reference Table 2026 */}
+          {(mobilityInnerTab === "overview" || mobilityInnerTab === "market") && (
+            <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                    <Globe className="w-4 h-4" />
+                  </span>
+                  <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
+                    Comparatif des Marchés Cibles (Grille de Référence 2026)
+                  </h3>
+                </div>
+                <span className="text-[10px] font-bold text-neutral-400 font-mono">Conditions de Visa & Seuils</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-neutral-50 text-neutral-500 font-black uppercase text-[10px] tracking-wider border-b border-neutral-200">
+                      <th className="py-3 px-3">Marché / Zone</th>
+                      <th className="py-3 px-3">Demande EPM / FP&A</th>
+                      <th className="py-3 px-3">Voie d'entrée</th>
+                      <th className="py-3 px-3">Seuil Salaire Visa 2026</th>
+                      <th className="py-3 px-3 text-right">Difficulté Visa</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 font-medium">
+                    {TARGET_MARKETS_REF.map((m, idx) => (
+                      <tr key={idx} className="hover:bg-neutral-50/70 transition-colors">
+                        <td className="py-3 px-3 font-bold text-neutral-900">{m.country}</td>
+                        <td className="py-3 px-3 text-neutral-700">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            m.demand.includes("Très forte") ? "bg-emerald-100 text-emerald-800" : "bg-indigo-100 text-indigo-800"
+                          }`}>
+                            {m.demand}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-neutral-600">{m.entry}</td>
+                        <td className="py-3 px-3 font-mono text-neutral-800 font-bold">{m.salaryThreshold}</td>
+                        <td className="py-3 px-3 text-right font-mono text-amber-600 font-bold">
+                          {"●".repeat(m.difficulty)}{"○".repeat(5 - m.difficulty)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* INNER VIEW: Skills Checklist */}
+          {(mobilityInnerTab === "overview" || mobilityInnerTab === "skills") && (
+            <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-purple-50 text-purple-600 rounded-lg">
+                    <Sparkles className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
+                      Plan de Montée en Compétences (EPM & Carrière Int.)
+                    </h3>
+                    <span className="text-[10px] text-neutral-500 font-medium">
+                      {doneSkillActions} sur {totalSkillActions} actions validées
+                    </span>
+                  </div>
+                </div>
+                <div className="w-32 bg-neutral-100 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-purple-600 rounded-full transition-all duration-500" 
+                    style={{ width: `${totalSkillActions > 0 ? (doneSkillActions / totalSkillActions) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {mobilitySkills.map((grp, gIdx) => {
+                  const grpDone = grp.items.filter(i => i.done).length;
+                  return (
+                    <div key={gIdx} className="p-4 bg-neutral-50/80 border border-neutral-200/80 rounded-2xl space-y-3">
+                      <div className="flex justify-between items-center border-b border-neutral-200/60 pb-2">
+                        <h4 className="text-xs font-black text-neutral-900 uppercase tracking-tight">{grp.category}</h4>
+                        <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                          {grpDone}/{grp.items.length}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {grp.items.map((item) => (
+                          <label key={item.id} className="flex items-start gap-2.5 cursor-pointer text-xs group">
+                            <input
+                              type="checkbox"
+                              checked={item.done}
+                              onChange={() => {
+                                const updated = [...mobilitySkills];
+                                const targetItem = updated[gIdx].items.find(i => i.id === item.id);
+                                if (targetItem) targetItem.done = !targetItem.done;
+                                setMobilitySkills(updated);
+                              }}
+                              className="mt-0.5 rounded text-purple-600 focus:ring-purple-500 border-neutral-300 cursor-pointer"
+                            />
+                            <span className={`leading-snug transition-colors ${
+                              item.done ? "line-through text-neutral-400" : "text-neutral-800 font-medium group-hover:text-neutral-950"
+                            }`}>
+                              {item.label}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* INNER VIEW: Roadmap */}
+          {(mobilityInnerTab === "overview" || mobilityInnerTab === "roadmap") && (
+            <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <MapPin className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
+                      Feuille de Route par Horizon (Roadmap Multi-Séquences)
+                    </h3>
+                    <span className="text-[10px] text-neutral-500 font-medium">
+                      {doneRoadmapActions} sur {totalRoadmapActions} jalons complétés
+                    </span>
+                  </div>
+                </div>
+                <div className="w-32 bg-neutral-100 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+                    style={{ width: `${totalRoadmapActions > 0 ? (doneRoadmapActions / totalRoadmapActions) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {mobilityRoadmap.map((phase, pIdx) => {
+                  const pDone = phase.items.filter(i => i.done).length;
+                  return (
+                    <div key={pIdx} className="p-4 bg-neutral-50/70 border border-neutral-200/80 rounded-2xl space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                            {phase.phase}
+                          </span>
+                          <span className="text-[10px] font-mono text-neutral-500">{pDone}/{phase.items.length}</span>
+                        </div>
+                        <h4 className="text-xs font-black text-neutral-900 leading-snug">{phase.title}</h4>
+                        <div className="space-y-2 pt-1 border-t border-neutral-200/60">
+                          {phase.items.map((item) => (
+                            <label key={item.id} className="flex items-start gap-2 cursor-pointer text-[11px] group">
+                              <input
+                                type="checkbox"
+                                checked={item.done}
+                                onChange={() => {
+                                  const updated = [...mobilityRoadmap];
+                                  const targetItem = updated[pIdx].items.find(i => i.id === item.id);
+                                  if (targetItem) targetItem.done = !targetItem.done;
+                                  setMobilityRoadmap(updated);
+                                }}
+                                className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 border-neutral-300 cursor-pointer"
+                              />
+                              <span className={`leading-snug transition-colors ${
+                                item.done ? "line-through text-neutral-400" : "text-neutral-700 group-hover:text-neutral-950 font-medium"
+                              }`}>
+                                {item.label}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* INNER VIEW: Visa & Documents Checklist */}
+          {(mobilityInnerTab === "overview" || mobilityInnerTab === "visa") && (
+            <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+                    <ShieldCheck className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
+                      Dossiers Visa & Pièces Justificatives par Pays
+                    </h3>
+                    <span className="text-[10px] text-neutral-500 font-medium">
+                      {doneVisaActions} sur {totalVisaActions} pièces prêtes
+                    </span>
+                  </div>
+                </div>
+                <div className="w-32 bg-neutral-100 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-amber-500 rounded-full transition-all duration-500" 
+                    style={{ width: `${totalVisaActions > 0 ? (doneVisaActions / totalVisaActions) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {mobilityVisa.map((vGroup, vIdx) => {
+                  const vDone = vGroup.docs.filter(d => d.done).length;
+                  return (
+                    <div key={vIdx} className="p-4 bg-neutral-50/70 border border-neutral-200/80 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between border-b border-neutral-200/60 pb-2">
+                        <h4 className="text-xs font-black text-neutral-900">{vGroup.country}</h4>
+                        <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                          {vDone}/{vGroup.docs.length}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {vGroup.docs.map((docItem) => (
+                          <label key={docItem.id} className="flex items-start gap-2 cursor-pointer text-[11px] group">
+                            <input
+                              type="checkbox"
+                              checked={docItem.done}
+                              onChange={() => {
+                                const updated = [...mobilityVisa];
+                                const targetDoc = updated[vIdx].docs.find(d => d.id === docItem.id);
+                                if (targetDoc) targetDoc.done = !targetDoc.done;
+                                setMobilityVisa(updated);
+                              }}
+                              className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 border-neutral-300 cursor-pointer"
+                            />
+                            <span className={`leading-snug transition-colors ${
+                              docItem.done ? "line-through text-neutral-400" : "text-neutral-700 group-hover:text-neutral-950 font-medium"
+                            }`}>
+                              {docItem.label}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* ==================================================== */}
       {/* --- TAB: DASHBOARD DE CARRIÈRE --- */}
       {/* ==================================================== */}
       {careerTab === "dash" && (
         <div className="space-y-6 animate-in fade-in duration-300">
+          
+          {/* Featured Banner: Tour de Contrôle Mobilité Internationale */}
+          <div className="bg-gradient-to-br from-zinc-950 via-zinc-900 to-indigo-950 text-white rounded-3xl p-6 shadow-lg border border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg border border-emerald-500/30">
+                  <Compass className="w-4 h-4" />
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 font-mono">
+                  Module Actif · Mobilité Internationale EPM
+                </span>
+              </div>
+              <h3 className="text-xl font-black text-white">
+                Tour de contrôle · Plan de carrière Serrou Mohammed
+              </h3>
+              <p className="text-xs text-zinc-300 font-medium max-w-2xl leading-relaxed">
+                Tableau de bord vivant multi-pays : suivi des candidatures (Golfe, France, Canada...), plan de compétences EPM, grille de salaire visa 2026 et dossiers administratifs.
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="text-right hidden sm:block">
+                <span className="text-2xl font-black font-mono text-emerald-400 block">{globalProgressPct}%</span>
+                <span className="text-[10px] text-zinc-400 font-mono">{globalDoneActions} / {globalTotalActions} actions faites</span>
+              </div>
+              <button
+                onClick={() => handleTabChange("mobility")}
+                className="px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span>Ouvrir la Tour de Contrôle</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
           {/* Welcome & Overview Bento Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
