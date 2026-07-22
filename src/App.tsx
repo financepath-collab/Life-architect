@@ -78,6 +78,7 @@ import MonthlyExpenseAnalysisCard from "./components/MonthlyExpenseAnalysisCard"
 import MonthlyComparisonCard from "./components/MonthlyComparisonCard";
 import MonthlyGoalsSection from "./components/MonthlyGoalsSection";
 import EditorialCalendarSection from "./components/EditorialCalendarSection";
+import CentralCalendar from "./components/CentralCalendar";
 import WeatherWidget from "./components/WeatherWidget";
 import DisciplineHeatmap from "./components/DisciplineHeatmap";
 import Actions30JoursSection from "./components/Actions30JoursSection";
@@ -2560,6 +2561,7 @@ export default function App() {
       icon: CheckSquare,
       items: [
         { id: "productivity_dash", label: "Dashboard Productivité", icon: LayoutDashboard, desc: "État de vos habitudes, sprints de combat et objectifs stratégiques." },
+        { id: "central_calendar", label: "Calendrier Central", icon: Calendar, desc: "Planning mensuel unifié des tâches, habitudes et rappels financiers." },
         { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." },
         { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour vos projets pro et perso." },
         { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." },
@@ -3697,6 +3699,19 @@ export default function App() {
               <LayoutDashboard className={`w-3.5 h-3.5 shrink-0 ${activeMenu === "dashboard" ? "text-white" : "text-neutral-400"}`} />
               <span className="hidden min-[1650px]:inline">Tableau de Bord</span>
               <span className="min-[1650px]:hidden">Dashboard</span>
+            </button>
+
+            {/* Central Calendar Link */}
+            <button
+              onClick={() => handleMenuClick("central_calendar")}
+              className={`flex items-center gap-1 xl:gap-1.5 px-1.5 xl:px-2 py-1.5 rounded-lg text-[9.5px] xl:text-[10px] 2xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
+                activeMenu === "central_calendar"
+                  ? "bg-neutral-900 text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
+              }`}
+            >
+              <Calendar className={`w-3.5 h-3.5 shrink-0 ${activeMenu === "central_calendar" ? "text-white" : "text-neutral-400"}`} />
+              <span>Calendrier</span>
             </button>
 
             {/* Categories Hover Dropdowns */}
@@ -4848,6 +4863,21 @@ export default function App() {
                       folders={folders}
                       setFolders={setFolders}
                       availableChannels={channels.map(c => c.name)}
+                    />
+                  ) : activeMenu === "central_calendar" ? (
+                    <CentralCalendar
+                      dailyHabits={dailyHabits}
+                      onToggleHabit={(id) => setDailyHabits(prev => prev.map(h => h.id === id ? { ...h, completed: !h.completed } : h))}
+                      weeklyObjectives={weeklyObjectives}
+                      actions30Jours={actions30Jours}
+                      abonnements={abonnements}
+                      achatsMensuels={achatsMensuels}
+                      achatsCouteux={achatsCouteux}
+                      epargnes={epargnes}
+                      salaires={salaires}
+                      transactions={transactions}
+                      editorialEvents={editorialEvents}
+                      monthlyGoals={monthlyGoals}
                     />
                   ) : activeMenu === "editorial_calendar" ? (
                     <EditorialCalendarSection
