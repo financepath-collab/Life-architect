@@ -290,34 +290,36 @@ export default function SettingsModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
           
           {/* Section: Firebase Identity */}
           <div className="space-y-3">
-            <span className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-wider block font-mono">
-              1. Compte Identité
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-md text-[10px] font-black uppercase font-mono tracking-wider">
+                1. Compte Identité
+              </span>
+            </div>
             
             {firebaseUser ? (
-              <div className="flex items-center justify-between p-3.5 bg-neutral-50 dark:bg-zinc-950/40 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl">
+              <div className="flex items-center justify-between p-4 bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl shadow-inner">
                 <div className="flex items-center gap-3">
                   {firebaseUser.photoURL ? (
                     <img 
                       src={firebaseUser.photoURL} 
                       alt="Profile" 
-                      className="w-9 h-9 rounded-full border border-neutral-200 dark:border-neutral-700"
+                      className="w-10 h-10 rounded-full border-2 border-emerald-500/40 shadow-sm"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-9 h-9 bg-neutral-900 dark:bg-zinc-800 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                    <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-black text-sm shadow-sm">
                       {firebaseUser.displayName?.charAt(0) || "U"}
                     </div>
                   )}
                   <div className="min-w-0">
-                    <span className="text-xs font-black text-neutral-900 dark:text-neutral-100 block truncate">
+                    <span className="text-xs font-black text-white block truncate">
                       {firebaseUser.displayName || "Utilisateur Cloud"}
                     </span>
-                    <span className="text-[10px] text-neutral-400 block truncate font-mono">
+                    <span className="text-[11px] text-zinc-300 block truncate font-mono">
                       {firebaseUser.email}
                     </span>
                   </div>
@@ -325,42 +327,42 @@ export default function SettingsModal({
                 
                 <button
                   onClick={handleLogoutClick}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-neutral-700 dark:text-neutral-200 rounded-xl text-[10px] font-bold transition-all cursor-pointer select-none border border-neutral-200/50 dark:border-neutral-700"
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-xl text-xs font-bold transition-all cursor-pointer select-none border border-rose-500/30"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Quitter
                 </button>
               </div>
             ) : (
-              <div className="p-5 text-center bg-neutral-50 dark:bg-zinc-950/30 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl space-y-3">
-                <div className="w-10 h-10 bg-neutral-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto text-neutral-500">
-                  <User className="w-5 h-5" />
+              <div className="p-5 text-center bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3">
+                <div className="w-11 h-11 bg-zinc-900 border border-zinc-700/60 rounded-2xl flex items-center justify-center mx-auto text-zinc-300">
+                  <User className="w-5.5 h-5.5" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs font-extrabold text-neutral-800 dark:text-neutral-200">
+                  <p className="text-xs font-black text-white">
                     Aucun compte cloud connecté
                   </p>
-                  <p className="text-[10px] text-neutral-400 max-w-[280px] mx-auto leading-relaxed">
+                  <p className="text-[11px] text-zinc-300 max-w-[280px] mx-auto leading-relaxed">
                     Connectez-vous pour sécuriser vos données sur votre espace personnel Firebase.
                   </p>
                 </div>
                 <button
                   onClick={handleLoginClick}
-                  className="w-full max-w-[180px] mx-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer select-none shadow-sm"
+                  className="w-full max-w-[200px] mx-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer select-none shadow-md"
                 >
-                  <Cloud className="w-4 h-4 text-emerald-400" />
+                  <Cloud className="w-4 h-4 text-white" />
                   Connexion Google
                 </button>
 
                 {authError && (
-                  <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 rounded-2xl text-left space-y-3 mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="flex items-start gap-2 text-rose-800 dark:text-rose-400">
+                  <div className="p-4 bg-rose-950/40 border border-rose-800/60 rounded-2xl text-left space-y-3 mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex items-start gap-2 text-rose-300">
                       <Shield className="w-4 h-4 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-bold uppercase tracking-wider font-mono">
+                        <p className="text-xs font-bold uppercase tracking-wider font-mono text-rose-300">
                           {authError.code === "auth/unauthorized-domain" ? "Domaine Non Autorisé" : "Configuration Manquante"}
                         </p>
-                        <p className="text-[10.5px] mt-1 leading-normal text-rose-700 dark:text-rose-300">
+                        <p className="text-[11px] mt-1 leading-normal text-rose-200">
                           {authError.code === "auth/unauthorized-domain" 
                             ? `Le domaine "${authError.hostname}" n'est pas autorisé dans la console Firebase.`
                             : `L'authentification Google n'est pas configurée dans la console Firebase.`}
@@ -368,38 +370,33 @@ export default function SettingsModal({
                       </div>
                     </div>
                     
-                    <div className="p-3 bg-white dark:bg-zinc-950 rounded-xl border border-rose-100 dark:border-rose-950 text-[10px] text-neutral-600 dark:text-neutral-400 space-y-2 leading-relaxed">
-                      <p className="font-extrabold text-neutral-800 dark:text-neutral-200">Comment résoudre ce problème :</p>
+                    <div className="p-3 bg-zinc-950 rounded-xl border border-rose-900/40 text-[10.5px] text-zinc-300 space-y-2 leading-relaxed">
+                      <p className="font-extrabold text-white">Comment résoudre ce problème :</p>
                       <ol className="list-decimal list-inside space-y-1.5 font-sans">
-                        <li>Allez sur la <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline font-bold">Console Firebase</a></li>
-                        <li>Ouvrez le projet : <strong className="font-mono text-rose-600 dark:text-rose-400 font-bold bg-neutral-100 dark:bg-zinc-900 px-1 py-0.5 rounded">gen-lang-client-0385167527</strong></li>
-                        <li>Dans le menu latéral, cliquez sur <strong className="font-bold">Authentication</strong></li>
+                        <li>Allez sur la <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline font-bold">Console Firebase</a></li>
+                        <li>Ouvrez le projet : <strong className="font-mono text-rose-400 font-bold bg-zinc-900 px-1 py-0.5 rounded">gen-lang-client-0385167527</strong></li>
+                        <li>Dans le menu latéral, cliquez sur <strong className="font-bold text-white">Authentication</strong></li>
                         {authError.code === "auth/unauthorized-domain" ? (
                           <>
-                            <li>Allez dans l'onglet <strong className="font-bold">Paramètres</strong> (ou <i>Settings</i>)</li>
-                            <li>Sélectionnez <strong className="font-bold">Domaines autorisés</strong> dans la liste</li>
-                            <li>Cliquez sur <strong className="font-bold">Ajouter un domaine</strong> et ajoutez : <code className="font-mono bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold select-all">{authError.hostname}</code></li>
+                            <li>Allez dans l'onglet <strong className="font-bold text-white">Paramètres</strong></li>
+                            <li>Sélectionnez <strong className="font-bold text-white">Domaines autorisés</strong></li>
+                            <li>Ajoutez : <code className="font-mono bg-amber-950/60 text-amber-300 px-1.5 py-0.5 rounded font-bold select-all border border-amber-800/40">{authError.hostname}</code></li>
                           </>
                         ) : (
                           <>
-                            <li>Allez dans l'onglet <strong className="font-bold">Sign-in method</strong></li>
-                            <li>Cliquez sur <strong className="font-bold">Ajouter un fournisseur</strong> et sélectionnez <strong className="font-bold">Google</strong></li>
-                            <li>Activez Google, renseignez l'adresse e-mail d'assistance et enregistrez</li>
+                            <li>Allez dans l'onglet <strong className="font-bold text-white">Sign-in method</strong></li>
+                            <li>Activez le fournisseur <strong className="font-bold text-white">Google</strong></li>
                           </>
                         )}
-                        <li>Actualisez la page et reconnectez-vous !</li>
                       </ol>
                     </div>
                   </div>
                 )}
 
                 {isIframe && (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 rounded-xl text-left mt-2 animate-in fade-in slide-in-from-bottom-1 duration-200">
-                    <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-normal font-bold">
-                      ⚠️ **Note importante :** L'application est actuellement intégrée dans un cadre (iframe) de prévisualisation. Les navigateurs bloquent la communication des popups de connexion dans ce mode. 
-                    </p>
-                    <p className="text-[10px] text-amber-600 dark:text-amber-400 leading-normal font-medium mt-1">
-                      Pour vous connecter, cliquez sur le bouton **« Ouvrir dans un nouvel onglet »** (en haut à droite de l'aperçu) ou utilisez le lien direct de l'application.
+                  <div className="p-3 bg-amber-950/30 border border-amber-800/40 rounded-xl text-left mt-2 animate-in fade-in duration-200">
+                    <p className="text-[10.5px] text-amber-300 font-bold leading-relaxed">
+                      ⚠️ Note : Les cadres (iframe) peuvent bloquer la popup Google. Ouvrez l'application dans un nouvel onglet pour vous connecter.
                     </p>
                   </div>
                 )}
@@ -409,61 +406,61 @@ export default function SettingsModal({
 
           {/* Section: Cloud Sync Toggle */}
           <div className="space-y-3">
-            <span className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-wider block font-mono">
-              2. Synchronisation en Temps Réel
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-md text-[10px] font-black uppercase font-mono tracking-wider">
+                2. Synchronisation en Temps Réel
+              </span>
+            </div>
             
-            <div className="p-4 bg-neutral-50 dark:bg-zinc-950/40 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl space-y-4">
+            <div className="p-4 bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl space-y-4">
               <div className="flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
-                  <span className="text-xs font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                  <span className="text-xs font-black text-white flex items-center gap-2">
                     {cloudSyncEnabled ? (
-                      <Cloud className="w-4 h-4 text-emerald-500 animate-pulse" />
+                      <Cloud className="w-4 h-4 text-emerald-400 animate-pulse" />
                     ) : (
-                      <CloudOff className="w-4 h-4 text-neutral-400" />
+                      <CloudOff className="w-4 h-4 text-zinc-400" />
                     )}
-                    Synchronisation Cloud
+                    Synchronisation Firestore Cloud
                   </span>
-                  <p className="text-[10px] text-neutral-400 max-w-[220px] leading-relaxed">
-                    Sauvegarde automatique et instantanée de vos données dans Firestore.
+                  <p className="text-[11px] text-zinc-300 max-w-[240px] leading-relaxed">
+                    Sauvegarde automatique instantanée de vos données dans votre Firestore.
                   </p>
                 </div>
                 
-                {/* Custom Toggle Switch */}
+                {/* Toggle Switch */}
                 <button
                   disabled={!firebaseUser}
                   onClick={() => onToggleCloudSync(!cloudSyncEnabled)}
-                  className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer focus:outline-none ${
-                    !firebaseUser ? "opacity-40 cursor-not-allowed bg-neutral-200 dark:bg-zinc-800" :
-                    cloudSyncEnabled ? "bg-emerald-500" : "bg-neutral-300 dark:bg-zinc-700"
+                  className={`w-12 h-6.5 rounded-full p-1 transition-colors duration-200 cursor-pointer focus:outline-none ${
+                    !firebaseUser ? "opacity-40 cursor-not-allowed bg-zinc-800" :
+                    cloudSyncEnabled ? "bg-emerald-500" : "bg-zinc-700"
                   }`}
                   title={!firebaseUser ? "Veuillez vous connecter d'abord" : ""}
                 >
-                  <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${cloudSyncEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                  <div className={`bg-white w-4.5 h-4.5 rounded-full shadow-md transform transition-transform duration-200 ${cloudSyncEnabled ? "translate-x-5.5" : "translate-x-0"}`} />
                 </button>
               </div>
 
               {/* Sync Status Info */}
               {cloudSyncEnabled && firebaseUser && (
-                <div className="pt-3 border-t border-neutral-200/50 dark:border-neutral-800 flex items-center justify-between text-[10px] font-mono text-neutral-500">
+                <div className="pt-3 border-t border-zinc-800 flex items-center justify-between text-[11px] font-mono">
                   <div className="flex items-center gap-1.5">
                     {isSyncing ? (
-                      <RefreshCw className="w-3.5 h-3.5 text-emerald-500 animate-spin" />
+                      <RefreshCw className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
                     ) : syncStatus === "synced" ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-                    ) : syncStatus === "error" ? (
-                      <CloudOff className="w-3.5 h-3.5 text-rose-500" />
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
                     ) : (
-                      <RefreshCw className="w-3.5 h-3.5 text-neutral-400" />
+                      <RefreshCw className="w-3.5 h-3.5 text-zinc-400" />
                     )}
-                    <span>
-                      {isSyncing ? "SYNCHRONISATION..." : syncStatus === "synced" ? "À JOUR" : syncStatus === "error" ? "ERREUR" : "EN ATTENTE"}
+                    <span className="text-emerald-400 font-bold">
+                      {isSyncing ? "SYNCHRONISATION..." : syncStatus === "synced" ? "À JOUR" : "EN ATTENTE"}
                     </span>
                   </div>
                   
                   {lastSyncedTime && (
-                    <span className="text-neutral-400">
-                      Synchro : {lastSyncedTime.toLocaleTimeString()}
+                    <span className="text-zinc-400">
+                      Dernière : {lastSyncedTime.toLocaleTimeString()}
                     </span>
                   )}
                 </div>
@@ -471,28 +468,30 @@ export default function SettingsModal({
             </div>
           </div>
 
-          {/* Section: Google Drive Storage & Backup */}
+          {/* Section: Google Drive Storage & Auto-Import */}
           <div className="space-y-3">
-            <span className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-wider block font-mono">
-              3. Stockage Google Drive (Fichiers de Sauvegarde)
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-md text-[10px] font-black uppercase font-mono tracking-wider">
+                3. Stockage & Auto-Importation Google Drive
+              </span>
+            </div>
             
-            <div className="p-4 bg-neutral-50 dark:bg-zinc-950/40 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl space-y-4">
+            <div className="p-4 bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl space-y-4">
               <div className="flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
-                  <span className="text-xs font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
-                    <Database className="w-4 h-4 text-amber-500" />
-                    Sauvegarde sur Google Drive
+                  <span className="text-xs font-black text-white flex items-center gap-2">
+                    <Database className="w-4 h-4 text-amber-400" />
+                    Sauvegarde & Importation Drive
                   </span>
-                  <p className="text-[10px] text-neutral-400 max-w-[220px] leading-relaxed">
-                    Stockez, importez ou exportez vos données directement sous forme de fichier JSON sécurisé dans votre Google Drive.
+                  <p className="text-[11px] text-zinc-300 max-w-[240px] leading-relaxed">
+                    Importation automatique au lancement du site. Fichier JSON sécurisé stocké dans Google Drive.
                   </p>
                 </div>
                 
                 {isDriveConnected ? (
                   <button
                     onClick={onDisconnectDrive}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-900/40 rounded-xl text-[10px] font-bold transition-all cursor-pointer select-none"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-xl text-[11px] font-bold transition-all cursor-pointer select-none shrink-0"
                   >
                     Déconnecter
                   </button>
@@ -500,29 +499,45 @@ export default function SettingsModal({
                   <button
                     disabled={isDriveLoading}
                     onClick={onConnectDrive}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer select-none"
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black rounded-xl text-[11px] uppercase tracking-wider transition-all cursor-pointer select-none shrink-0 shadow-sm"
                   >
                     Connecter Drive
                   </button>
                 )}
               </div>
 
+              {/* Status Badges for Auto Import & Midnight Refresh */}
+              <div className="p-3 bg-zinc-900/90 border border-zinc-800 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-zinc-200 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Importation Automatique au Lancement
+                  </span>
+                  <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-800/60 rounded text-[10px] font-mono font-bold uppercase">
+                    ACTIF (AUTOMATIQUE)
+                  </span>
+                </div>
+                <p className="text-[10px] text-zinc-400 leading-tight">
+                  Chaque fois que vous accédez au site web, l'application importe et applique automatiquement vos dernières données enregistrées.
+                </p>
+              </div>
+
               {isDriveConnected && (
-                <div className="pt-3 border-t border-neutral-200/50 dark:border-neutral-800 space-y-3">
+                <div className="pt-3 border-t border-zinc-800 space-y-3">
                   {/* Toggle auto-sync for Drive */}
-                  <div className="flex items-center justify-between p-2.5 bg-neutral-100/40 dark:bg-zinc-950/20 rounded-xl border border-neutral-200/20 dark:border-neutral-800/20">
+                  <div className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-zinc-800">
                     <div className="space-y-0.5">
-                      <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 block">
+                      <span className="text-[11px] font-extrabold text-white block">
                         Sauvegarde Automatique Drive
                       </span>
-                      <span className="text-[9.5px] text-neutral-400 block leading-tight">
-                        Sauvegarde en tâche de fond 15s après chaque modification.
+                      <span className="text-[10px] text-zinc-300 block leading-tight">
+                        Sauvegarde en arrière-plan 15s après chaque modification.
                       </span>
                     </div>
                     <button
                       onClick={() => onToggleDriveAutoSync(!driveAutoSync)}
                       className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer focus:outline-none ${
-                        driveAutoSync ? "bg-amber-500" : "bg-neutral-300 dark:bg-zinc-700"
+                        driveAutoSync ? "bg-amber-500" : "bg-zinc-700"
                       }`}
                     >
                       <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${driveAutoSync ? "translate-x-5" : "translate-x-0"}`} />
@@ -533,28 +548,28 @@ export default function SettingsModal({
                     <button
                       disabled={isDriveLoading}
                       onClick={onBackupToDrive}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer select-none"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer select-none border border-zinc-700"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${isDriveLoading ? "animate-spin" : ""}`} />
-                      Exporter vers Drive
+                      Sauvegarder vers Drive
                     </button>
                     <button
                       disabled={isDriveLoading}
                       onClick={onRestoreFromDrive}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-neutral-800 dark:text-neutral-100 rounded-xl text-[10px] font-bold transition-all cursor-pointer border border-neutral-200/50 dark:border-neutral-800 select-none"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl text-xs font-bold transition-all cursor-pointer border border-amber-500/40 select-none"
                     >
                       Importer depuis Drive
                     </button>
                   </div>
                   
-                  <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500">
-                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                    <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
                       <CheckCircle className="w-3.5 h-3.5" />
-                      DRIVE CONNECTÉ
+                      DRIVE CONNECTÉ & SYNCHRONISÉ
                     </span>
                     {driveLastSynced && (
-                      <span className="text-neutral-400">
-                        Sauvegarde : {driveLastSynced.toLocaleTimeString()}
+                      <span className="text-zinc-400">
+                        Dernier backup : {driveLastSynced.toLocaleTimeString()}
                       </span>
                     )}
                   </div>
@@ -565,31 +580,32 @@ export default function SettingsModal({
 
           {/* Section: Mode Sombre Automatique */}
           <div className="space-y-3">
-            <span className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-wider block font-mono">
-              3.5. Mode Sombre Automatique (Heure Locale)
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-md text-[10px] font-black uppercase font-mono tracking-wider">
+                4. Mode Sombre Automatique
+              </span>
+            </div>
             
-            <div className="p-4 bg-neutral-50 dark:bg-zinc-950/40 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl">
+            <div className="p-4 bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl">
               <div className="flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
-                  <span className="text-xs font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
+                  <span className="text-xs font-black text-white flex items-center gap-2">
                     {autoDarkTheme ? (
-                      <Moon className="w-4 h-4 text-indigo-500" />
+                      <Moon className="w-4 h-4 text-purple-400" />
                     ) : (
-                      <Sun className="w-4 h-4 text-neutral-400" />
+                      <Sun className="w-4 h-4 text-zinc-400" />
                     )}
-                    Thème Sombre Automatique
+                    Thème Sombre Automatique (Heure Locale)
                   </span>
-                  <p className="text-[10px] text-neutral-400 max-w-[220px] leading-relaxed">
-                    Active le mode sombre automatiquement entre 19h00 et 7h00 en fonction de votre heure locale.
+                  <p className="text-[11px] text-zinc-300 max-w-[240px] leading-relaxed">
+                    Bascule automatiquement entre 19h00 et 07h00.
                   </p>
                 </div>
                 
-                {/* Custom Toggle Switch */}
                 <button
                   onClick={() => onToggleAutoDarkTheme(!autoDarkTheme)}
                   className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer focus:outline-none ${
-                    autoDarkTheme ? "bg-indigo-500" : "bg-neutral-300 dark:bg-zinc-700"
+                    autoDarkTheme ? "bg-purple-600" : "bg-zinc-700"
                   }`}
                 >
                   <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${autoDarkTheme ? "translate-x-5" : "translate-x-0"}`} />
@@ -600,18 +616,20 @@ export default function SettingsModal({
 
           {/* Section: Export CSV des Modules */}
           <div className="space-y-3">
-            <span className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-wider block font-mono">
-              5. Centre d'Exportation CSV des Modules
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-md text-[10px] font-black uppercase font-mono tracking-wider">
+                5. Centre d'Exportation CSV
+              </span>
+            </div>
             
-            <div className="p-4 bg-neutral-50 dark:bg-zinc-950/40 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl space-y-4">
+            <div className="p-4 bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl space-y-4">
               <div className="space-y-1">
-                <span className="text-xs font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5">
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-                  Exporter les données au format CSV
+                <span className="text-xs font-black text-white flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  Exporter vos modules en fichier CSV
                 </span>
-                <p className="text-[10px] text-neutral-400 leading-relaxed">
-                  Générez et téléchargez instantanément un fichier CSV formaté pour n'importe quel module de votre Second Brain afin de réaliser des analyses externes ou sauvegardes rapides.
+                <p className="text-[11px] text-zinc-300 leading-relaxed">
+                  Générez un fichier CSV lisible sous Excel ou Google Sheets pour n'importe quel module de l'application.
                 </p>
               </div>
 
@@ -619,7 +637,7 @@ export default function SettingsModal({
                 <select
                   value={selectedExportModule}
                   onChange={(e) => setSelectedExportModule(e.target.value)}
-                  className="flex-1 bg-white dark:bg-zinc-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-semibold text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-neutral-300 focus:ring-1 focus:ring-neutral-200"
+                  className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
                 >
                   <option value="accounts">Comptes Bancaires ({accounts.length})</option>
                   <option value="transactions">Transactions Financières ({transactions.length})</option>
@@ -629,37 +647,45 @@ export default function SettingsModal({
                   <option value="epargnes">Objectifs d'Épargne ({epargnes.length})</option>
                   <option value="abonnements">Abonnements Actifs ({abonnements.length})</option>
                   <option value="stocks">Portefeuille Actions ({stocks.length})</option>
-                  <option value="journalEntries">Journal de Bord (Second Brain) ({journalEntries.length})</option>
+                  <option value="journalEntries">Journal de Bord ({journalEntries.length})</option>
                 </select>
 
                 <button
                   type="button"
                   onClick={handleExportCSV}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shrink-0"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  Exporter en CSV
+                  Exporter CSV
                 </button>
               </div>
 
               {exportFeedback && (
-                <div className="text-[10px] font-bold font-mono text-center p-2 bg-neutral-100 dark:bg-zinc-900 border border-neutral-200/50 dark:border-neutral-800 rounded-xl text-neutral-600 dark:text-neutral-300 animate-in fade-in duration-250">
+                <div className="text-[11px] font-bold font-mono text-center p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-emerald-400 animate-in fade-in duration-250">
                   {exportFeedback}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Fallback & Storage Status Explanation */}
-          <div className="p-4 bg-neutral-100/50 dark:bg-zinc-950/20 rounded-2xl space-y-2">
-            <div className="flex gap-2 text-neutral-500 dark:text-neutral-400">
-              <Database className="w-4 h-4 shrink-0 mt-0.5 text-neutral-600 dark:text-neutral-300" />
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider block leading-none">
-                  Sauvegarde & Sécurité
-                </span>
-                <p className="text-[10px] leading-relaxed">
-                  <strong>Fallback LocalStorage :</strong> Vos modifications sont toujours enregistrées en local. Si vous perdez votre connexion ou désactivez le cloud, votre Second Brain reste 100% accessible et utilisable.
+          {/* Section: Midnight Refresh & Storage Status */}
+          <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3">
+            <div className="flex items-start gap-2.5 text-zinc-300">
+              <Database className="w-4.5 h-4.5 shrink-0 mt-0.5 text-amber-400" />
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-white">
+                    Actualisation Automatique à Minuit & Persistance
+                  </span>
+                  <span className="px-2 py-0.5 bg-amber-950 text-amber-300 border border-amber-800/60 rounded text-[9.5px] font-mono font-bold">
+                    00:00 AM
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-zinc-300">
+                  <strong className="text-white">Actualisation quotidienne :</strong> Chaque jour après minuit, le site web rafraîchit automatiquement vos habitudes et synchronise vos données sans intervention.
+                </p>
+                <p className="text-[11px] leading-relaxed text-zinc-300">
+                  <strong className="text-white">Session Permanente :</strong> Vous restez connecté et déverrouillé automatiquement à chaque ouverture du site web.
                 </p>
               </div>
             </div>

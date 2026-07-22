@@ -91,13 +91,24 @@ export async function testConnection() {
   }
 }
 
-let cachedGoogleAccessToken: string | null = null;
+let cachedGoogleAccessToken: string | null = typeof window !== "undefined" ? localStorage.getItem("la_google_access_token") : null;
 
 export const getSharedGoogleAccessToken = (): string | null => {
-  return cachedGoogleAccessToken;
+  if (cachedGoogleAccessToken) return cachedGoogleAccessToken;
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("la_google_access_token");
+  }
+  return null;
 };
 
 export const setSharedGoogleAccessToken = (token: string | null) => {
   cachedGoogleAccessToken = token;
+  if (typeof window !== "undefined") {
+    if (token) {
+      localStorage.setItem("la_google_access_token", token);
+    } else {
+      localStorage.removeItem("la_google_access_token");
+    }
+  }
 };
 

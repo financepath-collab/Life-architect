@@ -210,7 +210,7 @@ export default function App() {
     return localStorage.getItem("la_auto_dark_theme") === "true";
   });
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
-    return sessionStorage.getItem("la_is_unlocked") === "true";
+    return localStorage.getItem("la_is_unlocked") === "true" || sessionStorage.getItem("la_is_unlocked") === "true";
   });
   const [isDbLoaded, setIsDbLoaded] = useState<boolean>(false);
 
@@ -2350,6 +2350,78 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // --- AUTOMATIC IMPORT ON SITE ACCESS & MIDNIGHT REFRESH ---
+  const autoImportRanRef = useRef(false);
+
+  // 1. Auto-import from Google Drive immediately upon accessing the app
+  useEffect(() => {
+    if (!isDbLoaded || !isUnlocked || autoImportRanRef.current) return;
+    
+    const token = driveAccessToken || getDriveAccessToken();
+    if (token) {
+      autoImportRanRef.current = true;
+      setIsDriveLoading(true);
+      loadFromDrive(token)
+        .then((payload) => {
+          if (payload) {
+            loadStatePayload(payload);
+            triggerToast("⚡ Importation & Synchronisation automatique Google Drive au lancement !", "success");
+          }
+        })
+        .catch((err) => {
+          console.warn("Auto-import from Google Drive on startup failed or skipped:", err);
+        })
+        .finally(() => {
+          setIsDriveLoading(false);
+        });
+    }
+  }, [isDbLoaded, isUnlocked, driveAccessToken]);
+
+  // 2. Midnight Refresh & Sync (runs every day after 00:00:00)
+  useEffect(() => {
+    if (!isDbLoaded || !isUnlocked) return;
+
+    const performMidnightRefresh = async () => {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const lastRefresh = localStorage.getItem("la_last_midnight_refresh_date");
+
+      if (lastRefresh && lastRefresh !== todayStr) {
+        console.log("🌙 Midnight date rollover detected! Executing daily auto-refresh...");
+        localStorage.setItem("la_last_midnight_refresh_date", todayStr);
+
+        const token = driveAccessToken || getDriveAccessToken();
+        if (token) {
+          try {
+            const payload = await loadFromDrive(token);
+            if (payload) {
+              loadStatePayload(payload);
+              triggerToast("🌙 Nouveau jour : Données réactualisées automatiquement depuis Google Drive !", "success");
+            }
+          } catch (err) {
+            console.warn("Midnight Drive auto-refresh failed:", err);
+          }
+        } else {
+          triggerToast("🌙 Nouveau jour : Bienvenue ! Actualisation automatique du tableau de bord effectuée.", "info");
+        }
+      } else if (!lastRefresh) {
+        localStorage.setItem("la_last_midnight_refresh_date", todayStr);
+      }
+    };
+
+    performMidnightRefresh();
+
+    // Schedule next midnight trigger
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 2);
+    const msToMidnight = nextMidnight.getTime() - now.getTime();
+
+    const midnightTimer = setTimeout(() => {
+      performMidnightRefresh();
+    }, msToMidnight);
+
+    return () => clearTimeout(midnightTimer);
+  }, [isDbLoaded, isUnlocked, driveAccessToken]);
+
 
 
   // Habit toggling
@@ -3431,6 +3503,7 @@ export default function App() {
       cleanPass === "architect"
     ) {
       setIsUnlocked(true);
+      localStorage.setItem("la_is_unlocked", "true");
       sessionStorage.setItem("la_is_unlocked", "true");
       setLoginError("");
     } else {
@@ -3804,6 +3877,7 @@ export default function App() {
             <button
               onClick={() => {
                 setIsUnlocked(false);
+                localStorage.removeItem("la_is_unlocked");
                 sessionStorage.removeItem("la_is_unlocked");
               }}
               className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0"
