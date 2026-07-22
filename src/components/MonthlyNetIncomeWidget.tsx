@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import CountUpNumber from "./CountUpNumber";
 import { 
   Scale, 
   TrendingUp, 
@@ -338,7 +339,7 @@ export default function MonthlyNetIncomeWidget({
             </svg>
             <div className="absolute flex flex-col items-center justify-center">
               <span className={`text-2xl font-black font-mono leading-none ${rateConfig.colorClass}`}>
-                {stats.savingsRate.toFixed(0)}%
+                <CountUpNumber value={stats.savingsRate} decimals={0} suffix="%" />
               </span>
               <span className="text-[8px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mt-1">
                 Taux Épargne
@@ -351,7 +352,7 @@ export default function MonthlyNetIncomeWidget({
               {rateConfig.badge}
             </span>
             <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-mono block mt-1">
-              Reste net : {stats.netIncome.toLocaleString("fr-FR")} MAD
+              Reste net : <CountUpNumber value={stats.netIncome} suffix=" MAD" />
             </span>
           </div>
         </div>
@@ -367,25 +368,31 @@ export default function MonthlyNetIncomeWidget({
               </span>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-black text-emerald-700 dark:text-emerald-300 font-mono">
-                  {stats.totalRevenue.toLocaleString("fr-FR")}
+                  <CountUpNumber value={stats.totalRevenue} />
                 </span>
                 <span className="text-[10px] text-emerald-600 font-bold">MAD</span>
               </div>
               <div className="mt-2 text-[9px] text-neutral-500 dark:text-neutral-400 space-y-0.5">
                 <div className="flex justify-between">
                   <span>Salaire Net:</span>
-                  <span className="font-mono font-bold">{stats.salaryAmount.toLocaleString("fr-FR")} MAD</span>
+                  <span className="font-mono font-bold">
+                    <CountUpNumber value={stats.salaryAmount} suffix=" MAD" />
+                  </span>
                 </div>
                 {stats.otherRevenueAmount > 0 && (
                   <div className="flex justify-between">
                     <span>Extras:</span>
-                    <span className="font-mono font-bold">+{stats.otherRevenueAmount.toLocaleString("fr-FR")} MAD</span>
+                    <span className="font-mono font-bold">
+                      <CountUpNumber value={stats.otherRevenueAmount} prefix="+" suffix=" MAD" />
+                    </span>
                   </div>
                 )}
                 {simulationEnabled && simulatedRevenue > 0 && (
                   <div className="flex justify-between text-indigo-600 dark:text-indigo-400 font-bold">
                     <span>Simulé:</span>
-                    <span className="font-mono font-extrabold">+{simulatedRevenue.toLocaleString("fr-FR")} MAD</span>
+                    <span className="font-mono font-extrabold">
+                      <CountUpNumber value={simulatedRevenue} prefix="+" suffix=" MAD" />
+                    </span>
                   </div>
                 )}
               </div>
@@ -398,7 +405,7 @@ export default function MonthlyNetIncomeWidget({
               </span>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-black text-indigo-700 dark:text-indigo-300 font-mono">
-                  {stats.totalSubscriptionsCost.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
+                  <CountUpNumber value={stats.totalSubscriptionsCost} />
                 </span>
                 <span className="text-[10px] text-indigo-600 font-bold">MAD/m</span>
               </div>
@@ -410,7 +417,7 @@ export default function MonthlyNetIncomeWidget({
                 <div className="flex justify-between">
                   <span>Pression budgétaire:</span>
                   <span className="font-mono text-neutral-600 dark:text-neutral-400">
-                    {stats.totalRevenue > 0 ? ((stats.totalSubscriptionsCost / stats.totalRevenue) * 100).toFixed(1) : 0}%
+                    <CountUpNumber value={stats.totalRevenue > 0 ? (stats.totalSubscriptionsCost / stats.totalRevenue) * 100 : 0} decimals={1} suffix="%" />
                   </span>
                 </div>
               </div>
@@ -423,7 +430,7 @@ export default function MonthlyNetIncomeWidget({
               </span>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-black text-neutral-800 dark:text-neutral-200 font-mono">
-                  {stats.totalExpenses.toLocaleString("fr-FR", { maximumFractionDigits: 0 })}
+                  <CountUpNumber value={stats.totalExpenses} />
                 </span>
                 <span className="text-[10px] text-neutral-500 font-bold">MAD</span>
               </div>
@@ -431,13 +438,15 @@ export default function MonthlyNetIncomeWidget({
                 <div className="flex justify-between">
                   <span>Base calculée:</span>
                   <span className="font-mono font-bold">
-                    {(calculationMode === "actual" ? stats.actualExpenses : stats.budgetLimit).toLocaleString("fr-FR")} MAD
+                    <CountUpNumber value={calculationMode === "actual" ? stats.actualExpenses : stats.budgetLimit} suffix=" MAD" />
                   </span>
                 </div>
                 {simulationEnabled && simulatedExpense > 0 && (
                   <div className="flex justify-between text-indigo-600 dark:text-indigo-400 font-bold">
                     <span>Simulé:</span>
-                    <span className="font-mono font-extrabold">+{simulatedExpense.toLocaleString("fr-FR")} MAD</span>
+                    <span className="font-mono font-extrabold">
+                      <CountUpNumber value={simulatedExpense} prefix="+" suffix=" MAD" />
+                    </span>
                   </div>
                 )}
               </div>
@@ -450,7 +459,7 @@ export default function MonthlyNetIncomeWidget({
             <div className="flex justify-between text-[10px] font-black uppercase tracking-wider">
               <span className="text-neutral-400 dark:text-neutral-500">Flux d'affectation des revenus</span>
               <span className={rateConfig.colorClass}>
-                Net : {stats.netIncome.toLocaleString("fr-FR")} MAD
+                Net : <CountUpNumber value={stats.netIncome} suffix=" MAD" />
               </span>
             </div>
             

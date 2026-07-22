@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import CountUpNumber from "./CountUpNumber";
 import { 
   PiggyBank, 
   Target, 
@@ -248,7 +249,7 @@ export default function MonthlySavingsGaugeCard({
             {/* Inner Content overlay */}
             <div className="absolute flex flex-col items-center justify-center pt-2">
               <span className={`text-3xl font-black font-mono leading-none ${gaugeConfig.colorClass}`}>
-                {stats.progressPercent}%
+                <CountUpNumber value={stats.progressPercent} suffix="%" />
               </span>
               <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mt-1.5 flex items-center gap-1">
                 Atteint
@@ -277,7 +278,7 @@ export default function MonthlySavingsGaugeCard({
                 Objectif d'Épargne Mensuel
               </span>
               <span className="font-mono font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-0.5 rounded-md border border-indigo-100/60 dark:border-indigo-900/40">
-                {savingsGoal.toLocaleString("fr-FR")} MAD
+                <CountUpNumber value={savingsGoal} suffix=" MAD" />
               </span>
             </div>
 
@@ -303,7 +304,7 @@ export default function MonthlySavingsGaugeCard({
             <div className="p-3 bg-neutral-50 dark:bg-zinc-900/20 border border-neutral-150 dark:border-neutral-850 rounded-xl">
               <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-wider block mb-1">Épargne Réalisée</span>
               <span className={`text-sm font-black font-mono block ${stats.netSavings >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                {stats.netSavings.toLocaleString("fr-FR")} MAD
+                <CountUpNumber value={stats.netSavings} suffix=" MAD" />
               </span>
               <span className="text-[8.5px] text-neutral-400 block mt-0.5">Surplus de trésorerie net</span>
             </div>
@@ -311,7 +312,7 @@ export default function MonthlySavingsGaugeCard({
             <div className="p-3 bg-neutral-50 dark:bg-zinc-900/20 border border-neutral-150 dark:border-neutral-850 rounded-xl">
               <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-wider block mb-1">Reste à Épargner</span>
               <span className="text-sm font-black font-mono text-neutral-800 dark:text-neutral-200 block">
-                {stats.remainingToSave.toLocaleString("fr-FR")} MAD
+                <CountUpNumber value={stats.remainingToSave} suffix=" MAD" />
               </span>
               <span className="text-[8.5px] text-neutral-400 block mt-0.5">Pour finaliser l'objectif</span>
             </div>
