@@ -3,18 +3,20 @@ import {
   X, 
   Settings, 
   Cloud, 
-  CloudOff, 
   User, 
   LogOut, 
   RefreshCw, 
   Shield, 
   Database,
   CheckCircle,
-  HelpCircle,
   Moon,
   Sun,
   Download,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ChevronRight,
+  Sliders,
+  Check,
+  HardDrive
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { User as FirebaseUser, signInWithPopup, signOut } from "firebase/auth";
@@ -65,6 +67,48 @@ interface SettingsModalProps {
   journalEntries?: JournalEntry[];
 }
 
+type TabType = "account" | "cloud_sync" | "drive_backup" | "appearance" | "export";
+
+interface TabItem {
+  id: TabType;
+  label: string;
+  description: string;
+  icon: React.ElementType;
+}
+
+const TABS: TabItem[] = [
+  {
+    id: "account",
+    label: "Compte Cloud",
+    description: "Google & Identité Firebase",
+    icon: User,
+  },
+  {
+    id: "cloud_sync",
+    label: "Synchronisation",
+    description: "Firestore en temps réel",
+    icon: Cloud,
+  },
+  {
+    id: "drive_backup",
+    label: "Google Drive",
+    description: "Sauvegardes & Auto-Import",
+    icon: Database,
+  },
+  {
+    id: "appearance",
+    label: "Apparence",
+    description: "Thème sombre automatique",
+    icon: Sliders,
+  },
+  {
+    id: "export",
+    label: "Exportation CSV",
+    description: "Téléchargement des données",
+    icon: FileSpreadsheet,
+  },
+];
+
 export default function SettingsModal({
   isOpen,
   onClose,
@@ -99,6 +143,7 @@ export default function SettingsModal({
   
   if (!isOpen) return null;
 
+  const [activeTab, setActiveTab] = useState<TabType>("account");
   const isIframe = typeof window !== "undefined" && window.self !== window.top;
   const [authError, setAuthError] = useState<{ code: string; message: string; hostname: string } | null>(null);
 
@@ -158,7 +203,6 @@ export default function SettingsModal({
     }
 
     try {
-      // Build a beautiful CSV with robust escaping
       const headers = Object.keys(dataToExport[0]);
       const csvRows = [
         headers.join(","),
@@ -173,7 +217,6 @@ export default function SettingsModal({
             } else {
               cellStr = String(val);
             }
-            // Escape double quotes and surround with double quotes
             return `"${cellStr.replace(/"/g, '""')}"`;
           }).join(",")
         )
@@ -218,14 +261,12 @@ export default function SettingsModal({
       console.groupEnd();
 
       if (errCode === "auth/unauthorized-domain" || errMessage.includes("unauthorized-domain")) {
-        console.warn("[Firebase Auth] Detected auth/unauthorized-domain error! Displaying helpful user diagnostic panel.");
         setAuthError({
           code: "auth/unauthorized-domain",
           message: errMessage,
           hostname: currentHostname
         });
       } else if (errCode === "auth/configuration-not-found" || errMessage.includes("configuration-not-found")) {
-        console.warn("[Firebase Auth] Detected auth/configuration-not-found error! Displaying helpful user diagnostic panel.");
         setAuthError({
           code: "auth/configuration-not-found",
           message: errMessage,
@@ -244,475 +285,579 @@ export default function SettingsModal({
   const handleLogoutClick = async () => {
     try {
       await signOut(auth);
-      await onToggleCloudSync(false); // Disable cloud sync when logging out
+      await onToggleCloudSync(false);
     } catch (e) {
       console.error("Logout failed:", e);
     }
   };
 
+  // Helper for badge rendering in sidebar tabs
+  const renderTabBadge = (tabId: TabType) => {
+    switch (tabId) {
+      case "account":
+        return firebaseUser ? (
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" title="Connecté" />
+        ) : (
+          <span className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-zinc-700" title="Non connecté" />
+        );
+      case "cloud_sync":
+        return cloudSyncEnabled && firebaseUser ? (
+          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs animate-pulse" title="Sync actif" />
+        ) : null;
+      case "drive_backup":
+        return isDriveConnected ? (
+          <span className="w-2 h-2 rounded-full bg-amber-500 shadow-xs" title="Drive connecté" />
+        ) : null;
+      case "appearance":
+        return autoDarkTheme ? (
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 rounded">
+            Auto
+          </span>
+        ) : null;
+      case "export":
+        const totalRecords = accounts.length + transactions.length + dailyHabits.length + weeklyObjectives.length + budgets.length + epargnes.length + abonnements.length + stocks.length + journalEntries.length;
+        return (
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 bg-neutral-200 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-400 rounded">
+            {totalRecords}
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div id="settings-modal" className="fixed inset-0 z-100 flex items-center justify-center p-4 select-none">
+    <div id="settings-modal" className="fixed inset-0 z-100 flex items-center justify-center p-3 sm:p-6 select-none">
       
       {/* Backdrop */}
       <div 
         id="settings-modal-backdrop"
-        className="fixed inset-0 bg-neutral-950/40 dark:bg-neutral-950/65 backdrop-blur-xs transition-opacity duration-300"
+        className="fixed inset-0 bg-neutral-950/50 dark:bg-neutral-950/70 backdrop-blur-xs transition-opacity duration-300"
         onClick={onClose}
       />
 
-      {/* Modal Container */}
+      {/* Main Modal Card with Sidebar Layout */}
       <div 
         id="settings-modal-card"
-        className="bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150"
+        className="bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 rounded-3xl shadow-2xl w-full max-w-4xl h-[88vh] max-h-[680px] flex flex-col overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200"
       >
         
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-neutral-100 dark:border-neutral-800/80">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-neutral-100 dark:bg-zinc-800 rounded-lg text-neutral-800 dark:text-neutral-200">
-              <Settings className="w-4 h-4" />
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200/80 dark:border-zinc-800 bg-neutral-50/80 dark:bg-zinc-950/50 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100 dark:border-indigo-900/50 shrink-0">
+              <Settings className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-black text-neutral-900 dark:text-white uppercase tracking-wider font-sans">
+              <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                 Paramètres Système
               </h3>
-              <p className="text-[10px] text-neutral-400 font-mono mt-0.5 uppercase tracking-wide">
-                CONFIGURATION & ARCHIVAGE CLOUD
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Préférences de synchronisation, sauvegardes et exportation de données
               </p>
             </div>
           </div>
+          
           <button 
             onClick={onClose}
-            className="p-1.5 hover:bg-neutral-100 dark:hover:bg-zinc-800 rounded-xl text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-all cursor-pointer"
+            className="p-2 hover:bg-neutral-200/70 dark:hover:bg-zinc-800 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-all cursor-pointer"
+            title="Fermer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+        {/* Modal Body: Sidebar Tabs + Content Area */}
+        <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           
-          {/* Section: Firebase Identity */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-md text-[10px] font-black uppercase font-mono tracking-wider">
-                1. Compte Identité
+          {/* Sidebar Tabs Navigation */}
+          <div className="w-full md:w-64 lg:w-72 border-b md:border-b-0 md:border-r border-neutral-200/80 dark:border-zinc-800 bg-neutral-50/50 dark:bg-zinc-950/40 p-2.5 sm:p-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto shrink-0 custom-scrollbar">
+            <div className="px-3 py-1.5 hidden md:block">
+              <span className="text-[10px] font-black uppercase tracking-wider text-neutral-400 dark:text-neutral-500 font-mono">
+                Catégories
               </span>
             </div>
-            
-            {firebaseUser ? (
-              <div className="flex items-center justify-between p-4 bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl shadow-inner">
-                <div className="flex items-center gap-3">
-                  {firebaseUser.photoURL ? (
-                    <img 
-                      src={firebaseUser.photoURL} 
-                      alt="Profile" 
-                      className="w-10 h-10 rounded-full border-2 border-emerald-500/40 shadow-sm"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-black text-sm shadow-sm">
-                      {firebaseUser.displayName?.charAt(0) || "U"}
+
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl transition-all cursor-pointer text-left shrink-0 md:shrink border ${
+                    isActive 
+                      ? "bg-white dark:bg-zinc-800 border-neutral-200 dark:border-zinc-700 shadow-sm text-neutral-900 dark:text-white" 
+                      : "border-transparent text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100/80 dark:hover:bg-zinc-800/60 hover:text-neutral-900 dark:hover:text-neutral-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 rounded-xl transition-colors ${
+                      isActive 
+                        ? "bg-indigo-600 text-white" 
+                        : "bg-neutral-200/70 dark:bg-zinc-800 text-neutral-500 dark:text-neutral-400"
+                    }`}>
+                      <Icon className="w-4 h-4 shrink-0" />
                     </div>
-                  )}
-                  <div className="min-w-0">
-                    <span className="text-xs font-black text-white block truncate">
-                      {firebaseUser.displayName || "Utilisateur Cloud"}
-                    </span>
-                    <span className="text-[11px] text-zinc-300 block truncate font-mono">
-                      {firebaseUser.email}
+                    <div className="min-w-0 hidden sm:block md:block">
+                      <p className="text-xs font-bold truncate">
+                        {tab.label}
+                      </p>
+                      <p className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate hidden md:block">
+                        {tab.description}
+                      </p>
+                    </div>
+                    {/* Short text for small screen tabs */}
+                    <span className="text-xs font-bold sm:hidden md:hidden truncate">
+                      {tab.label}
                     </span>
                   </div>
-                </div>
-                
-                <button
-                  onClick={handleLogoutClick}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-xl text-xs font-bold transition-all cursor-pointer select-none border border-rose-500/30"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  Quitter
-                </button>
-              </div>
-            ) : (
-              <div className="p-5 text-center bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3">
-                <div className="w-11 h-11 bg-zinc-900 border border-zinc-700/60 rounded-2xl flex items-center justify-center mx-auto text-zinc-300">
-                  <User className="w-5.5 h-5.5" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-black text-white">
-                    Aucun compte cloud connecté
-                  </p>
-                  <p className="text-[11px] text-zinc-300 max-w-[280px] mx-auto leading-relaxed">
-                    Connectez-vous pour sécuriser vos données sur votre espace personnel Firebase.
-                  </p>
-                </div>
-                <button
-                  onClick={handleLoginClick}
-                  className="w-full max-w-[200px] mx-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer select-none shadow-md"
-                >
-                  <Cloud className="w-4 h-4 text-white" />
-                  Connexion Google
-                </button>
 
-                {authError && (
-                  <div className="p-4 bg-rose-950/40 border border-rose-800/60 rounded-2xl text-left space-y-3 mt-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="flex items-start gap-2 text-rose-300">
-                      <Shield className="w-4 h-4 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-wider font-mono text-rose-300">
-                          {authError.code === "auth/unauthorized-domain" ? "Domaine Non Autorisé" : "Configuration Manquante"}
-                        </p>
-                        <p className="text-[11px] mt-1 leading-normal text-rose-200">
-                          {authError.code === "auth/unauthorized-domain" 
-                            ? `Le domaine "${authError.hostname}" n'est pas autorisé dans la console Firebase.`
-                            : `L'authentification Google n'est pas configurée dans la console Firebase.`}
+                  <div className="flex items-center gap-1.5 ml-2">
+                    {renderTabBadge(tab.id)}
+                    <ChevronRight className={`w-3.5 h-3.5 hidden md:block transition-transform ${
+                      isActive ? "text-indigo-500 translate-x-0.5" : "text-neutral-300 dark:text-zinc-700"
+                    }`} />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Main Content View Container */}
+          <div className="flex-1 p-5 sm:p-6 overflow-y-auto custom-scrollbar bg-white dark:bg-zinc-900">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.18 }}
+                className="space-y-5"
+              >
+
+                {/* TAB 1: ACCOUNT & AUTHENTICATION */}
+                {activeTab === "account" && (
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                        <User className="w-4 h-4 text-indigo-500" />
+                        Compte Cloud Firebase
+                      </h4>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        Gérez votre session utilisateur et votre identité Google pour la synchronisation.
+                      </p>
+                    </div>
+
+                    <div className="p-5 bg-neutral-50 dark:bg-zinc-800/40 border border-neutral-200/80 dark:border-zinc-700/60 rounded-2xl space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                          Statut de l'Authentification
+                        </span>
+                        {firebaseUser ? (
+                          <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 rounded-full text-xs font-bold flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            Session Active
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-neutral-200 dark:bg-zinc-700 text-neutral-700 dark:text-neutral-300 rounded-full text-xs font-bold">
+                            Déconnecté
+                          </span>
+                        )}
+                      </div>
+
+                      {firebaseUser ? (
+                        <div className="p-4 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-xl space-y-4 shadow-xs">
+                          <div className="flex items-center gap-3.5">
+                            {firebaseUser.photoURL ? (
+                              <img 
+                                src={firebaseUser.photoURL} 
+                                alt="Profile" 
+                                className="w-12 h-12 rounded-full border-2 border-indigo-500 shrink-0 shadow-xs"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white font-black text-lg shrink-0 shadow-xs">
+                                {firebaseUser.displayName?.charAt(0) || "U"}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-bold text-neutral-900 dark:text-white truncate">
+                                {firebaseUser.displayName || "Utilisateur Cloud"}
+                              </p>
+                              <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5">
+                                {firebaseUser.email}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="pt-3 border-t border-neutral-100 dark:border-zinc-800/80 flex items-center justify-between gap-3">
+                            <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                              Base de données liée au compte
+                            </span>
+                            <button
+                              onClick={handleLogoutClick}
+                              className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-300 rounded-xl text-xs font-bold transition-all cursor-pointer border border-rose-200/60 dark:border-rose-900/40 shrink-0"
+                            >
+                              <LogOut className="w-3.5 h-3.5" />
+                              Se déconnecter
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-5 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-xl space-y-3.5 text-center shadow-xs">
+                          <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mx-auto">
+                            <User className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                              Connectez votre Compte Google
+                            </p>
+                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 max-w-sm mx-auto">
+                              Activez la sauvegarde sécurisée en temps réel et accédez à vos données financières depuis n'importe quel appareil.
+                            </p>
+                          </div>
+
+                          <button
+                            onClick={handleLoginClick}
+                            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center justify-center gap-2 shadow-xs"
+                          >
+                            <Cloud className="w-4 h-4" />
+                            Se connecter avec Google
+                          </button>
+
+                          {authError && (
+                            <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-xl text-left space-y-1.5 mt-3">
+                              <div className="flex items-start gap-2 text-rose-700 dark:text-rose-300">
+                                <Shield className="w-4 h-4 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-xs font-bold">
+                                    {authError.code === "auth/unauthorized-domain" ? "Domaine Non Autorisé" : "Configuration Manquante"}
+                                  </p>
+                                  <p className="text-[11px] mt-0.5 text-rose-600 dark:text-rose-300">
+                                    {authError.code === "auth/unauthorized-domain" 
+                                      ? `Ajoutez le domaine "${authError.hostname}" dans les domaines autorisés de votre console Firebase.`
+                                      : `L'authentification Google n'est pas activée dans votre console Firebase.`}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {isIframe && (
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                              ⚠️ Si la fenêtre de connexion ne s'ouvre pas, ouvrez l'application dans un nouvel onglet.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: FIRESTORE CLOUD SYNC */}
+                {activeTab === "cloud_sync" && (
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                        <Cloud className="w-4 h-4 text-emerald-500" />
+                        Synchronisation Firestore Cloud
+                      </h4>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        Synchronisez vos modifications instantanément dans la base de données cloud Firestore.
+                      </p>
+                    </div>
+
+                    <div className="p-5 bg-neutral-50 dark:bg-zinc-800/40 border border-neutral-200/80 dark:border-zinc-700/60 rounded-2xl space-y-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
+                            Abonnement & Sync Automatique
+                          </span>
+                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                            Sauvegarde en tâche de fond à chaque modification.
+                          </p>
+                        </div>
+                        
+                        <button
+                          disabled={!firebaseUser}
+                          onClick={() => onToggleCloudSync(!cloudSyncEnabled)}
+                          className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer shrink-0 ${
+                            !firebaseUser ? "opacity-40 cursor-not-allowed bg-neutral-300 dark:bg-zinc-700" :
+                            cloudSyncEnabled ? "bg-emerald-500" : "bg-neutral-300 dark:bg-zinc-700"
+                          }`}
+                          title={!firebaseUser ? "Veuillez d'abord vous connecter" : ""}
+                        >
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${cloudSyncEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                        </button>
+                      </div>
+
+                      {!firebaseUser && (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/50 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                          <Shield className="w-4 h-4 shrink-0 text-amber-600" />
+                          <span>Connexion Google requise pour activer la synchronisation cloud.</span>
+                        </div>
+                      )}
+
+                      {cloudSyncEnabled && firebaseUser && (
+                        <div className="p-4 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-xl space-y-3 shadow-xs">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                              <CheckCircle className="w-4 h-4" />
+                              {isSyncing ? "Synchronisation en cours..." : "Cloud à jour & opérationnel"}
+                            </span>
+                            {lastSyncedTime && (
+                              <span className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">
+                                Dernier sync : {lastSyncedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="pt-2 border-t border-neutral-100 dark:border-zinc-800 flex justify-end">
+                            <button
+                              disabled={isSyncing}
+                              onClick={onForceSync}
+                              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                              Forcer la synchronisation maintenant
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: GOOGLE DRIVE BACKUP */}
+                {activeTab === "drive_backup" && (
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                        <Database className="w-4 h-4 text-amber-500" />
+                        Stockage & Sauvegarde Google Drive
+                      </h4>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        Importation automatique et sauvegardes au format JSON dans votre propre espace Google Drive.
+                      </p>
+                    </div>
+
+                    <div className="p-5 bg-neutral-50 dark:bg-zinc-800/40 border border-neutral-200/80 dark:border-zinc-700/60 rounded-2xl space-y-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
+                            Connexion à Google Drive
+                          </span>
+                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                            Crée un dossier de sauvegarde privé dans votre Drive.
+                          </p>
+                        </div>
+
+                        {isDriveConnected ? (
+                          <button
+                            onClick={onDisconnectDrive}
+                            className="px-3.5 py-1.5 bg-neutral-200 hover:bg-neutral-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-neutral-700 dark:text-neutral-200 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0"
+                          >
+                            Déconnecter Drive
+                          </button>
+                        ) : (
+                          <button
+                            disabled={isDriveLoading}
+                            onClick={onConnectDrive}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 shadow-xs flex items-center gap-1.5"
+                          >
+                            <HardDrive className="w-3.5 h-3.5" />
+                            Connecter Drive
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Auto Import Banner */}
+                      <div className="p-3 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-xl flex items-center justify-between text-xs shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                          <div>
+                            <p className="font-bold text-neutral-800 dark:text-neutral-200">
+                              Auto-Import au Lancement
+                            </p>
+                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                              Restaure automatiquement la version la plus récente au démarrage.
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-900/50 shrink-0">
+                          ACTIF
+                        </span>
+                      </div>
+
+                      {isDriveConnected && (
+                        <div className="p-4 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-xl space-y-3 shadow-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                              Sauvegarde auto régulière (Intervalle 15s)
+                            </span>
+                            <button
+                              onClick={() => onToggleDriveAutoSync(!driveAutoSync)}
+                              className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer ${
+                                driveAutoSync ? "bg-amber-500" : "bg-neutral-300 dark:bg-zinc-700"
+                              }`}
+                            >
+                              <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${driveAutoSync ? "translate-x-5" : "translate-x-0"}`} />
+                            </button>
+                          </div>
+
+                          <div className="flex gap-2.5 pt-2 border-t border-neutral-100 dark:border-zinc-800">
+                            <button
+                              disabled={isDriveLoading}
+                              onClick={onBackupToDrive}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${isDriveLoading ? "animate-spin" : ""}`} />
+                              Sauvegarder dans Drive
+                            </button>
+                            <button
+                              disabled={isDriveLoading}
+                              onClick={onRestoreFromDrive}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-200/80 dark:border-amber-900/50 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                            >
+                              Importer de Drive
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 4: APPEARANCE & AUTO DARK THEME */}
+                {activeTab === "appearance" && (
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                        <Sliders className="w-4 h-4 text-indigo-500" />
+                        Apparence & Thème Automatique
+                      </h4>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        Ajustez l'affichage visuel et le basculement automatique du thème jour/nuit.
+                      </p>
+                    </div>
+
+                    <div className="p-5 bg-neutral-50 dark:bg-zinc-800/40 border border-neutral-200/80 dark:border-zinc-700/60 rounded-2xl space-y-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
+                            {autoDarkTheme ? (
+                              <Moon className="w-4 h-4 text-indigo-500" />
+                            ) : (
+                              <Sun className="w-4 h-4 text-amber-500" />
+                            )}
+                            Mode Sombre Automatique
+                          </span>
+                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                            S'active automatiquement entre 19h00 et 07h00 selon votre horloge système.
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => onToggleAutoDarkTheme(!autoDarkTheme)}
+                          className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer shrink-0 ${
+                            autoDarkTheme ? "bg-indigo-600" : "bg-neutral-300 dark:bg-zinc-700"
+                          }`}
+                        >
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${autoDarkTheme ? "translate-x-5" : "translate-x-0"}`} />
+                        </button>
+                      </div>
+
+                      <div className="p-4 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-xl space-y-2 shadow-xs">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-neutral-600 dark:text-neutral-400 font-mono">
+                            ⏰ Horloge locale : <strong className="text-neutral-900 dark:text-white font-bold">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
+                          </span>
+                          <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                            {autoDarkTheme ? "Automatique Actif" : "Configuration Manuelle"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+                          Vous pouvez également basculer manuellement le thème sombre à tout moment via le bouton en haut de l'application.
                         </p>
                       </div>
                     </div>
-                    
-                    <div className="p-3 bg-zinc-950 rounded-xl border border-rose-900/40 text-[10.5px] text-zinc-300 space-y-2 leading-relaxed">
-                      <p className="font-extrabold text-white">Comment résoudre ce problème :</p>
-                      <ol className="list-decimal list-inside space-y-1.5 font-sans">
-                        <li>Allez sur la <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline font-bold">Console Firebase</a></li>
-                        <li>Ouvrez le projet : <strong className="font-mono text-rose-400 font-bold bg-zinc-900 px-1 py-0.5 rounded">gen-lang-client-0385167527</strong></li>
-                        <li>Dans le menu latéral, cliquez sur <strong className="font-bold text-white">Authentication</strong></li>
-                        {authError.code === "auth/unauthorized-domain" ? (
-                          <>
-                            <li>Allez dans l'onglet <strong className="font-bold text-white">Paramètres</strong></li>
-                            <li>Sélectionnez <strong className="font-bold text-white">Domaines autorisés</strong></li>
-                            <li>Ajoutez : <code className="font-mono bg-amber-950/60 text-amber-300 px-1.5 py-0.5 rounded font-bold select-all border border-amber-800/40">{authError.hostname}</code></li>
-                          </>
-                        ) : (
-                          <>
-                            <li>Allez dans l'onglet <strong className="font-bold text-white">Sign-in method</strong></li>
-                            <li>Activez le fournisseur <strong className="font-bold text-white">Google</strong></li>
-                          </>
-                        )}
-                      </ol>
+                  </div>
+                )}
+
+                {/* TAB 5: CSV EXPORT */}
+                {activeTab === "export" && (
+                  <div className="space-y-5">
+                    <div>
+                      <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                        Exportation CSV des Modules
+                      </h4>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        Téléchargez des données structurées et compatibles avec Excel, Google Sheets ou vos outils d'analyse.
+                      </p>
+                    </div>
+
+                    <div className="p-5 bg-neutral-50 dark:bg-zinc-800/40 border border-neutral-200/80 dark:border-zinc-700/60 rounded-2xl space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-neutral-800 dark:text-neutral-200 block">
+                          Sélectionnez le module à exporter
+                        </label>
+                        <select
+                          value={selectedExportModule}
+                          onChange={(e) => setSelectedExportModule(e.target.value)}
+                          className="w-full bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-700 rounded-xl p-3 text-xs font-medium text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs cursor-pointer"
+                        >
+                          <option value="accounts">Comptes Bancaires ({accounts.length} enregistrements)</option>
+                          <option value="transactions">Transactions Financières ({transactions.length} enregistrements)</option>
+                          <option value="dailyHabits">Habitudes Quotidiennes ({dailyHabits.length} enregistrements)</option>
+                          <option value="weeklyObjectives">Objectifs Hebdomadaires ({weeklyObjectives.length} enregistrements)</option>
+                          <option value="budgets">Budgets & Limites ({budgets.length} enregistrements)</option>
+                          <option value="epargnes">Objectifs d'Épargne ({epargnes.length} enregistrements)</option>
+                          <option value="abonnements">Abonnements Actifs ({abonnements.length} enregistrements)</option>
+                          <option value="stocks">Portefeuille Actions ({stocks.length} enregistrements)</option>
+                          <option value="journalEntries">Journal de Bord ({journalEntries.length} enregistrements)</option>
+                        </select>
+                      </div>
+
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={handleExportCSV}
+                          className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+                        >
+                          <Download className="w-4 h-4" />
+                          Générer & Télécharger le CSV
+                        </button>
+                      </div>
+
+                      {exportFeedback && (
+                        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2 animate-in fade-in">
+                          <Check className="w-4 h-4 shrink-0" />
+                          <span>{exportFeedback}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {isIframe && (
-                  <div className="p-3 bg-amber-950/30 border border-amber-800/40 rounded-xl text-left mt-2 animate-in fade-in duration-200">
-                    <p className="text-[10.5px] text-amber-300 font-bold leading-relaxed">
-                      ⚠️ Note : Les cadres (iframe) peuvent bloquer la popup Google. Ouvrez l'application dans un nouvel onglet pour vous connecter.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Section: Cloud Sync Toggle */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-md text-[10px] font-black uppercase font-mono tracking-wider">
-                2. Synchronisation en Temps Réel
-              </span>
-            </div>
-            
-            <div className="p-4 bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-black text-white flex items-center gap-2">
-                    {cloudSyncEnabled ? (
-                      <Cloud className="w-4 h-4 text-emerald-400 animate-pulse" />
-                    ) : (
-                      <CloudOff className="w-4 h-4 text-zinc-400" />
-                    )}
-                    Synchronisation Firestore Cloud
-                  </span>
-                  <p className="text-[11px] text-zinc-300 max-w-[240px] leading-relaxed">
-                    Sauvegarde automatique instantanée de vos données dans votre Firestore.
-                  </p>
-                </div>
-                
-                {/* Toggle Switch */}
-                <button
-                  disabled={!firebaseUser}
-                  onClick={() => onToggleCloudSync(!cloudSyncEnabled)}
-                  className={`w-12 h-6.5 rounded-full p-1 transition-colors duration-200 cursor-pointer focus:outline-none ${
-                    !firebaseUser ? "opacity-40 cursor-not-allowed bg-zinc-800" :
-                    cloudSyncEnabled ? "bg-emerald-500" : "bg-zinc-700"
-                  }`}
-                  title={!firebaseUser ? "Veuillez vous connecter d'abord" : ""}
-                >
-                  <div className={`bg-white w-4.5 h-4.5 rounded-full shadow-md transform transition-transform duration-200 ${cloudSyncEnabled ? "translate-x-5.5" : "translate-x-0"}`} />
-                </button>
-              </div>
-
-              {/* Sync Status Info */}
-              {cloudSyncEnabled && firebaseUser && (
-                <div className="pt-3 border-t border-zinc-800 flex items-center justify-between text-[11px] font-mono">
-                  <div className="flex items-center gap-1.5">
-                    {isSyncing ? (
-                      <RefreshCw className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
-                    ) : syncStatus === "synced" ? (
-                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : (
-                      <RefreshCw className="w-3.5 h-3.5 text-zinc-400" />
-                    )}
-                    <span className="text-emerald-400 font-bold">
-                      {isSyncing ? "SYNCHRONISATION..." : syncStatus === "synced" ? "À JOUR" : "EN ATTENTE"}
-                    </span>
-                  </div>
-                  
-                  {lastSyncedTime && (
-                    <span className="text-zinc-400">
-                      Dernière : {lastSyncedTime.toLocaleTimeString()}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section: Google Drive Storage & Auto-Import */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-md text-[10px] font-black uppercase font-mono tracking-wider">
-                3. Stockage & Auto-Importation Google Drive
-              </span>
-            </div>
-            
-            <div className="p-4 bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-black text-white flex items-center gap-2">
-                    <Database className="w-4 h-4 text-amber-400" />
-                    Sauvegarde & Importation Drive
-                  </span>
-                  <p className="text-[11px] text-zinc-300 max-w-[240px] leading-relaxed">
-                    Importation automatique au lancement du site. Fichier JSON sécurisé stocké dans Google Drive.
-                  </p>
-                </div>
-                
-                {isDriveConnected ? (
-                  <button
-                    onClick={onDisconnectDrive}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-xl text-[11px] font-bold transition-all cursor-pointer select-none shrink-0"
-                  >
-                    Déconnecter
-                  </button>
-                ) : (
-                  <button
-                    disabled={isDriveLoading}
-                    onClick={onConnectDrive}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black rounded-xl text-[11px] uppercase tracking-wider transition-all cursor-pointer select-none shrink-0 shadow-sm"
-                  >
-                    Connecter Drive
-                  </button>
-                )}
-              </div>
-
-              {/* Status Badges for Auto Import & Midnight Refresh */}
-              <div className="p-3 bg-zinc-900/90 border border-zinc-800 rounded-xl space-y-2">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-bold text-zinc-200 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    Importation Automatique au Lancement
-                  </span>
-                  <span className="px-2 py-0.5 bg-emerald-950 text-emerald-300 border border-emerald-800/60 rounded text-[10px] font-mono font-bold uppercase">
-                    ACTIF (AUTOMATIQUE)
-                  </span>
-                </div>
-                <p className="text-[10px] text-zinc-400 leading-tight">
-                  Chaque fois que vous accédez au site web, l'application importe et applique automatiquement vos dernières données enregistrées.
-                </p>
-              </div>
-
-              {isDriveConnected && (
-                <div className="pt-3 border-t border-zinc-800 space-y-3">
-                  {/* Toggle auto-sync for Drive */}
-                  <div className="flex items-center justify-between p-3 bg-zinc-900 rounded-xl border border-zinc-800">
-                    <div className="space-y-0.5">
-                      <span className="text-[11px] font-extrabold text-white block">
-                        Sauvegarde Automatique Drive
-                      </span>
-                      <span className="text-[10px] text-zinc-300 block leading-tight">
-                        Sauvegarde en arrière-plan 15s après chaque modification.
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => onToggleDriveAutoSync(!driveAutoSync)}
-                      className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer focus:outline-none ${
-                        driveAutoSync ? "bg-amber-500" : "bg-zinc-700"
-                      }`}
-                    >
-                      <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${driveAutoSync ? "translate-x-5" : "translate-x-0"}`} />
-                    </button>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      disabled={isDriveLoading}
-                      onClick={onBackupToDrive}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer select-none border border-zinc-700"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isDriveLoading ? "animate-spin" : ""}`} />
-                      Sauvegarder vers Drive
-                    </button>
-                    <button
-                      disabled={isDriveLoading}
-                      onClick={onRestoreFromDrive}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl text-xs font-bold transition-all cursor-pointer border border-amber-500/40 select-none"
-                    >
-                      Importer depuis Drive
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
-                    <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      DRIVE CONNECTÉ & SYNCHRONISÉ
-                    </span>
-                    {driveLastSynced && (
-                      <span className="text-zinc-400">
-                        Dernier backup : {driveLastSynced.toLocaleTimeString()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section: Mode Sombre Automatique */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/30 rounded-md text-[10px] font-black uppercase font-mono tracking-wider">
-                4. Mode Sombre Automatique
-              </span>
-            </div>
-            
-            <div className="p-4 bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl">
-              <div className="flex items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-black text-white flex items-center gap-2">
-                    {autoDarkTheme ? (
-                      <Moon className="w-4 h-4 text-purple-400" />
-                    ) : (
-                      <Sun className="w-4 h-4 text-zinc-400" />
-                    )}
-                    Thème Sombre Automatique (Heure Locale)
-                  </span>
-                  <p className="text-[11px] text-zinc-300 max-w-[240px] leading-relaxed">
-                    Bascule automatiquement entre 19h00 et 07h00.
-                  </p>
-                </div>
-                
-                <button
-                  onClick={() => onToggleAutoDarkTheme(!autoDarkTheme)}
-                  className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer focus:outline-none ${
-                    autoDarkTheme ? "bg-purple-600" : "bg-zinc-700"
-                  }`}
-                >
-                  <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${autoDarkTheme ? "translate-x-5" : "translate-x-0"}`} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Section: Export CSV des Modules */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-md text-[10px] font-black uppercase font-mono tracking-wider">
-                5. Centre d'Exportation CSV
-              </span>
-            </div>
-            
-            <div className="p-4 bg-zinc-950/80 dark:bg-zinc-950 border border-zinc-800 rounded-2xl space-y-4">
-              <div className="space-y-1">
-                <span className="text-xs font-black text-white flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                  Exporter vos modules en fichier CSV
-                </span>
-                <p className="text-[11px] text-zinc-300 leading-relaxed">
-                  Générez un fichier CSV lisible sous Excel ou Google Sheets pour n'importe quel module de l'application.
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
-                <select
-                  value={selectedExportModule}
-                  onChange={(e) => setSelectedExportModule(e.target.value)}
-                  className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="accounts">Comptes Bancaires ({accounts.length})</option>
-                  <option value="transactions">Transactions Financières ({transactions.length})</option>
-                  <option value="dailyHabits">Habitudes Quotidiennes ({dailyHabits.length})</option>
-                  <option value="weeklyObjectives">Objectifs Hebdomadaires ({weeklyObjectives.length})</option>
-                  <option value="budgets">Budgets & Limites ({budgets.length})</option>
-                  <option value="epargnes">Objectifs d'Épargne ({epargnes.length})</option>
-                  <option value="abonnements">Abonnements Actifs ({abonnements.length})</option>
-                  <option value="stocks">Portefeuille Actions ({stocks.length})</option>
-                  <option value="journalEntries">Journal de Bord ({journalEntries.length})</option>
-                </select>
-
-                <button
-                  type="button"
-                  onClick={handleExportCSV}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shrink-0"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Exporter CSV
-                </button>
-              </div>
-
-              {exportFeedback && (
-                <div className="text-[11px] font-bold font-mono text-center p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-emerald-400 animate-in fade-in duration-250">
-                  {exportFeedback}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section: Midnight Refresh & Storage Status */}
-          <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3">
-            <div className="flex items-start gap-2.5 text-zinc-300">
-              <Database className="w-4.5 h-4.5 shrink-0 mt-0.5 text-amber-400" />
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black uppercase tracking-wider text-white">
-                    Actualisation Automatique à Minuit & Persistance
-                  </span>
-                  <span className="px-2 py-0.5 bg-amber-950 text-amber-300 border border-amber-800/60 rounded text-[9.5px] font-mono font-bold">
-                    00:00 AM
-                  </span>
-                </div>
-                <p className="text-[11px] leading-relaxed text-zinc-300">
-                  <strong className="text-white">Actualisation quotidienne :</strong> Chaque jour après minuit, le site web rafraîchit automatiquement vos habitudes et synchronise vos données sans intervention.
-                </p>
-                <p className="text-[11px] leading-relaxed text-zinc-300">
-                  <strong className="text-white">Session Permanente :</strong> Vous restez connecté et déverrouillé automatiquement à chaque ouverture du site web.
-                </p>
-              </div>
-            </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
         </div>
 
-        {/* Action Button Footer */}
-        <div className="bg-neutral-50 dark:bg-zinc-950/30 p-4 border-t border-neutral-100 dark:border-neutral-800/80 flex justify-between gap-3">
-          {cloudSyncEnabled && firebaseUser ? (
-            <button
-              disabled={isSyncing}
-              onClick={onForceSync}
-              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer select-none"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-              Synchroniser maintenant
-            </button>
-          ) : (
-            <div className="flex-1 text-[10px] text-neutral-400 font-mono flex items-center justify-center gap-1">
-              <Shield className="w-3.5 h-3.5" />
-              PERSISTANCE LOCALE ACTIVE PAR DÉFAUT
-            </div>
-          )}
+        {/* Modal Action Footer */}
+        <div className="bg-neutral-50 dark:bg-zinc-950/50 px-6 py-3.5 border-t border-neutral-200/80 dark:border-zinc-800 flex items-center justify-between gap-3 shrink-0">
+          <div className="text-[11px] text-neutral-500 dark:text-neutral-400 font-mono flex items-center gap-1.5 truncate">
+            <Shield className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+            <span className="truncate">PERSISTANCE HYBRIDE (LOCALE + CLOUD)</span>
+          </div>
+
           <button
             onClick={onClose}
-            className="px-4 py-2.5 bg-neutral-200 hover:bg-neutral-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-neutral-800 dark:text-neutral-100 rounded-xl text-xs font-bold transition-all cursor-pointer select-none"
+            className="px-5 py-2 bg-neutral-200 hover:bg-neutral-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-neutral-800 dark:text-neutral-100 rounded-xl text-xs font-bold transition-all cursor-pointer select-none shrink-0"
           >
             Fermer
           </button>

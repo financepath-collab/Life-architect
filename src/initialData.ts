@@ -29,13 +29,14 @@ import {
 
 
 export const INITIAL_HABITS: DailyHabit[] = [
-  { id: "h1", name: "Lire pendant 10 minutes", description: "S'évader et stimuler l'imagination", completed: false, category: "Mental", isImportant: false, dueTime: "" },
-  { id: "h2", name: "Apprendre pendant 30 minutes", description: "Suivre une formation ou lire un article technique", completed: false, category: "Career", isImportant: true, dueTime: "12:00" },
-  { id: "h3", name: "Faire du sport", description: "Activité physique (Gym, course, marche)", completed: false, category: "Health", isImportant: true, dueTime: "08:00" },
-  { id: "h4", name: "Préparer le dîner de demain", description: "Planifier ses repas pour gagner du temps", completed: false, category: "Personal", isImportant: false, dueTime: "" },
-  { id: "h5", name: "Routine de soins (Skin care)", description: "Nettoyage, hydratation et protection solaire", completed: false, category: "Health", isImportant: true, dueTime: "09:00" },
-  { id: "h6", name: "Méditation & Respiration", description: "5-10 minutes de cohérence cardiaque", completed: false, category: "Mental", isImportant: false, dueTime: "" },
-  { id: "h7", name: "Nettoyage rapide de l'espace", description: "Ranger son bureau et sa pièce de travail", completed: false, category: "Personal", isImportant: false, dueTime: "" },
+  { id: "h1", name: "Lire pendant 10 minutes", description: "S'évader et stimuler l'imagination", completed: false, category: "Mental", isImportant: false, dueTime: "", frequency: "Quotidien" },
+  { id: "h2", name: "Apprendre pendant 30 minutes", description: "Suivre une formation ou lire un article technique", completed: false, category: "Career", isImportant: true, dueTime: "12:00", frequency: "Quotidien" },
+  { id: "h3", name: "Faire du sport", description: "Activité physique (Gym, course, marche)", completed: false, category: "Health", isImportant: true, dueTime: "08:00", frequency: "Quotidien" },
+  { id: "h4", name: "Planification de la semaine", description: "Définir les priorités et jalons stratégiques de la semaine", completed: false, category: "Career", isImportant: true, dueTime: "", frequency: "Hebdomadaire" },
+  { id: "h5", name: "Bilan comptable & financier mensuel", description: "Vérifier le solde des comptes, le budget et l'épargne", completed: false, category: "Finance", isImportant: true, dueTime: "", frequency: "Mensuel" },
+  { id: "h6", name: "Routine de soins (Skin care)", description: "Nettoyage, hydratation et protection solaire", completed: false, category: "Health", isImportant: true, dueTime: "09:00", frequency: "Quotidien" },
+  { id: "h7", name: "Grande session de ménage & tri", description: "Ménage approfondi et réorganisation de l'espace de vie", completed: false, category: "Personal", isImportant: false, dueTime: "", frequency: "Hebdomadaire" },
+  { id: "h8", name: "Révision des abonnements & charges", description: "Analyser les préélèvements et résilier les services inutiles", completed: false, category: "Finance", isImportant: false, dueTime: "", frequency: "Mensuel" },
 ];
 
 export const INITIAL_WEEKLY_OBJECTIVES: WeeklyObjective[] = [

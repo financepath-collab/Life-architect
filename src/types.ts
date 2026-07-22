@@ -6,6 +6,7 @@ export interface DailyHabit {
   category: "Health" | "Career" | "Mental" | "Personal" | "Finance" | "personal" | "professional" | string;
   isImportant?: boolean;
   dueTime?: string;
+  frequency?: "Quotidien" | "Hebdomadaire" | "Mensuel" | string;
 }
 
 export interface VideoFocus {

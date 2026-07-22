@@ -2760,16 +2760,17 @@ export default function App() {
 
       case "habits":
         return {
-          title: "Habits Tracker (Habitudes)",
-          description: "Cochez vos disciplines journalières pour maintenir votre niveau d'excellence.",
+          title: "Tracker de Disciplines & Tâches (Habitudes)",
+          description: "Gérez et cochez vos routines journalières, hebdomadaires et mensuelles.",
           data: dailyHabits,
           onAdd: (item: any) => setDailyHabits(prev => [...prev, item]),
           onEdit: (id: string, updated: any) => setDailyHabits(prev => prev.map(x => x.id === id ? updated : x)),
           onDelete: (id: string) => setDailyHabits(prev => prev.filter(x => x.id !== id)),
           onImport: (items: any[]) => setDailyHabits(prev => [...prev, ...items]),
           columns: [
-            { key: "name", label: "Habitude", type: "text", required: true },
-            { key: "description", label: "Description / Fréquence", type: "text" },
+            { key: "name", label: "Habitude / Tâche", type: "text", required: true },
+            { key: "frequency", label: "Fréquence", type: "select", options: ["Quotidien", "Hebdomadaire", "Mensuel"] },
+            { key: "description", label: "Description / Détails", type: "text" },
             { key: "category", label: "Catégorie", type: "select", options: ["Health", "Career", "Mental", "Personal", "Finance"] },
             { key: "isImportant", label: "Importante", type: "boolean" },
             { key: "dueTime", label: "Heure Limite (ex: 12:00)", type: "text" },

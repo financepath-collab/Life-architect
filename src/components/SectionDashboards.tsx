@@ -9,6 +9,7 @@ import {
 import MonthlyExpenseAnalysisCard from "./MonthlyExpenseAnalysisCard";
 import MonthlyNetIncomeWidget from "./MonthlyNetIncomeWidget";
 import MonthlySavingsGaugeCard from "./MonthlySavingsGaugeCard";
+import MonthlyComparisonCard from "./MonthlyComparisonCard";
 import { 
   Account, FinanceBudget, FinanceEpargne, Abonnement, StockEntry, FinanceTransaction,
   DailyHabit, Action30Jours, WeeklyObjective, ProfilAmelioration, PossibiliteGoal, JournalEntry,
@@ -343,6 +344,9 @@ export function FinanceSectionDashboard({
           </div>
         </div>
       </div>
+
+      {/* Monthly Variation Rate & Comparison Summary Card */}
+      <MonthlyComparisonCard transactions={transactions} abonnements={abonnements} />
 
       {/* Pie Chart and Category Breakdown Analysis Card */}
       <MonthlyExpenseAnalysisCard transactions={transactions} abonnements={abonnements} />
@@ -899,10 +903,17 @@ export function ProductivitySectionDashboard({
   morningReminderEnabled, setMorningReminderEnabled, morningReminderTime, setMorningReminderTime, morningReminderText, setMorningReminderText,
   onTriggerImmediateCheck, notificationPermission, requestNotificationPermission, habitHistory
 }: ProductivityDashProps) {
+  const [habitFreqFilter, setHabitFreqFilter] = React.useState<"Tous" | "Quotidien" | "Hebdomadaire" | "Mensuel">("Tous");
+
   // Stats
   const completedHabitsToday = dailyHabits.filter(h => h.completed).length;
   const totalHabitsCount = dailyHabits.length;
   const completed30JoursActions = actions30Jours.filter(a => a.completed).length;
+
+  const filteredHabits = React.useMemo(() => {
+    if (habitFreqFilter === "Tous") return dailyHabits;
+    return dailyHabits.filter(h => (h.frequency || "Quotidien") === habitFreqFilter);
+  }, [dailyHabits, habitFreqFilter]);
 
   const last7DaysTrend = React.useMemo(() => {
     const trendData = [];
@@ -1056,51 +1067,90 @@ export function ProductivitySectionDashboard({
         {/* Todays Habits Fast Panel */}
         <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3 flex-wrap gap-2">
               <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
                 <Flame className="w-4 h-4 text-neutral-700" />
-                <span>Suivi Rapide de mes disciplines</span>
+                <span>Disciplines & Tâches</span>
               </h3>
               <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full font-mono">
-                {completedHabitsToday} validées
+                {completedHabitsToday} / {totalHabitsCount} validées
               </span>
             </div>
 
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {dailyHabits.map((habit) => (
+            {/* Frequency filter tabs */}
+            <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl text-[10px] font-bold">
+              {(["Tous", "Quotidien", "Hebdomadaire", "Mensuel"] as const).map(freq => (
                 <button
-                  key={habit.id}
-                  onClick={() => onToggleHabit(habit.id)}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left cursor-pointer ${
-                    habit.completed
-                      ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
-                      : "bg-white border-neutral-200 text-neutral-850 hover:bg-neutral-50"
+                  key={freq}
+                  onClick={() => setHabitFreqFilter(freq)}
+                  className={`flex-1 py-1 px-1 rounded-lg transition-all cursor-pointer text-center ${
+                    habitFreqFilter === freq 
+                      ? "bg-white text-neutral-900 shadow-xs font-black" 
+                      : "text-neutral-500 hover:text-neutral-800"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="shrink-0">
-                      {habit.completed ? (
-                        <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-900 text-white" />
-                      ) : (
-                        <div className="w-4 h-4 border-2 border-neutral-300 rounded" />
-                      )}
-                    </div>
-                    <div>
-                      <span className={`text-xs font-semibold block ${habit.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
-                        {habit.name}
-                      </span>
-                    </div>
-                  </div>
-                  {(() => {
-                    const badge = getHabitCategoryBadge(habit.category);
-                    return (
-                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${badge.className}`}>
-                        {badge.label}
-                      </span>
-                    );
-                  })()}
+                  {freq === "Tous" ? "Tous" : freq === "Quotidien" ? "Quotidien" : freq === "Hebdomadaire" ? "Hebdo" : "Mensuel"}
                 </button>
               ))}
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {filteredHabits.length === 0 ? (
+                <div className="text-center py-6 text-xs text-neutral-400 italic">
+                  Aucune tâche ou habitude pour cette fréquence.
+                </div>
+              ) : (
+                filteredHabits.map((habit) => (
+                  <button
+                    key={habit.id}
+                    onClick={() => onToggleHabit(habit.id)}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition-all text-left cursor-pointer ${
+                      habit.completed
+                        ? "bg-neutral-50/50 border-neutral-200 text-neutral-400"
+                        : "bg-white border-neutral-200 text-neutral-850 hover:bg-neutral-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="shrink-0">
+                        {habit.completed ? (
+                          <CheckCircle2 className="w-4 h-4 text-neutral-900 fill-neutral-900 text-white" />
+                        ) : (
+                          <div className="w-4 h-4 border-2 border-neutral-300 rounded" />
+                        )}
+                      </div>
+                      <div>
+                        <span className={`text-xs font-semibold block ${habit.completed ? "line-through text-neutral-400" : "text-neutral-800"}`}>
+                          {habit.name}
+                        </span>
+                        {habit.description && (
+                          <span className="text-[10px] text-neutral-400 block truncate max-w-[150px]">
+                            {habit.description}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {habit.frequency && habit.frequency !== "Quotidien" && (
+                        <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                          habit.frequency === "Hebdomadaire" 
+                            ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                            : "bg-purple-50 border-purple-200 text-purple-700"
+                        }`}>
+                          {habit.frequency === "Hebdomadaire" ? "Hebdo" : "Mensuel"}
+                        </span>
+                      )}
+                      {(() => {
+                        const badge = getHabitCategoryBadge(habit.category);
+                        return (
+                          <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </div>
 

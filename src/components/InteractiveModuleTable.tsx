@@ -1,6 +1,13 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "motion/react";
 import { 
+  ResponsiveContainer, 
+  PieChart as RechartsPieChart, 
+  Pie, 
+  Cell, 
+  Tooltip as RechartsTooltip 
+} from "recharts";
+import { 
   Plus, 
   Search, 
   ArrowUpDown, 
@@ -20,6 +27,7 @@ import {
   ExternalLink,
   ArrowLeftRight
 } from "lucide-react";
+import DateRangeSelector, { DateRange } from "./DateRangeSelector";
 
 export interface TableColumn {
   key: string;
@@ -62,6 +70,14 @@ export default function InteractiveModuleTable({
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilters, setActiveFilters] = useState<{ [key: string]: string }>({});
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
+  const [showPieChart, setShowPieChart] = useState(true);
+
+  // Date Range Selector State
+  const [dateRange, setDateRange] = useState<DateRange>({
+    preset: "all",
+    startDate: "",
+    endDate: ""
+  });
 
   // History / Period filter states
   const [historyMode, setHistoryMode] = useState<"all" | "monthly" | "yearly">("all");
@@ -159,6 +175,18 @@ export default function InteractiveModuleTable({
     return options;
   }, [columns]);
 
+  // Auto-detect date column for filtering
+  const dateColumn = useMemo(() => {
+    const explicitDateCol = columns.find(col => col.type === "date");
+    if (explicitDateCol) return explicitDateCol;
+
+    const keywords = ["date", "duedate", "deadline", "nextbillingdate", "targetdate", "lastupdated", "purchasedate", "createdat"];
+    const keywordCol = columns.find(col => keywords.includes(col.key.toLowerCase()));
+    if (keywordCol) return keywordCol;
+
+    return null;
+  }, [columns]);
+
   // Search, Filter, and Sort data
   const processedData = useMemo(() => {
     let result = [...data];
@@ -189,13 +217,48 @@ export default function InteractiveModuleTable({
       }
     });
 
-    // 2.5 Apply History Filter (Monthly / Yearly) if there is a date column
-    if (historyMode !== "all" && columns.some(col => col.key === "date")) {
+    // 2.5 Apply Date Range Filter if active
+    if (dateRange.startDate || dateRange.endDate) {
+      const targetKey = dateColumn ? dateColumn.key : "date";
+      result = result.filter(item => {
+        const rawVal = item[targetKey] ?? item["date"] ?? item["dueDate"] ?? item["deadline"] ?? item["lastUpdated"] ?? item["nextBillingDate"] ?? item["targetDate"];
+        if (!rawVal) return false;
+
+        let normDate = "";
+        const strVal = String(rawVal).trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(strVal)) {
+          normDate = strVal.substring(0, 10);
+        } else {
+          const parts = strVal.split(/[/.-]/);
+          if (parts.length === 3) {
+            if (parts[0].length === 4) {
+              normDate = `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+            } else if (parts[2].length === 4) {
+              normDate = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+            }
+          }
+          if (!normDate) {
+            const parsed = new Date(rawVal);
+            if (!isNaN(parsed.getTime())) {
+              normDate = parsed.toISOString().split("T")[0];
+            }
+          }
+        }
+
+        if (!normDate) return false;
+
+        if (dateRange.startDate && normDate < dateRange.startDate) return false;
+        if (dateRange.endDate && normDate > dateRange.endDate) return false;
+        return true;
+      });
+    }
+
+    // 2.6 Legacy History Filter (Monthly / Yearly) fallback
+    if (historyMode !== "all" && columns.some(col => col.key === "date") && !dateRange.startDate && !dateRange.endDate) {
       result = result.filter(item => {
         const itemDate = item["date"];
         if (!itemDate) return false;
         
-        // Split date assuming standard formats like YYYY-MM-DD
         const parts = String(itemDate).split("-");
         if (parts.length >= 2) {
           const year = Number(parts[0]);
@@ -251,7 +314,7 @@ export default function InteractiveModuleTable({
     }
 
     return result;
-  }, [data, searchTerm, activeFilters, sortConfig, columns, historyMode, selectedYear, selectedMonth]);
+  }, [data, searchTerm, activeFilters, sortConfig, columns, historyMode, selectedYear, selectedMonth, dateRange, dateColumn]);
 
   // Calcule les dépenses les plus élevées du mois courant (uniquement pour les Transactions Réelles)
   const currentMonthExpensesData = useMemo(() => {
@@ -291,6 +354,75 @@ export default function InteractiveModuleTable({
 
     return { top3, total };
   }, [data, title]);
+
+  // Real-time Category Breakdown calculation for Pie Chart
+  const categoryPieData = useMemo(() => {
+    if (!processedData || processedData.length === 0) return { items: [], total: 0 };
+
+    const firstItem = processedData[0];
+    if (!firstItem) return { items: [], total: 0 };
+
+    // Find numerical key (spentAmount, spent, amount, montant, limitAmount, costMonthly, etc.)
+    const possibleNumKeys = ["spentAmount", "spent", "amount", "montant", "costMonthly", "limitAmount", "cost", "price", "prix", "balance"];
+    let numKey = possibleNumKeys.find(k => k in firstItem);
+    if (!numKey) {
+      const numCol = columns.find(c => c.type === "number");
+      if (numCol) numKey = numCol.key;
+    }
+
+    // Find category key
+    const possibleCatKeys = ["category", "categorie", "catégorie", "serviceName", "itemName", "source", "name", "type", "description"];
+    let catKey = possibleCatKeys.find(k => k in firstItem);
+    if (!catKey) {
+      const textCol = columns.find(c => c.type === "text" || c.type === "select");
+      if (textCol) catKey = textCol.key;
+    }
+
+    if (!numKey || !catKey) return { items: [], total: 0 };
+
+    const categoryTotals: { [key: string]: number } = {};
+    let totalAmount = 0;
+
+    processedData.forEach(item => {
+      if (!item) return;
+
+      // Filter out pure Revenue if type field exists
+      const typeVal = String(item.type || "").toLowerCase();
+      if (typeVal && (typeVal.includes("revenu") || typeVal.includes("revenue")) && !typeVal.includes("dépense") && !typeVal.includes("depense")) {
+        return;
+      }
+
+      const catVal = String(item[catKey] || "Autres").trim() || "Autres";
+      const amtVal = Math.abs(Number(item[numKey]) || 0);
+
+      if (amtVal > 0) {
+        categoryTotals[catVal] = (categoryTotals[catVal] || 0) + amtVal;
+        totalAmount += amtVal;
+      }
+    });
+
+    const PALETTE = [
+      "#6366f1", "#10b981", "#f59e0b", "#f43f5e", 
+      "#8b5cf6", "#06b6d4", "#ec4899", "#3b82f6", 
+      "#14b8a6", "#f97316", "#84cc16", "#a855f7"
+    ];
+
+    const sortedCategories = Object.entries(categoryTotals)
+      .map(([name, value], idx) => ({
+        name,
+        value,
+        percentage: totalAmount > 0 ? Number(((value / totalAmount) * 100).toFixed(1)) : 0,
+        fill: PALETTE[idx % PALETTE.length]
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    return { items: sortedCategories, total: totalAmount };
+  }, [processedData, columns]);
+
+  // Animation key for smooth fade-in transition when date range, category or search filters change
+  const filterAnimationKey = useMemo(() => {
+    return `${dateRange.preset}_${dateRange.startDate}_${dateRange.endDate}_${JSON.stringify(activeFilters)}_${searchTerm}_${historyMode}_${selectedYear}_${selectedMonth}`;
+  }, [dateRange, activeFilters, searchTerm, historyMode, selectedYear, selectedMonth]);
 
   // Export to CSV masquerading as Excel
   const handleExportCSV = () => {
@@ -441,6 +573,21 @@ export default function InteractiveModuleTable({
             <span>Importer</span>
           </button>
 
+          {categoryPieData.items.length > 0 && (
+            <button
+              onClick={() => setShowPieChart(!showPieChart)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                showPieChart 
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-xs" 
+                  : "bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border-neutral-200"
+              }`}
+              title="Afficher ou masquer le Graphique Circulaire de Répartition"
+            >
+              <PieChart className="w-3.5 h-3.5" />
+              <span>Répartition ({categoryPieData.items.length})</span>
+            </button>
+          )}
+
           <button
             onClick={openAddModal}
             className="flex items-center gap-1.5 bg-neutral-950 hover:bg-neutral-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs"
@@ -450,6 +597,168 @@ export default function InteractiveModuleTable({
           </button>
         </div>
       </div>
+
+      {/* Graphique Circulaire (Pie Chart) de Répartition en Temps Réel */}
+      {categoryPieData.items.length > 0 && showPieChart && (
+        <motion.div 
+          key={`pie-${filterAnimationKey}`}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="bg-neutral-900 text-white border border-neutral-800 rounded-2xl p-5 shadow-lg space-y-5"
+        >
+          {/* Header Card */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-800 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-xl shrink-0">
+                <PieChart className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-white font-mono flex items-center gap-2 flex-wrap">
+                  Répartition des Dépenses par Catégorie
+                  <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded text-[10px] normal-case font-mono font-bold">
+                    Temps réel
+                  </span>
+                </h3>
+                <p className="text-[11px] text-neutral-400 mt-0.5">
+                  Visualisation interactive mise à jour automatiquement selon vos filtres ({processedData.length} élément{processedData.length > 1 ? "s" : ""}).
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+              <div className="px-3 py-1.5 bg-neutral-800/90 border border-neutral-700/80 rounded-xl text-xs font-mono font-bold text-neutral-200">
+                Total filtré : <span className="text-emerald-400 font-extrabold">{categoryPieData.total.toLocaleString("fr-FR")} {currencySymbol}</span>
+              </div>
+              <button
+                onClick={() => setShowPieChart(false)}
+                className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-all cursor-pointer"
+                title="Fermer le graphique"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Grid: Pie Chart (Recharts) + Category Legend Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            {/* Recharts Donut Pie Chart Container */}
+            <div className="lg:col-span-5 relative h-[250px] w-full flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <RechartsTooltip
+                    content={({ active, payload }: any) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-neutral-950 border border-neutral-700/90 rounded-xl p-3 shadow-2xl text-xs space-y-1.5 z-50">
+                            <div className="flex items-center gap-2">
+                              <span 
+                                className="w-3 h-3 rounded-full shrink-0" 
+                                style={{ backgroundColor: data.fill }} 
+                              />
+                              <span className="font-bold text-white text-sm">{data.name}</span>
+                            </div>
+                            <div className="pt-1.5 border-t border-neutral-800/80 flex items-center justify-between gap-4 font-mono">
+                              <span className="text-neutral-400">Montant :</span>
+                              <span className="font-bold text-emerald-400">
+                                {data.value.toLocaleString("fr-FR")} {currencySymbol}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 font-mono">
+                              <span className="text-neutral-400">Part du total :</span>
+                              <span className="font-bold text-indigo-300">
+                                {data.percentage}%
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Pie
+                    data={categoryPieData.items}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={65}
+                    outerRadius={95}
+                    paddingAngle={3}
+                    cornerRadius={6}
+                  >
+                    {categoryPieData.items.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.fill} 
+                        stroke="#171717"
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </Pie>
+                </RechartsPieChart>
+              </ResponsiveContainer>
+
+              {/* Center Donut Badge */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-neutral-400">
+                  {categoryPieData.items.length} Catégorie{categoryPieData.items.length > 1 ? "s" : ""}
+                </span>
+                <span className="text-base font-black font-mono text-white mt-0.5">
+                  {categoryPieData.total.toLocaleString("fr-FR")}
+                </span>
+                <span className="text-[10px] font-bold text-emerald-400 font-mono">
+                  {currencySymbol}
+                </span>
+              </div>
+            </div>
+
+            {/* Category Breakdown Progress Cards */}
+            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+              {categoryPieData.items.map((cat) => (
+                <div 
+                  key={cat.name}
+                  className="p-3 bg-neutral-950/80 border border-neutral-800 rounded-xl space-y-2 hover:border-neutral-700 transition-all"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span 
+                        className="w-2.5 h-2.5 rounded-full shrink-0" 
+                        style={{ backgroundColor: cat.fill }}
+                      />
+                      <span className="text-xs font-bold text-neutral-200 truncate" title={cat.name}>
+                        {cat.name}
+                      </span>
+                    </div>
+                    <span className="px-1.5 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded text-[10px] font-mono font-bold shrink-0">
+                      {cat.percentage}%
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-mono pt-0.5">
+                    <span className="text-neutral-400 text-[11px]">Dépense :</span>
+                    <span className="font-bold text-white">
+                      {cat.value.toLocaleString("fr-FR")} {currencySymbol}
+                    </span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all duration-500" 
+                      style={{ 
+                        width: `${cat.percentage}%`,
+                        backgroundColor: cat.fill
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Résumé des dépenses les plus élevées pour le module Transactions */}
       {title === "Transactions Réelles" && (
@@ -535,6 +844,15 @@ export default function InteractiveModuleTable({
           )}
         </div>
       )}
+
+      {/* Sélecteur de Plage de Dates au-dessus de la table */}
+      <DateRangeSelector
+        value={dateRange}
+        onChange={setDateRange}
+        totalItemsCount={data.length}
+        filteredItemsCount={processedData.length}
+        dateColumnLabel={dateColumn?.label || "Date"}
+      />
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -774,7 +1092,13 @@ export default function InteractiveModuleTable({
       )}
 
       {/* Main Table View */}
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
+      <motion.div 
+        key={`table-container-${filterAnimationKey}`}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="overflow-x-auto rounded-xl border border-neutral-200 bg-white"
+      >
         <table className="w-full border-collapse text-left text-xs">
           <thead>
             <tr className="bg-neutral-50 border-b border-neutral-200 text-neutral-500 font-semibold tracking-wide">
@@ -823,10 +1147,10 @@ export default function InteractiveModuleTable({
             ) : (
               processedData.map((item, index) => (
                 <motion.tr 
-                  key={item.id} 
-                  initial={{ opacity: 0, y: 15 }}
+                  key={`${filterAnimationKey}_${item.id}`} 
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: Math.min(index * 0.03, 0.3), ease: "easeOut" }}
+                  transition={{ duration: 0.25, delay: Math.min(index * 0.02, 0.25), ease: "easeOut" }}
                   className="hover:bg-neutral-50/50 transition-colors text-neutral-700"
                 >
                   {columns.map(col => {
@@ -924,7 +1248,7 @@ export default function InteractiveModuleTable({
             )}
           </tbody>
         </table>
-      </div>
+      </motion.div>
 
       {/* Row summary count footer */}
       <div className="text-[11px] text-neutral-400 flex items-center justify-between font-sans">
