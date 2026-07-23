@@ -31,6 +31,7 @@ import {
   Rows
 } from "lucide-react";
 import DateRangeSelector, { DateRange } from "./DateRangeSelector";
+import { autoCategorizeTransaction, bulkAutoCategorizeTransactions } from "../utils/transactionCategorizer";
 
 export interface TableColumn {
   key: string;
@@ -132,26 +133,68 @@ export default function InteractiveModuleTable({
     setFormState({ ...item });
   };
 
-  // Handle standard input changes
+  // Handle standard input changes with real-time auto-categorization
   const handleInputChange = (key: string, value: any) => {
-    setFormState(prev => ({ ...prev, [key]: value }));
+    setFormState(prev => {
+      const updated = { ...prev, [key]: value };
+
+      if (key === "description" && typeof value === "string" && value.trim().length >= 2) {
+        const categoryCol = columns.find(c => c.key === "category");
+        if (categoryCol) {
+          const autoRes = autoCategorizeTransaction(value, updated.type, updated.category, categoryCol.options);
+          if (autoRes.isSuggested && autoRes.category) {
+            updated.category = autoRes.category;
+            updated._autoCategoryMatched = autoRes.matchedKeyword;
+          }
+        }
+      }
+      return updated;
+    });
   };
 
   // Form Submit (Add or Edit)
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalForm = { ...formState };
+    const categoryCol = columns.find(c => c.key === "category");
+    if (categoryCol && finalForm.description) {
+      const autoRes = autoCategorizeTransaction(finalForm.description, finalForm.type, finalForm.category, categoryCol.options);
+      if (autoRes.category) {
+        finalForm.category = autoRes.category;
+      }
+    }
+    delete finalForm._autoCategoryMatched;
+
     if (editingItem) {
-      onEdit(editingItem.id, formState);
+      onEdit(editingItem.id, finalForm);
       setEditingItem(null);
     } else {
       const newItem = {
         id: "gen_" + Date.now() + Math.random().toString(36).substr(2, 5),
-        ...formState
+        ...finalForm
       };
       onAdd(newItem);
       setIsAddOpen(false);
     }
     setFormState({});
+  };
+
+  // Bulk Auto Categorization handler for existing data
+  const handleBulkAutoCategorize = () => {
+    const categoryCol = columns.find(c => c.key === "category");
+    const options = categoryCol?.options || [];
+    const { updatedTransactions, updatedCount } = bulkAutoCategorizeTransactions(data, options);
+    if (updatedCount > 0) {
+      updatedTransactions.forEach(item => {
+        const original = data.find(d => d.id === item.id);
+        if (original && original.category !== item.category) {
+          onEdit(item.id, item);
+        }
+      });
+      alert(`🪄 ${updatedCount} transaction(s) ont été analysées et catégorisées avec succès !`);
+    } else {
+      alert("✨ Toutes vos transactions avec description ont déjà une catégorie appropriée !");
+    }
   };
 
   // Sorting Handler
@@ -607,6 +650,17 @@ export default function InteractiveModuleTable({
             <Upload className="w-3.5 h-3.5" />
             <span>Importer</span>
           </button>
+
+          {columns.some(c => c.key === "category") && (
+            <button
+              onClick={handleBulkAutoCategorize}
+              className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-3xs"
+              title="Analyser automatiquement les descriptions pour attribuer une catégorie aux transactions sans catégorie"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span>Catégoriser Auto</span>
+            </button>
+          )}
 
           {categoryPieData.items.length > 0 && (
             <button
@@ -1377,14 +1431,22 @@ export default function InteractiveModuleTable({
                           className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-neutral-900 focus:outline-none focus:border-neutral-900 focus:bg-white font-mono"
                         />
                       ) : (
-                        <input
-                          type="text"
-                          value={val}
-                          onChange={(e) => handleInputChange(col.key, e.target.value)}
-                          required={col.required}
-                          placeholder={`Entrer ${col.label.toLowerCase()}`}
-                          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white"
-                        />
+                        <div>
+                          <input
+                            type="text"
+                            value={val}
+                            onChange={(e) => handleInputChange(col.key, e.target.value)}
+                            required={col.required}
+                            placeholder={`Entrer ${col.label.toLowerCase()}`}
+                            className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2 text-xs text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white"
+                          />
+                          {col.key === "description" && formState._autoCategoryMatched && (
+                            <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-lg animate-in fade-in-50">
+                              <Sparkles className="w-3 h-3 text-amber-600 shrink-0" />
+                              <span>Catégorie <strong>{formState.category}</strong> attribuée automatiquement d'après <em>"{formState._autoCategoryMatched}"</em></span>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   );

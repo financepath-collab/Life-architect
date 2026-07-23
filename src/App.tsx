@@ -103,6 +103,7 @@ import {
 } from "./googleDriveService";
 import { dbStore } from "./indexedDBStore";
 import { mergePayloads } from "./utils/syncUtils";
+import { autoCategorizeTransaction, bulkAutoCategorizeTransactions } from "./utils/transactionCategorizer";
 import { auth, db, handleFirestoreError, OperationType, isOfflineError } from "./firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
@@ -485,11 +486,17 @@ export default function App() {
   };
 
   const handleQuickAddTransaction = (tx: any) => {
+    const categoryOptions = ["Revenus Pro", "Sponsor", "AdSense", "Équipement", "Repas", "Logiciels", "Alimentation", "Transport", "Loisirs", "Autres"];
+    const autoRes = autoCategorizeTransaction(tx.description || "", tx.type, tx.category, categoryOptions);
     const newTx = {
       ...tx,
+      category: autoRes.category || "Autres",
       id: "tr_" + Date.now()
     };
     setTransactions(prev => [newTx, ...prev]);
+    if (autoRes.isSuggested && autoRes.matchedKeyword) {
+      triggerToast(`🪄 Catégorie "${autoRes.category}" attribuée d'après "${autoRes.matchedKeyword}" !`, "info");
+    }
   };
 
   const handleQuickAddJournalEntry = (title: string, content: string, mood: any) => {
@@ -2753,15 +2760,32 @@ export default function App() {
 
   const getModuleConfig = (moduleId: string) => {
     switch (moduleId) {
-      case "transactions":
+      case "transactions": {
+        const categoryOptions = ["Revenus Pro", "Sponsor", "AdSense", "Équipement", "Repas", "Logiciels", "Alimentation", "Transport", "Loisirs", "Autres"];
         return {
           title: "Transactions Réelles",
           description: "Historique complet de vos entrées d'argent et vos dépenses courantes.",
           data: transactions,
-          onAdd: (item: any) => setTransactions(prev => [item, ...prev]),
+          onAdd: (item: any) => {
+            const autoRes = autoCategorizeTransaction(item.description || "", item.type, item.category, categoryOptions);
+            const newItem = {
+              ...item,
+              category: autoRes.category || "Autres"
+            };
+            setTransactions(prev => [newItem, ...prev]);
+            if (autoRes.isSuggested && autoRes.matchedKeyword) {
+              triggerToast(`🪄 Catégorie "${autoRes.category}" attribuée d'après "${autoRes.matchedKeyword}" !`, "info");
+            }
+          },
           onEdit: (id: string, updated: any) => setTransactions(prev => prev.map(x => x.id === id ? updated : x)),
           onDelete: (id: string) => setTransactions(prev => prev.filter(x => x.id !== id)),
-          onImport: (items: any[]) => setTransactions(prev => [...items, ...prev]),
+          onImport: (items: any[]) => {
+            const { updatedTransactions, updatedCount } = bulkAutoCategorizeTransactions(items, categoryOptions);
+            setTransactions(prev => [...updatedTransactions, ...prev]);
+            if (updatedCount > 0) {
+              triggerToast(`🪄 ${updatedCount} transaction(s) ont été catégorisées automatiquement !`, "success");
+            }
+          },
           columns: [
             { key: "date", label: "Date", type: "date", required: true },
             { key: "description", label: "Description", type: "text", required: true },
@@ -2769,13 +2793,14 @@ export default function App() {
               key: "category", 
               label: "Catégorie", 
               type: "select", 
-              options: ["Revenus Pro", "Sponsor", "AdSense", "Équipement", "Repas", "Logiciels", "Alimentation", "Transport", "Loisirs", "Autres"] 
+              options: categoryOptions 
             },
             { key: "type", label: "Type", type: "select", options: ["Revenue", "Dépense"] },
             { key: "amount", label: "Montant (MAD)", type: "number", required: true },
             { key: "account", label: "Compte", type: "text" }
           ] as TableColumn[]
         };
+      }
 
       case "stocks":
         return {
