@@ -104,7 +104,7 @@ import {
 import { dbStore } from "./indexedDBStore";
 import { mergePayloads } from "./utils/syncUtils";
 import { auth, db, handleFirestoreError, OperationType, isOfflineError } from "./firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { 
   FinanceSectionDashboard, 
@@ -1422,12 +1422,14 @@ export default function App() {
       }
     });
 
-    if (updated || !localStorage.getItem("la_module_timestamps")) {
+    if (updated) {
+      localStorage.setItem("la_module_timestamps", JSON.stringify(savedTimestamps));
+      localStorage.setItem("la_last_local_update_time", now);
+    } else if (!localStorage.getItem("la_module_timestamps")) {
       localStorage.setItem("la_module_timestamps", JSON.stringify(savedTimestamps));
     }
 
     prevModulesRef.current = current;
-    localStorage.setItem("la_last_local_update_time", now);
   }, [
     dailyHabits, habitHistory, weeklyObjectives, transactions, stocks, budgets, salaires,
     epargnes, actions30Jours, profilAmeliorations, skinTrackers, mealPlanners,
@@ -1941,9 +1943,9 @@ export default function App() {
     });
   };
 
-  // Auth State Listener & Boot Sync loader
+  // Auth State Listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
       if (user) {
         const syncPref = localStorage.getItem("la_cloud_sync_enabled");
@@ -1951,101 +1953,7 @@ export default function App() {
         
         if (shouldEnable) {
           setCloudSyncEnabled(true);
-          setSyncStatus("syncing");
           localStorage.setItem("la_cloud_sync_enabled", "true");
-          try {
-            const docRef = doc(db, "user_sync", user.uid);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              if (data && data.payload) {
-                const firebaseTime = data.updatedAt?.toDate() || new Date();
-                
-                // Only detect conflict if this device actually contains user data
-                const hasLocalData = checkIfHasLocalUserData();
-                const localTimeStr = localStorage.getItem("la_last_local_update_time");
-                const localTime = (hasLocalData && localTimeStr) ? new Date(localTimeStr) : null;
-
-                // Version verification: If local storage has modifications that are newer than Firebase by > 5 seconds
-                if (localTime && firebaseTime && localTime.getTime() > firebaseTime.getTime() + 5000) {
-                  const localPayload = getCurrentStatePayload();
-                  setSyncConflict({
-                    localTime,
-                    cloudTime: firebaseTime,
-                    localPayload,
-                    cloudPayload: data.payload,
-                    onResolve: (choice) => {
-                      if (choice === "merge") {
-                        const { mergedPayload, mergedModules } = mergePayloads(localPayload, data.payload);
-                        loadStatePayload(mergedPayload);
-                        setSyncStatus("syncing");
-                        setDoc(docRef, {
-                          userId: user.uid,
-                          updatedAt: new Date(),
-                          payload: mergedPayload
-                        }).then(() => {
-                          setLastSyncedTime(new Date());
-                          setSyncStatus("synced");
-                          triggerToast(`🔄 Fusion réussie ! ${mergedModules.length} modules mis à jour depuis le Cloud.`, "success");
-                        }).catch(err => {
-                          console.error("❌ Échec de la sauvegarde fusionnée vers le Cloud :", err);
-                          setSyncStatus("error");
-                        });
-                      } else if (choice === "cloud") {
-                        loadStatePayload(data.payload);
-                        setLastSyncedTime(firebaseTime);
-                        setSyncStatus("synced");
-                        triggerToast("☁️ Données du Cloud chargées avec succès !", "success");
-                      } else {
-                        // User chose local: Overwrite cloud with local payload
-                        setSyncStatus("syncing");
-                        setDoc(docRef, {
-                          userId: user.uid,
-                          updatedAt: new Date(),
-                          payload: localPayload
-                        }).then(() => {
-                          setLastSyncedTime(new Date());
-                          setSyncStatus("synced");
-                          triggerToast("☁️ Données locales envoyées sur le Cloud !", "success");
-                        }).catch(err => {
-                          console.error("❌ Échec lors de la résolution du conflit vers le Cloud :", err);
-                          setSyncStatus("error");
-                        });
-                      }
-                      setSyncConflict(null);
-                    }
-                  });
-                } else {
-                  loadStatePayload(data.payload);
-                  setLastSyncedTime(firebaseTime);
-                  setSyncStatus("synced");
-                  triggerToast("☁️ Données chargées et synchronisées depuis le cloud !", "success");
-                }
-              }
-            } else {
-              // Push local data as base since it's a new cloud user
-              const payload = getCurrentStatePayload();
-              await setDoc(docRef, {
-                userId: user.uid,
-                updatedAt: new Date(),
-                payload: payload
-              });
-              setLastSyncedTime(new Date());
-              setSyncStatus("synced");
-              triggerToast("☁️ Compte cloud configuré et synchronisé avec succès !", "success");
-            }
-          } catch (error: any) {
-            if (isOfflineError(error)) {
-              setSyncStatus("local");
-              triggerToast("🌐 Mode hors-ligne - Données sauvegardées en local.", "info");
-            } else {
-              console.error("❌ Échec lors de l'initialisation de la synchronisation cloud :", error);
-              setSyncStatus("error");
-              try {
-                handleFirestoreError(error, OperationType.GET, `user_sync/${user.uid}`);
-              } catch (e) {}
-            }
-          }
         } else {
           setSyncStatus("local");
         }
@@ -2059,6 +1967,120 @@ export default function App() {
       unsubscribe();
     };
   }, []);
+
+  // Realtime Firestore Listener for cross-browser & multi-device synchronization
+  useEffect(() => {
+    if (!firebaseUser || !cloudSyncEnabled) return;
+
+    setSyncStatus("syncing");
+    const docRef = doc(db, "user_sync", firebaseUser.uid);
+    let isFirstSnapshot = true;
+
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      // Ignore local optimistic writes (changes originating from setDoc on this client)
+      if (docSnap.metadata.hasPendingWrites) {
+        return;
+      }
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data && data.payload) {
+          const firebaseTime = data.updatedAt?.toDate?.() || new Date();
+
+          if (isFirstSnapshot) {
+            isFirstSnapshot = false;
+            const hasLocalData = checkIfHasLocalUserData();
+            const localTimeStr = localStorage.getItem("la_last_local_update_time");
+            const localTime = (hasLocalData && localTimeStr) ? new Date(localTimeStr) : null;
+
+            // Conflict check: Only if local device has offline changes strictly newer than Cloud by > 5 seconds
+            if (localTime && firebaseTime && localTime.getTime() > firebaseTime.getTime() + 5000) {
+              const localPayload = getCurrentStatePayload();
+              setSyncConflict({
+                localTime,
+                cloudTime: firebaseTime,
+                localPayload,
+                cloudPayload: data.payload,
+                onResolve: (choice) => {
+                  if (choice === "merge") {
+                    const { mergedPayload, mergedModules } = mergePayloads(localPayload, data.payload);
+                    loadStatePayload(mergedPayload);
+                    setSyncStatus("syncing");
+                    setDoc(docRef, {
+                      userId: firebaseUser.uid,
+                      updatedAt: new Date(),
+                      payload: mergedPayload
+                    }).then(() => {
+                      setLastSyncedTime(new Date());
+                      setSyncStatus("synced");
+                      triggerToast(`🔄 Fusion réussie ! ${mergedModules.length} modules mis à jour depuis le Cloud.`, "success");
+                    }).catch(err => {
+                      console.error("❌ Échec de la sauvegarde fusionnée vers le Cloud :", err);
+                      setSyncStatus("error");
+                    });
+                  } else if (choice === "cloud") {
+                    loadStatePayload(data.payload);
+                    setLastSyncedTime(firebaseTime);
+                    setSyncStatus("synced");
+                    triggerToast("☁️ Données du Cloud chargées avec succès !", "success");
+                  } else {
+                    setSyncStatus("syncing");
+                    setDoc(docRef, {
+                      userId: firebaseUser.uid,
+                      updatedAt: new Date(),
+                      payload: localPayload
+                    }).then(() => {
+                      setLastSyncedTime(new Date());
+                      setSyncStatus("synced");
+                      triggerToast("☁️ Données locales envoyées sur le Cloud !", "success");
+                    }).catch(err => {
+                      console.error("❌ Échec lors de la résolution du conflit vers le Cloud :", err);
+                      setSyncStatus("error");
+                    });
+                  }
+                  setSyncConflict(null);
+                }
+              });
+              return;
+            }
+          }
+
+          loadStatePayload(data.payload);
+          setLastSyncedTime(firebaseTime);
+          setSyncStatus("synced");
+        }
+      } else {
+        // Doc does not exist on Cloud yet -> Upload initial local state
+        if (isFirstSnapshot) {
+          isFirstSnapshot = false;
+          const payload = getCurrentStatePayload();
+          setDoc(docRef, {
+            userId: firebaseUser.uid,
+            updatedAt: new Date(),
+            payload: payload
+          }).then(() => {
+            setLastSyncedTime(new Date());
+            setSyncStatus("synced");
+            triggerToast("☁️ Compte cloud configuré et synchronisé avec succès !", "success");
+          }).catch(err => {
+            console.error("❌ Initial cloud document creation failed:", err);
+            setSyncStatus("error");
+          });
+        }
+      }
+    }, (error) => {
+      if (isOfflineError(error)) {
+        setSyncStatus("local");
+      } else {
+        console.error("❌ [onSnapshot Sync Error] :", error);
+        setSyncStatus("error");
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [firebaseUser, cloudSyncEnabled]);
 
   // Save Data to Firebase Firestore
   const saveDataToFirebase = async () => {

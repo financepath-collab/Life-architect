@@ -26,19 +26,17 @@ service cloud.firestore {
     // --- COLLECTION RULESETS ---
     match /user_sync/{userId} {
       // Restrict access so that users can only read or write their own cloud-sync documents
-      allow get: if isSignedIn() && userId == request.auth.uid;
+      allow get, list: if isSignedIn() && userId == request.auth.uid;
       
       allow create: if isSignedIn() 
         && userId == request.auth.uid 
         && isValidId(userId) 
-        && isValidUserSync(request.resource.data)
-        && request.resource.data.updatedAt == request.time;
+        && isValidUserSync(request.resource.data);
         
       allow update: if isSignedIn() 
         && userId == request.auth.uid 
         && isValidId(userId) 
         && isValidUserSync(request.resource.data)
-        && request.resource.data.updatedAt == request.time
         && request.resource.data.userId == resource.data.userId; // Prevent hijacking userId
         
       allow delete: if isSignedIn() && userId == request.auth.uid;
