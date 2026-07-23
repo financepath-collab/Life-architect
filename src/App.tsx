@@ -79,6 +79,7 @@ import MonthlyComparisonCard from "./components/MonthlyComparisonCard";
 import MonthlyGoalsSection from "./components/MonthlyGoalsSection";
 import EditorialCalendarSection from "./components/EditorialCalendarSection";
 import CentralCalendar from "./components/CentralCalendar";
+import DashboardUnifiedCalendar from "./components/DashboardUnifiedCalendar";
 import WeeklyCategoryStatsCard from "./components/WeeklyCategoryStatsCard";
 import WeatherWidget from "./components/WeatherWidget";
 import DisciplineHeatmap from "./components/DisciplineHeatmap";
@@ -2479,6 +2480,64 @@ export default function App() {
     setStreakCount(prev => prev + 1);
   };
 
+  // Handler for Calendar Habit Toggle for any Date
+  const handleToggleHabitForDate = (habitId: string, dateStr: string) => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (dateStr === todayStr) {
+      setDailyHabits(prev => prev.map(h => h.id === habitId ? { ...h, completed: !h.completed } : h));
+    } else {
+      setHabitHistory(prev => {
+        const existing = prev[dateStr] || [];
+        const isDone = existing.includes(habitId);
+        const next = isDone ? existing.filter(id => id !== habitId) : [...existing, habitId];
+        return { ...prev, [dateStr]: next };
+      });
+    }
+  };
+
+  // Handler for Calendar Skincare Routine Toggle for any Date
+  const handleToggleSkinRoutineForDate = (dateStr: string, timeOfDay: "morning" | "evening") => {
+    setSkinTrackers(prev => {
+      const existing = prev.find(s => s.date === dateStr);
+      if (existing) {
+        return prev.map(s => s.date === dateStr ? {
+          ...s,
+          morningRoutine: timeOfDay === "morning" ? !s.morningRoutine : s.morningRoutine,
+          eveningRoutine: timeOfDay === "evening" ? !s.eveningRoutine : s.eveningRoutine
+        } : s);
+      } else {
+        const newEntry: SkinTracker = {
+          id: Math.random().toString(36).substr(2, 9),
+          date: dateStr,
+          morningRoutine: timeOfDay === "morning",
+          eveningRoutine: timeOfDay === "evening",
+          skinCondition: "Bonne",
+          productsUsed: "",
+          waterIntakeLiters: 0
+        };
+        return [newEntry, ...prev];
+      }
+    });
+  };
+
+  // Handler for Folder Objective Toggle
+  const handleToggleFolderObjective = (folderId: string, objId: string) => {
+    setFolders(prev => prev.map(f => f.id === folderId ? {
+      ...f,
+      customObjectives: f.customObjectives.map(o => o.id === objId ? { ...o, completed: !o.completed } : o)
+    } : f));
+  };
+
+  // Handler for Action30Jours Toggle
+  const handleToggleAction30Jours = (id: string) => {
+    setActions30Jours(prev => prev.map(a => a.id === id ? { ...a, completed: !a.completed } : a));
+  };
+
+  // Handler for Achat Status Toggle
+  const handleToggleAchatStatus = (id: string) => {
+    setAchatsMensuels(prev => prev.map(a => a.id === id ? { ...a, status: a.status === "Acheté" ? "À acheter" : "Acheté" } : a));
+  };
+
   // Focus Mode Toggle handler with redirect and state check
   const handleToggleFocusMode = () => {
     const nextVal = !focusMode;
@@ -4149,6 +4208,28 @@ export default function App() {
                 epargnes={epargnes}
                 dailyHabits={dailyHabits}
                 onNavigateToModule={handleNavigateToModule}
+              />
+
+              {/* UNIFIED INTERACTIVE CALENDAR ON MAIN DASHBOARD */}
+              <DashboardUnifiedCalendar
+                dailyHabits={dailyHabits}
+                habitHistory={habitHistory}
+                onToggleHabitForDate={handleToggleHabitForDate}
+                weeklyObjectives={weeklyObjectives}
+                onToggleWeeklyObjective={toggleWeeklyObjective}
+                actions30Jours={actions30Jours}
+                onToggleAction30Jours={handleToggleAction30Jours}
+                folders={folders}
+                onToggleFolderObjective={handleToggleFolderObjective}
+                skinTrackers={skinTrackers}
+                onToggleSkinRoutineForDate={handleToggleSkinRoutineForDate}
+                abonnements={abonnements}
+                achatsMensuels={achatsMensuels}
+                onToggleAchatStatus={handleToggleAchatStatus}
+                transactions={transactions}
+                epargnes={epargnes}
+                onNavigateToModule={handleNavigateToModule}
+                triggerToast={triggerToast}
               />
 
               {/* 3-Column Responsive Bento-style Grid */}
