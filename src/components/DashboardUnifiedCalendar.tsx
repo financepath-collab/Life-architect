@@ -22,7 +22,9 @@ import {
   ExternalLink,
   Zap,
   GripVertical,
-  MoveRight
+  MoveRight,
+  AlertCircle,
+  AlertTriangle
 } from "lucide-react";
 import {
   DailyHabit,
@@ -270,6 +272,13 @@ export default function DashboardUnifiedCalendar({
     // 4. FINANCE (Abonnements + Achats due)
     const financeCount = abonnements.filter(a => a.status === "Actif").length + achatsMensuels.length;
 
+    const isPastDay = dateStr < todayStr;
+    const hasOverdue = isPastDay && (
+      (habitsTotal > 0 && habitsCompleted < habitsTotal) ||
+      (skinCompletedCount < 2) ||
+      (projPendingCount > 0)
+    );
+
     return {
       habitsCompleted,
       habitsTotal,
@@ -279,6 +288,7 @@ export default function DashboardUnifiedCalendar({
       projPendingCount,
       projTotal,
       financeCount,
+      hasOverdue,
       hasHabitActivity: selectedCategories.has("HABIT") && habitsCompleted > 0,
       hasSkinActivity: selectedCategories.has("SKIN CARE") && skinCompletedCount > 0,
       hasProjActivity: selectedCategories.has("PROJET") && projTotal > 0,
@@ -301,7 +311,8 @@ export default function DashboardUnifiedCalendar({
         completed: isDone,
         category: "HABIT" as CalendarFilterCategory,
         moduleKey: "habits",
-        typeLabel: "Habitude"
+        typeLabel: "Habitude",
+        dueDate: selectedDateStr
       };
     });
 
@@ -314,7 +325,8 @@ export default function DashboardUnifiedCalendar({
       category: "PROJET" as CalendarFilterCategory,
       moduleKey: "projets_dash",
       typeLabel: "Objectif",
-      rawType: "weekly"
+      rawType: "weekly",
+      dueDate: (o as any).dueDate || selectedDateStr
     }));
 
     const folderObjectives = folders.flatMap(f => f.customObjectives.map(o => ({
@@ -326,7 +338,8 @@ export default function DashboardUnifiedCalendar({
       category: "PROJET" as CalendarFilterCategory,
       moduleKey: "project_folders",
       typeLabel: "Tâche de Projet",
-      rawType: "folder"
+      rawType: "folder",
+      dueDate: o.dueDate || selectedDateStr
     })));
 
     const sprint30Actions = actions30Jours.slice(0, 5).map(a => ({
@@ -337,7 +350,8 @@ export default function DashboardUnifiedCalendar({
       category: "PROJET" as CalendarFilterCategory,
       moduleKey: "actions30",
       typeLabel: "Action 30J",
-      rawType: "action30"
+      rawType: "action30",
+      dueDate: selectedDateStr
     }));
 
     // SKIN CARE
@@ -351,7 +365,8 @@ export default function DashboardUnifiedCalendar({
         category: "SKIN CARE" as CalendarFilterCategory,
         moduleKey: "skin",
         typeLabel: "Soins Matin",
-        rawType: "skin_morning"
+        rawType: "skin_morning",
+        dueDate: selectedDateStr
       },
       {
         id: "skin_evening",
@@ -361,7 +376,8 @@ export default function DashboardUnifiedCalendar({
         category: "SKIN CARE" as CalendarFilterCategory,
         moduleKey: "skin",
         typeLabel: "Soins Soir",
-        rawType: "skin_evening"
+        rawType: "skin_evening",
+        dueDate: selectedDateStr
       }
     ];
 
@@ -375,7 +391,8 @@ export default function DashboardUnifiedCalendar({
         category: "FINANCE" as CalendarFilterCategory,
         moduleKey: "abonnements",
         typeLabel: "Abonnement",
-        rawType: "abonnement"
+        rawType: "abonnement",
+        dueDate: a.nextBillingDate || selectedDateStr
       })),
       ...achatsMensuels.map(a => ({
         id: a.id,
@@ -385,7 +402,8 @@ export default function DashboardUnifiedCalendar({
         category: "FINANCE" as CalendarFilterCategory,
         moduleKey: "achats",
         typeLabel: "Achat Prévisible",
-        rawType: "achat"
+        rawType: "achat",
+        dueDate: (a as any).targetDate || (a as any).dueDate || selectedDateStr
       }))
     ];
 
@@ -422,6 +440,13 @@ export default function DashboardUnifiedCalendar({
     const percent = Math.round((completed / total) * 100);
     return { total, completed, percent };
   }, [selectedDayItems]);
+
+  const overdueCountInSelectedDay = useMemo(() => {
+    return selectedDayItems.filter(item => {
+      const itemDueDate = item.dueDate || selectedDateStr;
+      return !item.completed && itemDueDate < todayStr;
+    }).length;
+  }, [selectedDayItems, selectedDateStr, todayStr]);
 
   // Handle Validation directly from Calendar
   const handleToggleItemInCalendar = (item: any) => {
@@ -768,20 +793,29 @@ export default function DashboardUnifiedCalendar({
                       : isToday
                       ? "bg-indigo-50/80 dark:bg-indigo-950/60 border-indigo-400 text-indigo-950 dark:text-indigo-200 font-bold"
                       : day.isCurrentMonth
-                      ? "bg-white dark:bg-zinc-900 border-neutral-200/70 dark:border-zinc-800 text-neutral-800 dark:text-neutral-200 hover:border-neutral-300 dark:hover:border-zinc-700"
+                      ? summary.hasOverdue
+                        ? "bg-rose-50/20 dark:bg-rose-950/20 border-rose-300 dark:border-rose-900/80 text-neutral-800 dark:text-neutral-200 hover:border-rose-400"
+                        : "bg-white dark:bg-zinc-900 border-neutral-200/70 dark:border-zinc-800 text-neutral-800 dark:text-neutral-200 hover:border-neutral-300 dark:hover:border-zinc-700"
                       : "bg-neutral-100/50 dark:bg-zinc-900/30 border-transparent text-neutral-300 dark:text-zinc-700"
                   }`}
                 >
-                  {/* Day Number and Today Badge */}
+                  {/* Day Number and Today Badge / Overdue Indicator */}
                   <div className="flex items-center justify-between w-full">
                     <span className={`text-xs font-mono font-extrabold ${isSelected ? (isSelected && isToday ? "text-amber-300 dark:text-amber-600" : "") : ""}`}>
                       {day.dayNumber}
                     </span>
-                    {isToday && (
-                      <span className={`text-[8px] font-mono uppercase font-black px-1 rounded ${isSelected ? "bg-amber-400 text-neutral-950" : "bg-indigo-600 text-white"}`}>
-                        Auj.
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {summary.hasOverdue && !isSelected && (
+                        <span className="p-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 flex items-center gap-0.5" title="Date dépassée / Éléments non complétés en retard">
+                          <AlertCircle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
+                        </span>
+                      )}
+                      {isToday && (
+                        <span className={`text-[8px] font-mono uppercase font-black px-1 rounded ${isSelected ? "bg-amber-400 text-neutral-950" : "bg-indigo-600 text-white"}`}>
+                          Auj.
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Indicator Dots for Activity Categories */}
@@ -948,6 +982,19 @@ export default function DashboardUnifiedCalendar({
             <span><strong>Glissez-déposez</strong> une tâche vers une date du calendrier pour la reprogrammer rapidement.</span>
           </div>
 
+          {/* Overdue Items Alert Banner */}
+          {overdueCountInSelectedDay > 0 && (
+            <div className="px-3 py-2.5 bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-800 rounded-2xl flex items-center justify-between gap-2 text-xs font-bold text-rose-900 dark:text-rose-200 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                <span>{overdueCountInSelectedDay} {overdueCountInSelectedDay > 1 ? "éléments en retard (date dépassée)" : "élément en retard (date dépassée)"}</span>
+              </div>
+              <span className="text-[10px] font-mono bg-rose-200/80 dark:bg-rose-900 text-rose-950 dark:text-rose-100 px-2 py-0.5 rounded-full font-black uppercase tracking-wider shrink-0">
+                À Traiter
+              </span>
+            </div>
+          )}
+
           {/* Interactive Items Checklist for selected day */}
           <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
             {selectedDayItems.length === 0 ? (
@@ -972,6 +1019,8 @@ export default function DashboardUnifiedCalendar({
                 if (item.category === "SKIN CARE") badgeBg = "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800";
 
                 const isBeingDragged = draggedItem?.id === item.id;
+                const itemDueDate = item.dueDate || selectedDateStr;
+                const isOverdue = !item.completed && itemDueDate < todayStr;
 
                 return (
                   <div
@@ -991,6 +1040,8 @@ export default function DashboardUnifiedCalendar({
                         ? "opacity-40 border-dashed border-indigo-400 scale-98"
                         : item.completed
                         ? "bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40"
+                        : isOverdue
+                        ? "bg-rose-50/70 dark:bg-rose-950/30 border-rose-400 dark:border-rose-800/90 shadow-2xs ring-1 ring-rose-400/40"
                         : "bg-white dark:bg-zinc-900 border-neutral-200/80 dark:border-zinc-800 hover:border-neutral-300 hover:shadow-xs"
                     }`}
                   >
@@ -1005,7 +1056,11 @@ export default function DashboardUnifiedCalendar({
                         type="button"
                         onClick={() => handleToggleItemInCalendar(item)}
                         className={`p-1 rounded-lg transition-transform active:scale-90 cursor-pointer shrink-0 ${
-                          item.completed ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-300 hover:text-neutral-500"
+                          item.completed 
+                            ? "text-emerald-600 dark:text-emerald-400" 
+                            : isOverdue
+                            ? "text-rose-500 dark:text-rose-400 hover:text-rose-600"
+                            : "text-neutral-300 hover:text-neutral-500"
                         }`}
                         title={item.completed ? "Marquer comme non accompli" : "Valider l'élément"}
                       >
@@ -1017,15 +1072,27 @@ export default function DashboardUnifiedCalendar({
                       </button>
 
                       <div className="space-y-0.5 min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full border ${badgeBg}`}>
                             {item.typeLabel}
                           </span>
+                          {isOverdue && (
+                            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center gap-1 shrink-0 animate-pulse">
+                              <AlertTriangle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
+                              <span>Date dépassée ({itemDueDate})</span>
+                            </span>
+                          )}
                           <span className="text-[10px] text-neutral-400 font-medium truncate">
                             {item.subtitle}
                           </span>
                         </div>
-                        <p className={`text-xs font-bold leading-snug truncate ${item.completed ? "line-through text-neutral-400 dark:text-neutral-500" : "text-neutral-900 dark:text-white"}`}>
+                        <p className={`text-xs font-bold leading-snug truncate ${
+                          item.completed 
+                            ? "line-through text-neutral-400 dark:text-neutral-500" 
+                            : isOverdue
+                            ? "text-rose-950 dark:text-rose-100"
+                            : "text-neutral-900 dark:text-white"
+                        }`}>
                           {item.title}
                         </p>
                       </div>

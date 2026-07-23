@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent } from "../types";
+import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent, TopicToCover } from "../types";
 import { 
   Folder, 
   FolderOpen, 
@@ -31,7 +31,12 @@ import {
   FolderArchive,
   RotateCcw,
   CalendarDays,
-  Pencil
+  Pencil,
+  Lightbulb,
+  Compass,
+  Tag,
+  Filter,
+  Layers
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -85,7 +90,7 @@ export default function ProjectFoldersSection({
   }, [folders, selectedFolderId, displayedFolders]);
 
   // Tab control within selected folder
-  const [activeTab, setActiveTab] = useState<"overview" | "formations" | "objectives" | "links" | "calendar">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "strategy" | "topics" | "formations" | "objectives" | "links" | "calendar">("overview");
 
   // Form states for creating/editing projects
   const [showProjectModal, setShowProjectModal] = useState(false);
@@ -94,6 +99,155 @@ export default function ProjectFoldersSection({
   const [projDesc, setProjDesc] = useState("");
   const [projCategory, setProjCategory] = useState<ProjectFolder["category"]>("Autre");
   const [projIsArchived, setProjIsArchived] = useState(false);
+  const [projTargetAudienceModal, setProjTargetAudienceModal] = useState("");
+  const [projCoreGoalModal, setProjCoreGoalModal] = useState("");
+  const [projKeyMetricTargetModal, setProjKeyMetricTargetModal] = useState("");
+
+  // Strategy & Goal states for selected project
+  const [projTargetAudience, setProjTargetAudience] = useState("");
+  const [projCoreGoal, setProjCoreGoal] = useState("");
+  const [projKeyMetricTarget, setProjKeyMetricTarget] = useState("");
+  const [isEditingStrategy, setIsEditingStrategy] = useState(false);
+
+  // Topics to cover (Sujets à traiter) states
+  const [topicStatusFilter, setTopicStatusFilter] = useState<"Tous" | "À traiter" | "En rédaction" | "Tourné" | "Publié" | "Idée">("Tous");
+  const [newTopicTitle, setNewTopicTitle] = useState("");
+  const [newTopicCategory, setNewTopicCategory] = useState("Tutoriel");
+  const [newTopicStatus, setNewTopicStatus] = useState<TopicToCover["status"]>("À traiter");
+  const [newTopicFormat, setNewTopicFormat] = useState<TopicToCover["targetFormat"]>("Vidéo YouTube");
+  const [newTopicPriority, setNewTopicPriority] = useState<TopicToCover["priority"]>("Haute");
+  const [newTopicNotes, setNewTopicNotes] = useState("");
+
+  // Edit topic state
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
+  const [editTopicTitle, setEditTopicTitle] = useState("");
+  const [editTopicCategory, setEditTopicCategory] = useState("");
+  const [editTopicStatus, setEditTopicStatus] = useState<TopicToCover["status"]>("À traiter");
+  const [editTopicFormat, setEditTopicFormat] = useState<TopicToCover["targetFormat"]>("Vidéo YouTube");
+  const [editTopicPriority, setEditTopicPriority] = useState<TopicToCover["priority"]>("Haute");
+  const [editTopicNotes, setEditTopicNotes] = useState("");
+
+  // Sync strategy fields when selected folder changes
+  useEffect(() => {
+    if (selectedFolder) {
+      setProjTargetAudience(selectedFolder.targetAudience || "");
+      setProjCoreGoal(selectedFolder.coreGoal || "");
+      setProjKeyMetricTarget(selectedFolder.keyMetricTarget || "");
+      setIsEditingStrategy(false);
+    }
+  }, [selectedFolderId]);
+
+  // Save strategy handler
+  const handleSaveStrategy = () => {
+    if (!selectedFolder) return;
+    setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
+      ...f,
+      targetAudience: projTargetAudience.trim(),
+      coreGoal: projCoreGoal.trim(),
+      keyMetricTarget: projKeyMetricTarget.trim()
+    } : f));
+    setIsEditingStrategy(false);
+  };
+
+  // Add topic to cover handler
+  const handleAddTopicToCover = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTopicTitle.trim() || !selectedFolder) return;
+
+    const newTopic: TopicToCover = {
+      id: "top_" + Date.now(),
+      title: newTopicTitle.trim(),
+      category: newTopicCategory,
+      status: newTopicStatus,
+      targetFormat: newTopicFormat,
+      priority: newTopicPriority,
+      notes: newTopicNotes.trim() || undefined
+    };
+
+    setFolders(prev => prev.map(f => {
+      if (f.id === selectedFolder.id) {
+        return {
+          ...f,
+          topicsToCover: [...(f.topicsToCover || []), newTopic]
+        };
+      }
+      return f;
+    }));
+
+    setNewTopicTitle("");
+    setNewTopicNotes("");
+  };
+
+  // Cycle status for topic to cover
+  const handleToggleTopicStatus = (topicId: string) => {
+    if (!selectedFolder) return;
+    const statusCycle: TopicToCover["status"][] = ["Idée", "À traiter", "En rédaction", "Tourné", "Publié"];
+    setFolders(prev => prev.map(f => {
+      if (f.id === selectedFolder.id) {
+        return {
+          ...f,
+          topicsToCover: (f.topicsToCover || []).map(t => {
+            if (t.id === topicId) {
+              const nextIdx = (statusCycle.indexOf(t.status) + 1) % statusCycle.length;
+              return { ...t, status: statusCycle[nextIdx] };
+            }
+            return t;
+          })
+        };
+      }
+      return f;
+    }));
+  };
+
+  // Delete topic to cover
+  const handleDeleteTopicToCover = (topicId: string) => {
+    if (!selectedFolder) return;
+    setFolders(prev => prev.map(f => {
+      if (f.id === selectedFolder.id) {
+        return {
+          ...f,
+          topicsToCover: (f.topicsToCover || []).filter(t => t.id !== topicId)
+        };
+      }
+      return f;
+    }));
+  };
+
+  // Start editing topic
+  const handleStartEditTopic = (topic: TopicToCover) => {
+    setEditingTopicId(topic.id);
+    setEditTopicTitle(topic.title);
+    setEditTopicCategory(topic.category || "Tutoriel");
+    setEditTopicStatus(topic.status);
+    setEditTopicFormat(topic.targetFormat);
+    setEditTopicPriority(topic.priority || "Moyenne");
+    setEditTopicNotes(topic.notes || "");
+  };
+
+  // Save edit topic
+  const handleSaveEditTopic = (topicId: string) => {
+    if (!selectedFolder || !editTopicTitle.trim()) return;
+    setFolders(prev => prev.map(f => {
+      if (f.id === selectedFolder.id) {
+        return {
+          ...f,
+          topicsToCover: (f.topicsToCover || []).map(t =>
+            t.id === topicId ? {
+              ...t,
+              title: editTopicTitle.trim(),
+              category: editTopicCategory,
+              status: editTopicStatus,
+              targetFormat: editTopicFormat,
+              priority: editTopicPriority,
+              notes: editTopicNotes.trim() || undefined
+            } : t
+          )
+        };
+      }
+      return f;
+    }));
+    setEditingTopicId(null);
+  };
 
   // Quick inputs inside unified view
   const [newCustomObjectiveText, setNewCustomObjectiveText] = useState("");
@@ -156,6 +310,9 @@ export default function ProjectFoldersSection({
     setProjDesc("");
     setProjCategory("Autre");
     setProjIsArchived(false);
+    setProjTargetAudienceModal("");
+    setProjCoreGoalModal("");
+    setProjKeyMetricTargetModal("");
     setShowProjectModal(true);
   };
 
@@ -166,6 +323,9 @@ export default function ProjectFoldersSection({
     setProjDesc(proj.description);
     setProjCategory(proj.category);
     setProjIsArchived(proj.isArchived || false);
+    setProjTargetAudienceModal(proj.targetAudience || "");
+    setProjCoreGoalModal(proj.coreGoal || "");
+    setProjKeyMetricTargetModal(proj.keyMetricTarget || "");
     setShowProjectModal(true);
   };
 
@@ -182,7 +342,10 @@ export default function ProjectFoldersSection({
         description: projDesc.trim(),
         category: projCategory,
         isArchived: projIsArchived,
-        archivedAt: projIsArchived ? (f.archivedAt || new Date().toISOString().split("T")[0]) : undefined
+        archivedAt: projIsArchived ? (f.archivedAt || new Date().toISOString().split("T")[0]) : undefined,
+        targetAudience: projTargetAudienceModal.trim(),
+        coreGoal: projCoreGoalModal.trim(),
+        keyMetricTarget: projKeyMetricTargetModal.trim()
       } : f));
     } else {
       // Create mode
@@ -192,10 +355,14 @@ export default function ProjectFoldersSection({
         description: projDesc.trim(),
         category: projCategory,
         createdAt: new Date().toISOString().split('T')[0],
+        targetAudience: projTargetAudienceModal.trim(),
+        coreGoal: projCoreGoalModal.trim(),
+        keyMetricTarget: projKeyMetricTargetModal.trim(),
         associatedFormationIds: [],
         associatedLinkIds: [],
         associatedGoalIds: [],
         customObjectives: [],
+        topicsToCover: [],
         customLinks: [],
         notes: "",
         isArchived: projIsArchived,
@@ -844,7 +1011,7 @@ export default function ProjectFoldersSection({
                 <div className="flex flex-wrap gap-2 mt-4">
                   <button
                     onClick={() => setActiveTab("overview")}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       activeTab === "overview" 
                         ? "bg-neutral-900 text-white shadow-3xs" 
                         : "bg-neutral-50 border border-neutral-100 text-neutral-500 hover:text-neutral-900"
@@ -853,49 +1020,77 @@ export default function ProjectFoldersSection({
                     <FileText className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-indigo-500" />
                     <span>Vue d'ensemble & Notes</span>
                   </button>
+
+                  <button
+                    onClick={() => setActiveTab("strategy")}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === "strategy" 
+                        ? "bg-neutral-900 text-white shadow-3xs" 
+                        : "bg-neutral-50 border border-neutral-100 text-neutral-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    <Target className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-rose-500" />
+                    <span>Objectifs & Stratégie</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab("topics")}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === "topics" 
+                        ? "bg-neutral-900 text-white shadow-3xs" 
+                        : "bg-neutral-50 border border-neutral-100 text-neutral-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    <Lightbulb className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-amber-500" />
+                    <span>Sujets à traiter ({selectedFolder.topicsToCover?.length || 0})</span>
+                  </button>
+
                   <button
                     onClick={() => setActiveTab("formations")}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       activeTab === "formations" 
                         ? "bg-neutral-900 text-white shadow-3xs" 
                         : "bg-neutral-50 border border-neutral-100 text-neutral-500 hover:text-neutral-900"
                     }`}
                   >
                     <GraduationCap className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-emerald-500" />
-                    <span>Formations Associées ({associatedFormations.length})</span>
+                    <span>Formations ({associatedFormations.length})</span>
                   </button>
+
                   <button
                     onClick={() => setActiveTab("objectives")}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       activeTab === "objectives" 
                         ? "bg-neutral-900 text-white shadow-3xs" 
                         : "bg-neutral-50 border border-neutral-100 text-neutral-500 hover:text-neutral-900"
                     }`}
                   >
-                    <Target className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-red-500" />
-                    <span>Objectifs & Jalons ({selectedFolder.customObjectives.length + associatedGoals.length})</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-indigo-500" />
+                    <span>Jalons & Checklist ({selectedFolder.customObjectives.length + associatedGoals.length})</span>
                   </button>
+
                   <button
                     onClick={() => setActiveTab("links")}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       activeTab === "links" 
                         ? "bg-neutral-900 text-white shadow-3xs" 
                         : "bg-neutral-50 border border-neutral-100 text-neutral-500 hover:text-neutral-900"
                     }`}
                   >
                     <Link2 className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-amber-500" />
-                    <span>Liens & Ressources ({selectedFolder.customLinks.length + associatedLinks.length})</span>
+                    <span>Ressources & Liens ({selectedFolder.customLinks.length + associatedLinks.length})</span>
                   </button>
+
                   <button
                     onClick={() => setActiveTab("calendar")}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       activeTab === "calendar" 
                         ? "bg-neutral-900 text-white shadow-3xs" 
                         : "bg-neutral-50 border border-neutral-100 text-neutral-500 hover:text-neutral-900"
                     }`}
                   >
                     <CalendarIcon className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-indigo-500" />
-                    <span>Calendrier & Contenus ({associatedEvents.length})</span>
+                    <span>Calendrier Éditorial ({associatedEvents.length})</span>
                   </button>
                 </div>
               </div>
@@ -935,7 +1130,45 @@ export default function ProjectFoldersSection({
                   </div>
 
                   {/* Right Summary Grid Column */}
-                  <div className="md:col-span-4 space-y-4">
+                  <div className="md:col-span-4 space-y-4 font-sans">
+                    {/* Strategic Snapshot Widget */}
+                    <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 text-white border border-neutral-800 rounded-2xl p-4 space-y-3 shadow-md">
+                      <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-rose-400 tracking-wider">
+                          <Target className="w-3.5 h-3.5" />
+                          <span>Aperçu Stratégique</span>
+                        </div>
+                        <button
+                          onClick={() => setActiveTab("strategy")}
+                          className="text-[9px] text-indigo-300 hover:text-white font-bold underline cursor-pointer"
+                        >
+                          Éditer
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 text-xs">
+                        <div>
+                          <span className="text-[9px] font-bold text-neutral-400 block uppercase">Audience Cible :</span>
+                          <span className="font-medium text-neutral-200 line-clamp-2">
+                            {selectedFolder.targetAudience || "Non définie"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-neutral-400 block uppercase">Objectif Principal :</span>
+                          <span className="font-medium text-neutral-200 line-clamp-2">
+                            {selectedFolder.coreGoal || "Non défini"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-neutral-400 block uppercase">Cible KPI :</span>
+                          <span className="font-bold text-amber-300 font-mono">
+                            {selectedFolder.keyMetricTarget || "Non définie"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats Widget */}
                     <div className="bg-gradient-to-br from-indigo-50/50 to-neutral-50 border border-indigo-100 rounded-2xl p-5 space-y-4">
                       <h4 className="text-[10px] font-black text-indigo-900 uppercase tracking-widest font-sans">
                         Statistiques Projet
@@ -943,19 +1176,25 @@ export default function ProjectFoldersSection({
                       
                       <div className="space-y-3 font-sans">
                         <div className="flex justify-between items-center text-xs">
+                          <span className="text-neutral-500 font-medium">Sujets à traiter :</span>
+                          <span className="font-bold text-neutral-900 font-mono">
+                            {selectedFolder.topicsToCover?.length || 0} sujets
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
                           <span className="text-neutral-500 font-medium">Formations :</span>
                           <span className="font-bold text-neutral-900">
                             {associatedFormations.length} cours ({projectStats.completedFormations} terminés)
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-xs">
-                          <span className="text-neutral-500 font-medium">Objectifs :</span>
+                          <span className="text-neutral-500 font-medium">Jalons & Objectifs :</span>
                           <span className="font-bold text-neutral-900">
                             {selectedFolder.customObjectives.length} jalons ({selectedFolder.customObjectives.filter(o => o.completed).length} validés)
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-xs">
-                          <span className="text-neutral-500 font-medium">Liens & Favoris :</span>
+                          <span className="text-neutral-500 font-medium">Ressources & Liens :</span>
                           <span className="font-bold text-neutral-900">
                             {selectedFolder.customLinks.length + associatedLinks.length} ressources
                           </span>
@@ -968,10 +1207,378 @@ export default function ProjectFoldersSection({
                           <span>Focus de l'architecte</span>
                         </div>
                         <p className="text-[10.5px] text-indigo-950/80 mt-1 leading-relaxed font-medium">
-                          Reliez vos formations suivies pour consolider vos compétences techniques. Définissez des jalons clairs et gardez vos outils de référence à portée de main !
+                          Reliez vos formations et organisez vos thématiques dans l'onglet 'Sujets à traiter' pour planifier vos productions avec régularité !
                         </p>
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 1.5: STRATEGY & OBJECTIVES */}
+              {activeTab === "strategy" && (
+                <div className="bg-white border border-neutral-200/90 rounded-2xl p-5 space-y-6 animate-in fade-in duration-300 font-sans">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100">
+                    <div>
+                      <h4 className="text-xs font-black text-neutral-900 uppercase flex items-center gap-2">
+                        <Target className="w-4 h-4 text-rose-500" />
+                        <span>Objectifs Stratégiques & Orientation du Projet</span>
+                      </h4>
+                      <p className="text-[10.5px] text-neutral-400 mt-0.5">
+                        Définissez la cible, le but ultime et les KPIs clés pour clarifier chaque projet de chaîne ou formation.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (isEditingStrategy) {
+                          handleSaveStrategy();
+                        } else {
+                          setIsEditingStrategy(true);
+                        }
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                        isEditingStrategy 
+                          ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs" 
+                          : "bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200"
+                      }`}
+                    >
+                      {isEditingStrategy ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Enregistrer la Stratégie</span>
+                        </>
+                      ) : (
+                        <>
+                          <Pencil className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Modifier les Objectifs</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Cards for Strategy */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Target Audience */}
+                    <div className="bg-neutral-50/70 border border-neutral-200/80 rounded-2xl p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-indigo-900 text-xs font-extrabold uppercase tracking-wide">
+                        <div className="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
+                          <Compass className="w-4 h-4" />
+                        </div>
+                        <span>Audience Cible & Niche</span>
+                      </div>
+                      {isEditingStrategy ? (
+                        <textarea
+                          value={projTargetAudience}
+                          onChange={(e) => setProjTargetAudience(e.target.value)}
+                          placeholder="Ex: Étudiants en finance, jeunes professionnels M&A / Private Equity..."
+                          rows={4}
+                          className="w-full text-xs font-medium text-neutral-800 bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                        />
+                      ) : (
+                        <p className="text-xs text-neutral-700 font-medium leading-relaxed bg-white/60 p-3 rounded-xl border border-neutral-100 min-h-[90px]">
+                          {selectedFolder.targetAudience || <span className="text-neutral-400 italic">Aucune audience définie. Cliquez sur Modifier pour la spécifier.</span>}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Core Goal */}
+                    <div className="bg-neutral-50/70 border border-neutral-200/80 rounded-2xl p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-rose-900 text-xs font-extrabold uppercase tracking-wide">
+                        <div className="p-1.5 bg-rose-100 text-rose-700 rounded-lg">
+                          <Target className="w-4 h-4" />
+                        </div>
+                        <span>Objectif Stratégique Principal</span>
+                      </div>
+                      {isEditingStrategy ? (
+                        <textarea
+                          value={projCoreGoal}
+                          onChange={(e) => setProjCoreGoal(e.target.value)}
+                          placeholder="Ex: Développer une audience qualifiée et se positionner comme l'expert de référence..."
+                          rows={4}
+                          className="w-full text-xs font-medium text-neutral-800 bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-rose-500"
+                        />
+                      ) : (
+                        <p className="text-xs text-neutral-700 font-medium leading-relaxed bg-white/60 p-3 rounded-xl border border-neutral-100 min-h-[90px]">
+                          {selectedFolder.coreGoal || <span className="text-neutral-400 italic">Aucun objectif stratégique défini. Cliquez sur Modifier pour le spécifier.</span>}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Key Metric Target */}
+                    <div className="bg-neutral-50/70 border border-neutral-200/80 rounded-2xl p-4 space-y-2">
+                      <div className="flex items-center gap-2 text-amber-900 text-xs font-extrabold uppercase tracking-wide">
+                        <div className="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                        <span>Métriques & Cibles KPIs</span>
+                      </div>
+                      {isEditingStrategy ? (
+                        <textarea
+                          value={projKeyMetricTarget}
+                          onChange={(e) => setProjKeyMetricTarget(e.target.value)}
+                          placeholder="Ex: 10,000 abonnés / 15 000€ CA sur le 1er lancement..."
+                          rows={4}
+                          className="w-full text-xs font-medium text-neutral-800 bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                        />
+                      ) : (
+                        <p className="text-xs text-neutral-700 font-medium leading-relaxed bg-white/60 p-3 rounded-xl border border-neutral-100 min-h-[90px]">
+                          {selectedFolder.keyMetricTarget || <span className="text-neutral-400 italic">Aucune cible métrique renseignée.</span>}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 1.8: TOPICS TO COVER (SUJETS À TRAITER) */}
+              {activeTab === "topics" && (
+                <div className="bg-white border border-neutral-200/90 rounded-2xl p-5 space-y-5 animate-in fade-in duration-300 font-sans">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100">
+                    <div>
+                      <h4 className="text-xs font-black text-neutral-900 uppercase flex items-center gap-2">
+                        <Lightbulb className="w-4 h-4 text-amber-500" />
+                        <span>Sujets & Thématiques à traiter (Content Backlog)</span>
+                      </h4>
+                      <p className="text-[10.5px] text-neutral-400 mt-0.5">
+                        Acheminez vos idées de sujets, épisodes, vidéos ou modules de cours selon leur état d'avancement.
+                      </p>
+                    </div>
+
+                    {/* Filter status pills */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {(["Tous", "À traiter", "En rédaction", "Tourné", "Publié", "Idée"] as const).map(status => (
+                        <button
+                          key={status}
+                          onClick={() => setTopicStatusFilter(status)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase font-mono transition-all cursor-pointer ${
+                            topicStatusFilter === status
+                              ? "bg-neutral-900 text-white shadow-2xs"
+                              : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                          }`}
+                        >
+                          {status}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Form to add new topic */}
+                  <form onSubmit={handleAddTopicToCover} className="bg-neutral-50/80 border border-neutral-200/80 p-4 rounded-2xl space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-extrabold text-neutral-900 uppercase">
+                      <Plus className="w-4 h-4 text-indigo-600" />
+                      <span>Ajouter un nouveau sujet / thème</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                      <div className="sm:col-span-5">
+                        <input
+                          type="text"
+                          value={newTopicTitle}
+                          onChange={(e) => setNewTopicTitle(e.target.value)}
+                          placeholder="Titre du sujet, étude de cas ou module..."
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 text-neutral-800"
+                          required
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <select
+                          value={newTopicCategory}
+                          onChange={(e) => setNewTopicCategory(e.target.value)}
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden text-neutral-800"
+                        >
+                          <option value="Tutoriel">Tutoriel</option>
+                          <option value="Étude de cas">Étude de cas</option>
+                          <option value="Stratégie">Stratégie</option>
+                          <option value="Avis / Analyse">Avis / Analyse</option>
+                          <option value="Mindset">Mindset</option>
+                          <option value="Module Formation">Module Formation</option>
+                          <option value="Autre">Autre</option>
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <select
+                          value={newTopicFormat}
+                          onChange={(e) => setNewTopicFormat(e.target.value as TopicToCover["targetFormat"])}
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden text-neutral-800"
+                        >
+                          <option value="Vidéo YouTube">Vidéo YouTube</option>
+                          <option value="Short / Reel">Short / Reel</option>
+                          <option value="Module Formation">Module Formation</option>
+                          <option value="Post LinkedIn">Post LinkedIn</option>
+                          <option value="Newsletter">Newsletter</option>
+                          <option value="Autre">Autre</option>
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-3">
+                        <select
+                          value={newTopicStatus}
+                          onChange={(e) => setNewTopicStatus(e.target.value as TopicToCover["status"])}
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden text-neutral-800"
+                        >
+                          <option value="À traiter">À traiter</option>
+                          <option value="En rédaction">En rédaction</option>
+                          <option value="Tourné">Tourné</option>
+                          <option value="Publié">Publié</option>
+                          <option value="Idée">Idée</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2.5 items-center">
+                      <input
+                        type="text"
+                        value={newTopicNotes}
+                        onChange={(e) => setNewTopicNotes(e.target.value)}
+                        placeholder="Notes / Angle d'attaque / Ressources requises (optionnel)..."
+                        className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden text-neutral-800 flex-1"
+                      />
+                      <button
+                        type="submit"
+                        className="w-full sm:w-auto bg-neutral-900 hover:bg-neutral-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Ajouter le sujet</span>
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Topics List */}
+                  <div className="space-y-2.5">
+                    {((selectedFolder.topicsToCover || []).filter(t => topicStatusFilter === "Tous" || t.status === topicStatusFilter)).map(topic => {
+                      const isEditing = editingTopicId === topic.id;
+
+                      const statusBadgeStyle = {
+                        "Idée": "bg-neutral-100 text-neutral-600 border-neutral-200",
+                        "À traiter": "bg-amber-100 text-amber-800 border-amber-200",
+                        "En rédaction": "bg-sky-100 text-sky-800 border-sky-200",
+                        "Tourné": "bg-indigo-100 text-indigo-800 border-indigo-200",
+                        "Publié": "bg-emerald-100 text-emerald-800 border-emerald-200"
+                      }[topic.status] || "bg-neutral-100 text-neutral-600 border-neutral-200";
+
+                      if (isEditing) {
+                        return (
+                          <div key={topic.id} className="p-3.5 bg-neutral-50 border border-indigo-300 rounded-2xl space-y-3 font-sans">
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                              <input
+                                type="text"
+                                value={editTopicTitle}
+                                onChange={(e) => setEditTopicTitle(e.target.value)}
+                                className="sm:col-span-6 text-xs font-bold bg-white border border-neutral-200 rounded-lg p-2 text-neutral-900"
+                              />
+                              <select
+                                value={editTopicStatus}
+                                onChange={(e) => setEditTopicStatus(e.target.value as TopicToCover["status"])}
+                                className="sm:col-span-3 text-xs font-semibold bg-white border border-neutral-200 rounded-lg p-2 text-neutral-800"
+                              >
+                                <option value="Idée">Idée</option>
+                                <option value="À traiter">À traiter</option>
+                                <option value="En rédaction">En rédaction</option>
+                                <option value="Tourné">Tourné</option>
+                                <option value="Publié">Publié</option>
+                              </select>
+                              <select
+                                value={editTopicFormat}
+                                onChange={(e) => setEditTopicFormat(e.target.value as TopicToCover["targetFormat"])}
+                                className="sm:col-span-3 text-xs font-semibold bg-white border border-neutral-200 rounded-lg p-2 text-neutral-800"
+                              >
+                                <option value="Vidéo YouTube">Vidéo YouTube</option>
+                                <option value="Short / Reel">Short / Reel</option>
+                                <option value="Module Formation">Module Formation</option>
+                                <option value="Post LinkedIn">Post LinkedIn</option>
+                                <option value="Newsletter">Newsletter</option>
+                                <option value="Autre">Autre</option>
+                              </select>
+                            </div>
+                            <input
+                              type="text"
+                              value={editTopicNotes}
+                              onChange={(e) => setEditTopicNotes(e.target.value)}
+                              placeholder="Notes..."
+                              className="w-full text-xs bg-white border border-neutral-200 rounded-lg p-2 text-neutral-800"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => setEditingTopicId(null)}
+                                className="px-3 py-1 bg-neutral-200 text-neutral-800 rounded-lg text-xs font-bold cursor-pointer"
+                              >
+                                Annuler
+                              </button>
+                              <button
+                                onClick={() => handleSaveEditTopic(topic.id)}
+                                className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold cursor-pointer"
+                              >
+                                Enregistrer
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={topic.id}
+                          className="p-3.5 bg-neutral-50/50 hover:bg-white border border-neutral-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all font-sans"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {/* Status badge button (click to cycle) */}
+                              <button
+                                onClick={() => handleToggleTopicStatus(topic.id)}
+                                className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border font-mono cursor-pointer transition-transform active:scale-95 ${statusBadgeStyle}`}
+                                title="Cliquer pour faire avancer le statut"
+                              >
+                                {topic.status}
+                              </button>
+
+                              <span className="text-[10px] font-extrabold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-md">
+                                {topic.category || "Général"}
+                              </span>
+
+                              <span className="text-[10px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md">
+                                {topic.targetFormat}
+                              </span>
+                            </div>
+
+                            <h5 className="text-xs font-bold text-neutral-900 leading-snug">
+                              {topic.title}
+                            </h5>
+
+                            {topic.notes && (
+                              <p className="text-[11px] text-neutral-500 font-medium">
+                                📝 {topic.notes}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                            <button
+                              onClick={() => handleStartEditTopic(topic)}
+                              className="p-1.5 text-neutral-400 hover:text-indigo-600 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+                              title="Modifier"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTopicToCover(topic.id)}
+                              className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {(!selectedFolder.topicsToCover || selectedFolder.topicsToCover.length === 0) && (
+                      <div className="text-center py-10 bg-neutral-50/50 border border-dashed border-neutral-200 rounded-2xl text-neutral-400 text-xs italic">
+                        Aucun sujet ou thème enregistré dans ce backlog. Ajoutez votre premier sujet ci-dessus !
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1757,9 +2364,55 @@ export default function ProjectFoldersSection({
                   value={projDesc}
                   onChange={(e) => setProjDesc(e.target.value)}
                   placeholder="Objectif à moyen terme de ce projet, niche, plateformes..."
-                  rows={3}
+                  rows={2}
                   className="w-full text-xs font-semibold bg-neutral-50/50 border border-neutral-200 rounded-xl p-3 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 focus:bg-white transition-all text-neutral-800 resize-none"
                 />
+              </div>
+
+              {/* Strategic Objectives fields */}
+              <div className="space-y-2 pt-2 border-t border-neutral-100 font-sans">
+                <span className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block">
+                  🎯 Orientation & Objectifs Stratégiques
+                </span>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase">
+                    Audience Cible & Niche
+                  </label>
+                  <input
+                    type="text"
+                    value={projTargetAudienceModal}
+                    onChange={(e) => setProjTargetAudienceModal(e.target.value)}
+                    placeholder="ex: Étudiants en M&A, analystes Private Equity..."
+                    className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase">
+                    Objectif Principal
+                  </label>
+                  <input
+                    type="text"
+                    value={projCoreGoalModal}
+                    onChange={(e) => setProjCoreGoalModal(e.target.value)}
+                    placeholder="ex: Se positionner comme la référence incontournable..."
+                    className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase">
+                    Cible Métrique / KPIs
+                  </label>
+                  <input
+                    type="text"
+                    value={projKeyMetricTargetModal}
+                    onChange={(e) => setProjKeyMetricTargetModal(e.target.value)}
+                    placeholder="ex: 10,000 abonnés / 15 000€ CA..."
+                    className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 focus:bg-white"
+                  />
+                </div>
               </div>
 
               {/* Archiving Toggle Checkbox */}

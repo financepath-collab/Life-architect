@@ -321,16 +321,31 @@ export interface EditorialEvent {
   projectId?: string;
 }
 
+export interface TopicToCover {
+  id: string;
+  title: string;
+  category?: string; // e.g. "Tutoriel", "Étude de cas", "Stratégie", "Avis / Analyse", "Mindset"
+  status: "Idée" | "À traiter" | "En rédaction" | "Tourné" | "Publié";
+  targetFormat: "Vidéo YouTube" | "Short / Reel" | "Module Formation" | "Post LinkedIn" | "Newsletter" | "Autre";
+  priority?: "Haute" | "Moyenne" | "Basse";
+  notes?: string;
+}
+
 export interface ProjectFolder {
   id: string;
   name: string;
   description: string;
   category: "YouTube" | "Formation" | "E-commerce" | "Finance" | "Autre";
   createdAt: string;
+  // Specific project goals & strategic attributes
+  targetAudience?: string;
+  coreGoal?: string;
+  keyMetricTarget?: string;
   associatedFormationIds: string[];
   associatedLinkIds: string[];
   associatedGoalIds: string[];
   customObjectives: { id: string; text: string; completed: boolean; dueDate?: string }[];
+  topicsToCover?: TopicToCover[];
   customLinks: { id: string; title: string; url: string; category: string }[];
   notes: string;
   isArchived?: boolean;

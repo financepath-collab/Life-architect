@@ -354,16 +354,25 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
   {
     id: "proj_1",
     name: "Chaîne YouTube - The Moroccan Analyst",
-    description: "Planification des tutoriels de modélisation financière, analyses macroéconomiques et développement de l'audience.",
+    description: "Création de contenu éducatif sur la modélisation financière, les études de cas d'entreprises et l'analyse macroéconomique.",
     category: "YouTube",
     createdAt: "2026-05-15",
-    associatedFormationIds: ["f1", "f2"], // we can prelink some if we like
+    targetAudience: "Étudiants en finance, jeunes professionnels M&A/Private Equity & passionnés d'analyse d'entreprises.",
+    coreGoal: "Développer une audience qualifiée de 10 000 passionnés de finance d'ici la fin d'année et établir une autorité de marque incontournable.",
+    keyMetricTarget: "10,000 abonnés / 25,000 vues mensuelles",
+    associatedFormationIds: ["f1", "f2"],
     associatedLinkIds: [],
     associatedGoalIds: ["mg1"],
     customObjectives: [
       { id: "co_1", text: "Atteindre 10k abonnés d'ici la fin d'année", completed: false, dueDate: "2026-12-31" },
       { id: "co_2", text: "Publier 2 vidéos de haute qualité par semaine", completed: true, dueDate: "2026-08-15" },
       { id: "co_3", text: "Finaliser le script de la vidéo de Private Equity", completed: false, dueDate: "2026-07-30" }
+    ],
+    topicsToCover: [
+      { id: "top_1", title: "Comment construire un modèle financier LBO complet sur Excel de A à Z", category: "Tutoriel", status: "À traiter", targetFormat: "Vidéo YouTube", priority: "Haute", notes: "Inclure le fichier Excel téléchargeable en description." },
+      { id: "top_2", title: "Analyse financière approfondie de LVMH : Secret de leurs marges d'exploitation", category: "Étude de cas", status: "En rédaction", targetFormat: "Vidéo YouTube", priority: "Haute", notes: "Focus sur la valorisation du multiple EBITDA." },
+      { id: "top_3", title: "Private Equity vs Investment Banking : Quel parcours choisir en 2026 ?", category: "Avis / Analyse", status: "Tourné", targetFormat: "Vidéo YouTube", priority: "Moyenne", notes: "Interview croisée avec un analyste senior." },
+      { id: "top_4", title: "Les 5 erreurs classiques en valorisation DCF que font 90% des analystes", category: "Tutoriel", status: "Idée", targetFormat: "Short / Reel", priority: "Moyenne", notes: "Format court dynamique pour YouTube Shorts & Instagram." }
     ],
     customLinks: [
       { id: "cl_1", title: "YouTube Creator Studio", url: "https://studio.youtube.com", category: "Outils" },
@@ -373,22 +382,55 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
   },
   {
     id: "proj_2",
-    name: "Lancement de la Formation Private Equity",
-    description: "Création et monétisation du programme d'accompagnement premium d'analyse transactionnelle pour professionnels de la finance.",
+    name: "Académie & Offres de Formations Premium",
+    description: "Création, structuration et monétisation des programmes d'accompagnement avancés (Private Equity, Modélisation & Excel Financier).",
     category: "Formation",
     createdAt: "2026-06-10",
+    targetAudience: "Professionnels en reconversion ou analystes souhaitant décrocher une offre en M&A, TS ou Private Equity.",
+    coreGoal: "Construire un catalogue de 3 formations phares haut de gamme générant un chiffre d'affaires récurrent et des taux de satisfaction client > 95%.",
+    keyMetricTarget: "50 premiers étudiants / 15 000€ de CA au 1er lancement",
     associatedFormationIds: ["f3"],
     associatedLinkIds: [],
     associatedGoalIds: ["mg2"],
     customObjectives: [
-      { id: "co_4", text: "Enregistrer les 15 premiers modules vidéos", completed: false, dueDate: "2026-09-01" },
-      { id: "co_5", text: "Préparer le template de modèle financier de LBO", completed: true, dueDate: "2026-06-30" },
+      { id: "co_4", text: "Enregistrer les 15 premiers modules vidéos de la formation PE", completed: false, dueDate: "2026-09-01" },
+      { id: "co_5", text: "Préparer le template de modèle financier de LBO certifié", completed: true, dueDate: "2026-06-30" },
       { id: "co_6", text: "Créer la page de capture de leads de l'Académie", completed: false, dueDate: "2026-08-10" }
+    ],
+    topicsToCover: [
+      { id: "top_5", title: "Module 1 : Principes fondamentaux du Montage LBO & Debt Service", category: "Module Formation", status: "À traiter", targetFormat: "Module Formation", priority: "Haute", notes: "Support PDF + cas pratique téléchargeable." },
+      { id: "top_6", title: "Module 2 : Valorisation d'entreprise par la méthode des multiples de transactions comparables", category: "Module Formation", status: "En rédaction", targetFormat: "Module Formation", priority: "Haute" },
+      { id: "top_7", title: "Atelier Live trimestriel : Coaching Q&A et préparation aux entretiens M&A", category: "Stratégie", status: "Idée", targetFormat: "Autre", priority: "Moyenne" }
     ],
     customLinks: [
       { id: "cl_3", title: "Kajabi Dashboard", url: "https://kajabi.com", category: "Outils" }
     ],
-    notes: "Tarification prévue : formule premium directe. Tester l'offre auprès de 50 premiers bêta-testeurs de la communauté 'The MA Circle'."
+    notes: "Tarification prévue : formule premium directe. Tester l'offre auprès des 50 premiers bêta-testeurs de la communauté 'The MA Circle'."
+  },
+  {
+    id: "proj_3",
+    name: "Newsletter & Communauté Private 'The MA Circle'",
+    description: "Publication hebdomadaire d'analyses financières confidentielles et animation de la communauté d'élite.",
+    category: "YouTube",
+    createdAt: "2026-07-01",
+    targetAudience: "Abonnés investis souhaitant recevoir des dossiers d'analyse financière poussés directement par e-mail.",
+    coreGoal: "Créer une relation de confiance directe et convertir les lecteurs réguliers en étudiants de l'Académie.",
+    keyMetricTarget: "2,500 inscrits Newsletter / Taux d'ouverture de 45%",
+    associatedFormationIds: [],
+    associatedLinkIds: [],
+    associatedGoalIds: [],
+    customObjectives: [
+      { id: "co_7", text: "Configurer le système d'automation Substack / ConvertKit", completed: true, dueDate: "2026-07-10" },
+      { id: "co_8", text: "Rédiger le Lead Magnet : 'Guide ultime de la valorisation d'entreprise'", completed: false, dueDate: "2026-08-05" }
+    ],
+    topicsToCover: [
+      { id: "top_8", title: "Édition #01 : Décryptage d'une transaction M&A récente dans la Tech", category: "Avis / Analyse", status: "À traiter", targetFormat: "Newsletter", priority: "Haute", notes: "Envoi prévu tous les dimanches matin à 09h00." },
+      { id: "top_9", title: "Édition #02 : Les secrets des fonds de Private Equity pour booster l'EBITDA", category: "Stratégie", status: "Idée", targetFormat: "Newsletter", priority: "Moyenne" }
+    ],
+    customLinks: [
+      { id: "cl_4", title: "Substack Dashboard", url: "https://substack.com", category: "Outils" }
+    ],
+    notes: "Liaison directe avec l'acquisition YouTube : insérer un appel à l'action en fin de chaque vidéo."
   }
 ];
 
