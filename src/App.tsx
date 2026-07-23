@@ -90,6 +90,7 @@ import QuickCaptureInbox from "./components/QuickCaptureInbox";
 import CommandCenterModal from "./components/CommandCenterModal";
 import BudgetOptimizer from "./components/BudgetOptimizer";
 import SettingsModal from "./components/SettingsModal";
+import ThemeSelectorModal, { ThemePresetId, THEME_PRESETS } from "./components/ThemeSelectorModal";
 import LifeGoalsSection from "./components/LifeGoalsSection";
 import {
   initDriveAuth,
@@ -177,7 +178,8 @@ import {
   Cloud,
   CloudOff,
   AlertTriangle,
-  Database
+  Database,
+  Palette
 } from "lucide-react";
 
 function Logo({ className = "w-8 h-8 text-indigo-500" }: { className?: string }) {
@@ -208,6 +210,10 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem("la_theme") === "dark";
   });
+  const [themePreset, setThemePreset] = useState<ThemePresetId>(() => {
+    return (localStorage.getItem("la_theme_preset") as ThemePresetId) || "indigo";
+  });
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [autoDarkTheme, setAutoDarkTheme] = useState<boolean>(() => {
     return localStorage.getItem("la_auto_dark_theme") === "true";
   });
@@ -1353,6 +1359,12 @@ export default function App() {
       localStorage.setItem("la_theme", "light");
     }
   }, [isDarkMode]);
+
+  // --- THEME PRESET PALETTE SYNC ---
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", themePreset);
+    localStorage.setItem("la_theme_preset", themePreset);
+  }, [themePreset]);
 
   // Save autoDarkTheme setting to localStorage
   useEffect(() => {
@@ -3871,6 +3883,35 @@ export default function App() {
               )}
             </button>
 
+            {/* Theme Palette Quick Switcher & Modal Trigger */}
+            <div className="hidden lg:flex items-center gap-1.5 p-1 bg-neutral-100/90 dark:bg-zinc-800/80 rounded-xl border border-neutral-200/80 dark:border-zinc-700/60">
+              <div className="flex items-center gap-1 px-1">
+                {THEME_PRESETS.slice(0, 5).map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => {
+                      setThemePreset(preset.id);
+                      triggerToast(`Thème "${preset.name.split(' ')[0]}" appliqué`, "success");
+                    }}
+                    className={`w-4 h-4 rounded-full transition-all cursor-pointer relative flex items-center justify-center ${
+                      themePreset === preset.id
+                        ? "scale-125 ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-zinc-900 z-10"
+                        : "opacity-70 hover:opacity-100 hover:scale-110"
+                    }`}
+                    style={{ backgroundColor: preset.primaryColor }}
+                    title={`Changer de couleur: ${preset.name}`}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={() => setIsThemeModalOpen(true)}
+                className="p-1 text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition-colors cursor-pointer"
+                title="Ouvrir la galerie complète des 7 thèmes"
+              >
+                <Palette className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             {/* Theme Toggle Button */}
             <button
               onClick={() => {
@@ -5153,6 +5194,12 @@ export default function App() {
             triggerToast("Mode sombre automatique désactivé", "info");
           }
         }}
+        currentTheme={themePreset}
+        onSelectTheme={(preset) => {
+          setThemePreset(preset);
+          triggerToast("Thème visuel mis à jour", "success");
+        }}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
         accounts={accounts}
         transactions={transactions}
         dailyHabits={dailyHabits}
@@ -5162,6 +5209,22 @@ export default function App() {
         abonnements={abonnements}
         stocks={stocks}
         journalEntries={journalEntries}
+      />
+
+      {/* THEME & COLOR PALETTE SELECTION MODAL */}
+      <ThemeSelectorModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={(dark) => {
+          if (autoDarkTheme) setAutoDarkTheme(false);
+          setIsDarkMode(dark);
+        }}
+        currentTheme={themePreset}
+        onSelectTheme={(preset) => {
+          setThemePreset(preset);
+          triggerToast("Thème visuel appliqué avec succès !", "success");
+        }}
       />
 
       {/* SYNC CONFLICT RESOLUTION MODAL */}

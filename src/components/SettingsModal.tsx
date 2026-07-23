@@ -16,8 +16,11 @@ import {
   ChevronRight,
   Sliders,
   Check,
-  HardDrive
+  HardDrive,
+  Palette,
+  Sparkles
 } from "lucide-react";
+import { ThemePresetId, THEME_PRESETS } from "./ThemeSelectorModal";
 import { motion, AnimatePresence } from "motion/react";
 import { User as FirebaseUser, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "../firebase";
@@ -54,6 +57,9 @@ interface SettingsModalProps {
   onToggleDriveAutoSync?: (enabled: boolean) => void;
   autoDarkTheme: boolean;
   onToggleAutoDarkTheme: (enabled: boolean) => void;
+  currentTheme?: ThemePresetId;
+  onSelectTheme?: (theme: ThemePresetId) => void;
+  onOpenThemeModal?: () => void;
   
   // Data props for CSV Export
   accounts?: Account[];
@@ -130,6 +136,9 @@ export default function SettingsModal({
   onToggleDriveAutoSync = () => {},
   autoDarkTheme,
   onToggleAutoDarkTheme,
+  currentTheme = "indigo",
+  onSelectTheme,
+  onOpenThemeModal,
   accounts = [],
   transactions = [],
   dailyHabits = [],
@@ -781,6 +790,57 @@ export default function SettingsModal({
                         <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
                           Vous pouvez également basculer manuellement le thème sombre à tout moment via le bouton en haut de l'application.
                         </p>
+                      </div>
+
+                      {/* Theme Presets Quick Selector */}
+                      <div className="pt-3 border-t border-neutral-200/60 dark:border-zinc-700/60 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                            <Palette className="w-4 h-4 text-indigo-500" />
+                            Sélecteur de Thèmes Visuels
+                          </span>
+                          {onOpenThemeModal && (
+                            <button
+                              onClick={() => {
+                                onClose();
+                                onOpenThemeModal();
+                              }}
+                              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-bold flex items-center gap-1"
+                            >
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Galerie complète
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {THEME_PRESETS.map((p) => {
+                            const isSelected = currentTheme === p.id;
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => onSelectTheme && onSelectTheme(p.id)}
+                                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                                  isSelected
+                                    ? "bg-indigo-50 dark:bg-indigo-950/80 border-indigo-600 dark:border-indigo-500 shadow-2xs"
+                                    : "bg-white dark:bg-zinc-900 border-neutral-200 dark:border-zinc-800 hover:border-neutral-300"
+                                }`}
+                              >
+                                <span
+                                  className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/10 shadow-2xs"
+                                  style={{ backgroundColor: p.primaryColor }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <span className={`text-[11px] font-bold block truncate ${isSelected ? "text-indigo-900 dark:text-indigo-200" : "text-neutral-800 dark:text-neutral-200"}`}>
+                                    {p.name.split(" ")[0]}
+                                  </span>
+                                </div>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>

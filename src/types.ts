@@ -333,6 +333,8 @@ export interface ProjectFolder {
   customObjectives: { id: string; text: string; completed: boolean }[];
   customLinks: { id: string; title: string; url: string; category: string }[];
   notes: string;
+  isArchived?: boolean;
+  archivedAt?: string;
 }
 
 export interface JournalEntry {

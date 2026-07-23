@@ -25,7 +25,10 @@ import {
   AlertCircle,
   PieChart,
   ExternalLink,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Maximize2,
+  Minimize2,
+  Rows
 } from "lucide-react";
 import DateRangeSelector, { DateRange } from "./DateRangeSelector";
 
@@ -71,6 +74,17 @@ export default function InteractiveModuleTable({
   const [activeFilters, setActiveFilters] = useState<{ [key: string]: string }>({});
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [showPieChart, setShowPieChart] = useState(true);
+  const [isCompactView, setIsCompactView] = useState<boolean>(() => {
+    return localStorage.getItem("la_table_compact") === "true";
+  });
+
+  const toggleCompactView = () => {
+    setIsCompactView(prev => {
+      const next = !prev;
+      localStorage.setItem("la_table_compact", next ? "true" : "false");
+      return next;
+    });
+  };
 
   // Date Range Selector State
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -554,6 +568,27 @@ export default function InteractiveModuleTable({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={toggleCompactView}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer select-none ${
+              isCompactView
+                ? "bg-indigo-50 dark:bg-indigo-950/80 border-indigo-500 text-indigo-700 dark:text-indigo-300 shadow-2xs"
+                : "bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border-neutral-200"
+            }`}
+            title={isCompactView ? "Désactiver la vue compacte (revenir à l'espacement standard)" : "Activer la vue compacte (réduire l'espacement pour afficher plus d'éléments sur l'écran)"}
+          >
+            {isCompactView ? (
+              <Maximize2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            ) : (
+              <Rows className="w-3.5 h-3.5 text-neutral-500" />
+            )}
+            <span>Vue Compacte</span>
+            {isCompactView && (
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+            )}
+          </button>
+
           <button
             onClick={handleExportCSV}
             disabled={processedData.length === 0}
@@ -1108,7 +1143,7 @@ export default function InteractiveModuleTable({
                   <th 
                     key={col.key}
                     onClick={() => handleSort(col.key)}
-                    className={`px-4 py-3 cursor-pointer hover:bg-neutral-100/80 hover:text-neutral-900 transition-colors select-none group ${
+                    className={`${isCompactView ? "px-3 py-1.5 text-[11px]" : "px-4 py-3"} cursor-pointer hover:bg-neutral-100/80 hover:text-neutral-900 transition-colors select-none group ${
                       isSorted ? "bg-neutral-100/40 text-neutral-950 font-bold" : ""
                     }`}
                     title={`Trier par ${col.label}`}
@@ -1130,7 +1165,7 @@ export default function InteractiveModuleTable({
                   </th>
                 );
               })}
-              <th className="px-4 py-3 text-right font-semibold text-neutral-500">Actions</th>
+              <th className={`${isCompactView ? "px-3 py-1.5 text-[11px]" : "px-4 py-3"} text-right font-semibold text-neutral-500`}>Actions</th>
             </tr>
           </thead>
           
@@ -1157,9 +1192,9 @@ export default function InteractiveModuleTable({
                     const value = item[col.key];
 
                     return (
-                      <td key={col.key} className="px-4 py-3.5">
+                      <td key={col.key} className={isCompactView ? "px-3 py-1 text-[11px]" : "px-4 py-3.5"}>
                         {col.type === "boolean" ? (
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                             value 
                               ? "bg-neutral-900 text-white border-neutral-900" 
                               : "bg-neutral-100 border-neutral-200 text-neutral-400"
@@ -1215,12 +1250,12 @@ export default function InteractiveModuleTable({
                     );
                   })}
                   
-                  <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1.5">
+                  <td className={`${isCompactView ? "px-3 py-1 text-[11px]" : "px-4 py-3.5"} text-right whitespace-nowrap`}>
+                    <div className="flex items-center justify-end gap-1">
                       {onTransfer && (
                         <button
                           onClick={() => onTransfer(item)}
-                          className="p-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-all flex items-center gap-1 cursor-pointer border border-indigo-100 dark:border-indigo-900/30"
+                          className={`${isCompactView ? "p-1" : "p-1.5"} text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-all flex items-center gap-1 cursor-pointer border border-indigo-100 dark:border-indigo-900/30`}
                           title={transferLabel || "Convertir"}
                         >
                           <ArrowLeftRight className="w-3.5 h-3.5" />
@@ -1229,14 +1264,14 @@ export default function InteractiveModuleTable({
                       )}
                       <button
                         onClick={() => openEditModal(item)}
-                        className="p-1.5 text-neutral-400 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors"
+                        className={`${isCompactView ? "p-1" : "p-1.5"} text-neutral-400 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors`}
                         title="Modifier la ligne"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setItemToDelete(item)}
-                        className="p-1.5 text-neutral-400 hover:text-red-500 rounded-lg hover:bg-neutral-100 transition-colors"
+                        className={`${isCompactView ? "p-1" : "p-1.5"} text-neutral-400 hover:text-red-500 rounded-lg hover:bg-neutral-100 transition-colors`}
                         title="Supprimer la ligne"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

@@ -25,7 +25,11 @@ import {
   Search,
   CheckCircle2,
   ListTodo,
-  FolderPlus
+  FolderPlus,
+  Archive,
+  ArchiveRestore,
+  FolderArchive,
+  RotateCcw
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -55,15 +59,28 @@ export default function ProjectFoldersSection({
   setEvents
 }: ProjectFoldersSectionProps) {
   
-  // Selected folder
+  // Archiving view toggle (false = Active projects, true = Archived projects)
+  const [showArchivedView, setShowArchivedView] = useState<boolean>(false);
+
+  // Active vs. Archived projects memo
+  const activeFolders = useMemo(() => folders.filter(f => !f.isArchived), [folders]);
+  const archivedFolders = useMemo(() => folders.filter(f => f.isArchived), [folders]);
+
+  const displayedFolders = useMemo(() => {
+    return showArchivedView ? archivedFolders : activeFolders;
+  }, [showArchivedView, activeFolders, archivedFolders]);
+
+  // Selected folder ID
   const [selectedFolderId, setSelectedFolderId] = useState<string>(() => {
     return folders[0]?.id || "";
   });
 
   // Safe selected folder getter
   const selectedFolder = useMemo(() => {
-    return folders.find(f => f.id === selectedFolderId) || folders[0] || null;
-  }, [folders, selectedFolderId]);
+    const match = folders.find(f => f.id === selectedFolderId);
+    if (match) return match;
+    return displayedFolders[0] || folders[0] || null;
+  }, [folders, selectedFolderId, displayedFolders]);
 
   // Tab control within selected folder
   const [activeTab, setActiveTab] = useState<"overview" | "formations" | "objectives" | "links" | "calendar">("overview");
@@ -74,6 +91,7 @@ export default function ProjectFoldersSection({
   const [projName, setProjName] = useState("");
   const [projDesc, setProjDesc] = useState("");
   const [projCategory, setProjCategory] = useState<ProjectFolder["category"]>("Autre");
+  const [projIsArchived, setProjIsArchived] = useState(false);
 
   // Quick inputs inside unified view
   const [newCustomObjectiveText, setNewCustomObjectiveText] = useState("");
@@ -110,12 +128,26 @@ export default function ProjectFoldersSection({
     setFolders(prev => prev.map(f => f.id === selectedFolder.id ? { ...f, notes: localNotes } : f));
   };
 
+  // Archive project handler
+  const handleArchiveProject = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const todayStr = new Date().toISOString().split("T")[0];
+    setFolders(prev => prev.map(f => f.id === id ? { ...f, isArchived: true, archivedAt: todayStr } : f));
+  };
+
+  // Unarchive / Restore project handler
+  const handleUnarchiveProject = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setFolders(prev => prev.map(f => f.id === id ? { ...f, isArchived: false, archivedAt: undefined } : f));
+  };
+
   // Open modal for creating project
   const handleOpenCreateModal = () => {
     setEditingProject(null);
     setProjName("");
     setProjDesc("");
     setProjCategory("Autre");
+    setProjIsArchived(false);
     setShowProjectModal(true);
   };
 
@@ -125,6 +157,7 @@ export default function ProjectFoldersSection({
     setProjName(proj.name);
     setProjDesc(proj.description);
     setProjCategory(proj.category);
+    setProjIsArchived(proj.isArchived || false);
     setShowProjectModal(true);
   };
 
@@ -139,7 +172,9 @@ export default function ProjectFoldersSection({
         ...f,
         name: projName.trim(),
         description: projDesc.trim(),
-        category: projCategory
+        category: projCategory,
+        isArchived: projIsArchived,
+        archivedAt: projIsArchived ? (f.archivedAt || new Date().toISOString().split("T")[0]) : undefined
       } : f));
     } else {
       // Create mode
@@ -154,7 +189,9 @@ export default function ProjectFoldersSection({
         associatedGoalIds: [],
         customObjectives: [],
         customLinks: [],
-        notes: ""
+        notes: "",
+        isArchived: projIsArchived,
+        archivedAt: projIsArchived ? new Date().toISOString().split("T")[0] : undefined
       };
       setFolders(prev => [...prev, newFolder]);
       setSelectedFolderId(newFolder.id);
@@ -497,82 +534,159 @@ export default function ProjectFoldersSection({
           
           {/* Sidebar - Projects selector list */}
           <div className="lg:col-span-4 space-y-3">
-            <div className="bg-neutral-50/60 border border-neutral-200/60 rounded-2xl p-4">
-              <span className="text-[10px] font-black text-neutral-400 uppercase tracking-wider block mb-3 font-sans">
-                Mes Projets Créateurs ({folders.length})
-              </span>
-              <div className="space-y-2">
-                {folders.map(f => {
-                  const isSelected = f.id === selectedFolderId;
-                  const totalItems = f.associatedFormationIds.length + f.customObjectives.length + f.associatedGoalIds.length + f.customLinks.length;
-                  return (
-                    <div
-                      key={f.id}
-                      onClick={() => {
-                        setSelectedFolderId(f.id);
-                        setActiveTab("overview");
-                      }}
-                      className={`group p-4 rounded-xl border text-left transition-all cursor-pointer select-none relative ${
-                        isSelected 
-                          ? "bg-white border-indigo-600 shadow-sm"
-                          : "bg-white/60 border-neutral-200/80 hover:bg-white hover:border-neutral-300"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start gap-2">
-                        <div className="flex items-start gap-2.5">
-                          {isSelected ? (
-                            <FolderOpen className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-                          ) : (
-                            <Folder className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
-                          )}
-                          <div className="space-y-0.5">
-                            <span className="text-xs font-bold text-neutral-900 block group-hover:text-indigo-600 transition-colors">
-                              {f.name}
+            <div className="bg-neutral-50/60 border border-neutral-200/60 rounded-2xl p-4 space-y-3">
+              
+              {/* Filter tabs: Active vs Archived */}
+              <div className="flex items-center justify-between border-b border-neutral-200/80 pb-2.5">
+                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-wider block font-sans">
+                  Projets ({folders.length})
+                </span>
+                <div className="flex items-center gap-1 bg-neutral-200/60 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowArchivedView(false);
+                      if (activeFolders.length > 0 && (!selectedFolder || selectedFolder.isArchived)) {
+                        setSelectedFolderId(activeFolders[0].id);
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      !showArchivedView 
+                        ? "bg-white text-neutral-900 shadow-2xs font-black"
+                        : "text-neutral-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    <FolderOpen className="w-3 h-3 text-indigo-600" />
+                    <span>Actifs ({activeFolders.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowArchivedView(true);
+                      if (archivedFolders.length > 0 && (!selectedFolder || !selectedFolder.isArchived)) {
+                        setSelectedFolderId(archivedFolders[0].id);
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      showArchivedView 
+                        ? "bg-white text-neutral-900 shadow-2xs font-black"
+                        : "text-neutral-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    <Archive className="w-3 h-3 text-amber-600" />
+                    <span>Archives ({archivedFolders.length})</span>
+                  </button>
+                </div>
+              </div>
+
+              {displayedFolders.length === 0 ? (
+                <div className="p-6 text-center text-neutral-400 text-xs italic bg-white/60 rounded-xl border border-dashed border-neutral-200">
+                  {showArchivedView 
+                    ? "Aucun projet archivé pour l'instant." 
+                    : "Aucun projet actif. Créez un nouveau dossier de projet ou consultez vos archives."}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {displayedFolders.map(f => {
+                    const isSelected = f.id === selectedFolderId;
+                    const totalItems = f.associatedFormationIds.length + f.customObjectives.length + f.associatedGoalIds.length + f.customLinks.length;
+                    return (
+                      <div
+                        key={f.id}
+                        onClick={() => {
+                          setSelectedFolderId(f.id);
+                          setActiveTab("overview");
+                        }}
+                        className={`group p-4 rounded-xl border text-left transition-all cursor-pointer select-none relative ${
+                          isSelected 
+                            ? "bg-white border-indigo-600 shadow-sm"
+                            : "bg-white/60 border-neutral-200/80 hover:bg-white hover:border-neutral-300"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="flex items-start gap-2.5 min-w-0">
+                            {isSelected ? (
+                              <FolderOpen className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                            ) : f.isArchived ? (
+                              <Archive className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                            ) : (
+                              <Folder className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
+                            )}
+                            <div className="space-y-0.5 min-w-0">
+                              <span className="text-xs font-bold text-neutral-900 block group-hover:text-indigo-600 transition-colors truncate">
+                                {f.name}
+                              </span>
+                              <span className="text-[10px] text-neutral-400 font-medium block line-clamp-1">
+                                {f.description}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Quick category or archived badge */}
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full font-mono tracking-wider ${
+                              f.category === "YouTube" ? "bg-red-50 text-red-600 border border-red-100" :
+                              f.category === "Formation" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                              f.category === "E-commerce" ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                              f.category === "Finance" ? "bg-indigo-50 text-indigo-600 border border-indigo-100" :
+                              "bg-neutral-100 text-neutral-600 border border-neutral-200"
+                            }`}>
+                              {f.category}
                             </span>
-                            <span className="text-[10px] text-neutral-400 font-medium block line-clamp-1">
-                              {f.description}
-                            </span>
+                            {f.isArchived && (
+                              <span className="text-[8px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.2 rounded font-mono">
+                                Archivé
+                              </span>
+                            )}
                           </div>
                         </div>
-                        
-                        {/* Quick category badge */}
-                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 font-mono tracking-wider ${
-                          f.category === "YouTube" ? "bg-red-50 text-red-600 border border-red-100" :
-                          f.category === "Formation" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
-                          f.category === "E-commerce" ? "bg-amber-50 text-amber-600 border border-amber-100" :
-                          f.category === "Finance" ? "bg-indigo-50 text-indigo-600 border border-indigo-100" :
-                          "bg-neutral-100 text-neutral-600 border border-neutral-200"
-                        }`}>
-                          {f.category}
-                        </span>
-                      </div>
 
-                      <div className="mt-3 flex items-center justify-between pt-2 border-t border-neutral-100 text-[10px] text-neutral-400 font-bold uppercase tracking-wider font-sans">
-                        <span>{totalItems} Éléments reliés</span>
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditModal(f);
-                            }}
-                            className="text-neutral-500 hover:text-indigo-600 transition-colors p-1"
-                            title="Modifier"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={(e) => handleDeleteProject(f.id, e)}
-                            className="text-neutral-400 hover:text-red-600 transition-colors p-1"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                        <div className="mt-3 flex items-center justify-between pt-2 border-t border-neutral-100 text-[10px] text-neutral-400 font-bold uppercase tracking-wider font-sans">
+                          <span>{totalItems} Éléments reliés</span>
+                          <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditModal(f);
+                              }}
+                              className="text-neutral-500 hover:text-indigo-600 transition-colors p-1"
+                              title="Modifier"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+
+                            {f.isArchived ? (
+                              <button
+                                onClick={(e) => handleUnarchiveProject(f.id, e)}
+                                className="text-amber-600 hover:text-amber-700 transition-colors p-1"
+                                title="Restaurer le projet"
+                              >
+                                <ArchiveRestore className="w-3.5 h-3.5" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => handleArchiveProject(f.id, e)}
+                                className="text-neutral-400 hover:text-amber-600 transition-colors p-1"
+                                title="Archiver le projet"
+                              >
+                                <Archive className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
+                            <button
+                              onClick={(e) => handleDeleteProject(f.id, e)}
+                              className="text-neutral-400 hover:text-red-600 transition-colors p-1"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -580,6 +694,30 @@ export default function ProjectFoldersSection({
           {selectedFolder && (
             <div className="lg:col-span-8 space-y-6">
               
+              {/* Archive Alert Banner if selected folder is archived */}
+              {selectedFolder.isArchived && (
+                <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-amber-100 text-amber-700 rounded-xl shrink-0">
+                      <Archive className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black block uppercase tracking-tight">PROJET ARCHIVÉ</span>
+                      <span className="text-[11px] text-amber-700 font-medium leading-tight block mt-0.5">
+                        Dossier classé {selectedFolder.archivedAt ? `le ${selectedFolder.archivedAt}` : ""}. Vos formations, objectifs, événements et liens restent consultables en mode archive.
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleUnarchiveProject(selectedFolder.id)}
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-xs active:scale-95"
+                  >
+                    <ArchiveRestore className="w-4 h-4" />
+                    <span>Désarchiver</span>
+                  </button>
+                </div>
+              )}
+
               {/* Active project header card */}
               <div className="bg-white border border-neutral-200/90 rounded-2xl p-5 shadow-3xs">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-neutral-100">
@@ -596,9 +734,30 @@ export default function ProjectFoldersSection({
                       </span>
                       <span className="text-[10px] font-mono text-neutral-400">Créé le {selectedFolder.createdAt}</span>
                     </div>
-                    <h3 className="text-lg font-black text-neutral-900 leading-tight">
-                      {selectedFolder.name}
-                    </h3>
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-black text-neutral-900 leading-tight">
+                        {selectedFolder.name}
+                      </h3>
+                      {!selectedFolder.isArchived ? (
+                        <button
+                          onClick={() => handleArchiveProject(selectedFolder.id)}
+                          className="px-2.5 py-1 bg-neutral-100 hover:bg-amber-50 text-neutral-600 hover:text-amber-700 border border-neutral-200 hover:border-amber-200 rounded-lg text-[10px] font-extrabold flex items-center gap-1 transition-all cursor-pointer"
+                          title="Archiver ce projet"
+                        >
+                          <Archive className="w-3 h-3 text-amber-600" />
+                          <span>Archiver</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleUnarchiveProject(selectedFolder.id)}
+                          className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[10px] font-extrabold flex items-center gap-1 transition-all cursor-pointer"
+                          title="Restaurer le projet"
+                        >
+                          <ArchiveRestore className="w-3 h-3 text-amber-600" />
+                          <span>Restaurer</span>
+                        </button>
+                      )}
+                    </div>
                     <p className="text-xs text-neutral-400 font-medium leading-relaxed max-w-2xl">
                       {selectedFolder.description}
                     </p>
@@ -1480,6 +1639,22 @@ export default function ProjectFoldersSection({
                   rows={3}
                   className="w-full text-xs font-semibold bg-neutral-50/50 border border-neutral-200 rounded-xl p-3 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 focus:bg-white transition-all text-neutral-800 resize-none"
                 />
+              </div>
+
+              {/* Archiving Toggle Checkbox */}
+              <div className="pt-1">
+                <label className="flex items-center gap-2.5 p-3 bg-neutral-50 border border-neutral-200/80 rounded-xl cursor-pointer hover:bg-neutral-100/60 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={projIsArchived}
+                    onChange={(e) => setProjIsArchived(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 rounded border-neutral-300 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800">
+                    <Archive className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Archiver ce projet (masquer de la vue principale)</span>
+                  </div>
+                </label>
               </div>
 
               <div className="pt-4 flex justify-end gap-2.5 border-t border-neutral-100">
