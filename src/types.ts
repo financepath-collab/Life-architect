@@ -330,7 +330,7 @@ export interface ProjectFolder {
   associatedFormationIds: string[];
   associatedLinkIds: string[];
   associatedGoalIds: string[];
-  customObjectives: { id: string; text: string; completed: boolean }[];
+  customObjectives: { id: string; text: string; completed: boolean; dueDate?: string }[];
   customLinks: { id: string; title: string; url: string; category: string }[];
   notes: string;
   isArchived?: boolean;

@@ -29,7 +29,9 @@ import {
   Archive,
   ArchiveRestore,
   FolderArchive,
-  RotateCcw
+  RotateCcw,
+  CalendarDays,
+  Pencil
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -95,6 +97,12 @@ export default function ProjectFoldersSection({
 
   // Quick inputs inside unified view
   const [newCustomObjectiveText, setNewCustomObjectiveText] = useState("");
+  const [newCustomObjectiveDueDate, setNewCustomObjectiveDueDate] = useState(() => new Date().toISOString().split("T")[0]);
+
+  // Editing custom objective/jalon state
+  const [editingObjectiveId, setEditingObjectiveId] = useState<string | null>(null);
+  const [editObjectiveText, setEditObjectiveText] = useState("");
+  const [editObjectiveDueDate, setEditObjectiveDueDate] = useState("");
   const [newCustomLinkTitle, setNewCustomLinkTitle] = useState("");
   const [newCustomLinkUrl, setNewCustomLinkUrl] = useState("");
   const [newCustomLinkCat, setNewCustomLinkCat] = useState("Outils");
@@ -220,7 +228,8 @@ export default function ProjectFoldersSection({
     const newObj = {
       id: "co_" + Date.now(),
       text: newCustomObjectiveText.trim(),
-      completed: false
+      completed: false,
+      dueDate: newCustomObjectiveDueDate || undefined
     };
 
     setFolders(prev => prev.map(f => {
@@ -234,6 +243,35 @@ export default function ProjectFoldersSection({
     }));
 
     setNewCustomObjectiveText("");
+  };
+
+  // Start editing custom objective/jalon
+  const handleStartEditObjective = (o: { id: string; text: string; completed: boolean; dueDate?: string }) => {
+    setEditingObjectiveId(o.id);
+    setEditObjectiveText(o.text);
+    setEditObjectiveDueDate(o.dueDate || "");
+  };
+
+  // Save edited custom objective/jalon
+  const handleSaveEditObjective = (objId: string) => {
+    if (!selectedFolder || !editObjectiveText.trim()) return;
+    setFolders(prev => prev.map(f => {
+      if (f.id === selectedFolder.id) {
+        return {
+          ...f,
+          customObjectives: f.customObjectives.map(o =>
+            o.id === objId ? { ...o, text: editObjectiveText.trim(), dueDate: editObjectiveDueDate || undefined } : o
+          )
+        };
+      }
+      return f;
+    }));
+    setEditingObjectiveId(null);
+  };
+
+  // Cancel editing custom objective/jalon
+  const handleCancelEditObjective = () => {
+    setEditingObjectiveId(null);
   };
 
   // Toggle custom objective completion
@@ -1113,21 +1151,33 @@ export default function ProjectFoldersSection({
                   </div>
 
                   {/* Add new custom project checklist objective form */}
-                  <form onSubmit={handleAddCustomObjective} className="flex gap-2 bg-neutral-50 p-2 rounded-xl border border-neutral-200/60">
+                  <form onSubmit={handleAddCustomObjective} className="flex flex-col sm:flex-row gap-2 bg-neutral-50 p-2.5 rounded-2xl border border-neutral-200/80">
                     <input
                       type="text"
                       value={newCustomObjectiveText}
                       onChange={(e) => setNewCustomObjectiveText(e.target.value)}
                       placeholder="Ajouter un nouveau jalon spécifique à ce projet (ex: Enregistrer l'épisode 1)..."
-                      className="flex-1 text-xs font-medium bg-transparent border-0 focus:outline-hidden focus:ring-0 text-neutral-800"
+                      className="flex-1 text-xs font-medium bg-transparent border-0 focus:outline-none focus:ring-0 text-neutral-800 px-2 py-1"
                     />
-                    <button
-                      type="submit"
-                      className="bg-neutral-900 hover:bg-neutral-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Ajouter</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-xl px-2.5 py-1 shadow-2xs">
+                        <CalendarDays className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                        <input
+                          type="date"
+                          value={newCustomObjectiveDueDate}
+                          onChange={(e) => setNewCustomObjectiveDueDate(e.target.value)}
+                          className="text-xs font-bold bg-transparent border-0 focus:outline-none text-neutral-800 cursor-pointer"
+                          title="Date limite / Échéance du jalon"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="bg-neutral-900 hover:bg-neutral-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none shrink-0"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Ajouter</span>
+                      </button>
+                    </div>
                   </form>
 
                   {/* Combined List of Objectives */}
@@ -1195,35 +1245,106 @@ export default function ProjectFoldersSection({
                       ) : (
                         <div className="space-y-2">
                           {selectedFolder.customObjectives.map(o => {
+                            const isEditing = editingObjectiveId === o.id;
+
+                            if (isEditing) {
+                              return (
+                                <div key={o.id} className="p-3 bg-indigo-50/50 border border-indigo-200 rounded-2xl space-y-2 animate-in fade-in duration-200">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-800">
+                                      Modifier l'objectif & la date cible
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-col sm:flex-row gap-2">
+                                    <input
+                                      type="text"
+                                      value={editObjectiveText}
+                                      onChange={(e) => setEditObjectiveText(e.target.value)}
+                                      placeholder="Intitulé du jalon..."
+                                      className="flex-1 bg-white border border-neutral-200 rounded-xl px-3 py-1.5 text-xs font-bold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    />
+                                    <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-xl px-2.5 py-1">
+                                      <CalendarDays className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                      <input
+                                        type="date"
+                                        value={editObjectiveDueDate}
+                                        onChange={(e) => setEditObjectiveDueDate(e.target.value)}
+                                        className="text-xs font-bold bg-transparent border-0 focus:outline-none text-neutral-800 cursor-pointer"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSaveEditObjective(o.id)}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Enregistrer</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={handleCancelEditObjective}
+                                        className="bg-white hover:bg-neutral-100 border border-neutral-200 text-neutral-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                      >
+                                        Annuler
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+
                             return (
                               <div
                                 key={o.id}
-                                className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+                                className={`p-3 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
                                   o.completed 
-                                    ? "bg-neutral-50 border-neutral-200 text-neutral-400" 
-                                    : "bg-white border-neutral-200/80 text-neutral-800"
+                                    ? "bg-neutral-50 border-neutral-200/80 text-neutral-400" 
+                                    : "bg-white border-neutral-200/80 text-neutral-800 shadow-2xs hover:border-neutral-300"
                                 }`}
                               >
                                 <div
                                   onClick={() => handleToggleCustomObjective(o.id)}
-                                  className="flex items-center gap-3 cursor-pointer flex-1 select-none"
+                                  className="flex items-center gap-3 cursor-pointer flex-1 select-none min-w-0"
                                 >
                                   {o.completed ? (
                                     <CheckSquare className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
                                   ) : (
                                     <Square className="w-4.5 h-4.5 text-neutral-400 shrink-0" />
                                   )}
-                                  <span className={`text-xs font-medium leading-tight ${o.completed ? "line-through" : ""}`}>
+                                  <span className={`text-xs font-semibold leading-tight ${o.completed ? "line-through text-neutral-400" : "text-neutral-900"}`}>
                                     {o.text}
                                   </span>
                                 </div>
-                                <button
-                                  onClick={() => handleDeleteCustomObjective(o.id)}
-                                  className="text-neutral-400 hover:text-red-500 transition-colors p-1 shrink-0"
-                                  title="Supprimer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+
+                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                                  {o.dueDate ? (
+                                    <span className="text-[10px] bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-bold font-mono px-2.5 py-1 rounded-lg border border-indigo-200/60 flex items-center gap-1.5">
+                                      <CalendarDays className="w-3 h-3 text-indigo-500" />
+                                      <span>{o.dueDate}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-neutral-400 italic">Sans date</span>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditObjective(o)}
+                                    className="text-neutral-400 hover:text-indigo-600 transition-colors p-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer"
+                                    title="Modifier le jalon et sa date d'objectif"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCustomObjective(o.id)}
+                                    className="text-neutral-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-neutral-100 cursor-pointer"
+                                    title="Supprimer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </div>
                             );
                           })}

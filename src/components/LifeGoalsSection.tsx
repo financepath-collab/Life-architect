@@ -24,7 +24,8 @@ import {
   Hourglass,
   CalendarDays,
   Activity,
-  Search
+  Search,
+  Pencil
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -57,6 +58,11 @@ export default function LifeGoalsSection({
   // New Milestone quick fields (mapped per goal to keep it simple, or single temp fields)
   const [newMilestoneTitle, setNewMilestoneTitle] = useState("");
   const [newMilestoneDueDate, setNewMilestoneDueDate] = useState("");
+
+  // Editing Milestone state
+  const [editingMilestoneId, setEditingMilestoneId] = useState<string | null>(null);
+  const [editMilestoneTitle, setEditMilestoneTitle] = useState("");
+  const [editMilestoneDueDate, setEditMilestoneDueDate] = useState("");
 
   // Stats calculation
   const stats = useMemo(() => {
@@ -244,6 +250,30 @@ export default function LifeGoalsSection({
 
     setNewMilestoneTitle("");
     setNewMilestoneDueDate("");
+  };
+
+  const handleStartEditMilestone = (milestone: GoalMilestone) => {
+    setEditingMilestoneId(milestone.id);
+    setEditMilestoneTitle(milestone.title);
+    setEditMilestoneDueDate(milestone.dueDate || "");
+  };
+
+  const handleSaveEditMilestone = (goalId: string, milestoneId: string) => {
+    if (!editMilestoneTitle.trim()) return;
+    setPossibilitesGoals(prev => prev.map(g => {
+      if (g.id !== goalId) return g;
+      return {
+        ...g,
+        milestones: (g.milestones || []).map(m =>
+          m.id === milestoneId ? { ...m, title: editMilestoneTitle.trim(), dueDate: editMilestoneDueDate || undefined } : m
+        )
+      };
+    }));
+    setEditingMilestoneId(null);
+  };
+
+  const handleCancelEditMilestone = () => {
+    setEditingMilestoneId(null);
   };
 
   const handleDeleteMilestone = (goalId: string, milestoneId: string) => {

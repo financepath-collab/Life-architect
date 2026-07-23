@@ -361,9 +361,9 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
     associatedLinkIds: [],
     associatedGoalIds: ["mg1"],
     customObjectives: [
-      { id: "co_1", text: "Atteindre 10k abonnés d'ici la fin d'année", completed: false },
-      { id: "co_2", text: "Publier 2 vidéos de haute qualité par semaine", completed: true },
-      { id: "co_3", text: "Finaliser le script de la vidéo de Private Equity", completed: false }
+      { id: "co_1", text: "Atteindre 10k abonnés d'ici la fin d'année", completed: false, dueDate: "2026-12-31" },
+      { id: "co_2", text: "Publier 2 vidéos de haute qualité par semaine", completed: true, dueDate: "2026-08-15" },
+      { id: "co_3", text: "Finaliser le script de la vidéo de Private Equity", completed: false, dueDate: "2026-07-30" }
     ],
     customLinks: [
       { id: "cl_1", title: "YouTube Creator Studio", url: "https://studio.youtube.com", category: "Outils" },
@@ -381,9 +381,9 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
     associatedLinkIds: [],
     associatedGoalIds: ["mg2"],
     customObjectives: [
-      { id: "co_4", text: "Enregistrer les 15 premiers modules vidéos", completed: false },
-      { id: "co_5", text: "Préparer le template de modèle financier de LBO", completed: true },
-      { id: "co_6", text: "Créer la page de capture de leads de l'Académie", completed: false }
+      { id: "co_4", text: "Enregistrer les 15 premiers modules vidéos", completed: false, dueDate: "2026-09-01" },
+      { id: "co_5", text: "Préparer le template de modèle financier de LBO", completed: true, dueDate: "2026-06-30" },
+      { id: "co_6", text: "Créer la page de capture de leads de l'Académie", completed: false, dueDate: "2026-08-10" }
     ],
     customLinks: [
       { id: "cl_3", title: "Kajabi Dashboard", url: "https://kajabi.com", category: "Outils" }
