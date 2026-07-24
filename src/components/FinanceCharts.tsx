@@ -617,20 +617,71 @@ export default function FinanceCharts({
 
           {/* Savings Goals performance */}
           <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-xs">
-            <h3 className="text-sm font-bold text-neutral-950 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-neutral-800" />
-              <span>Progression de l'Épargne & Objectifs</span>
-            </h3>
+            {(() => {
+              const ongoingGoals = epargnes.filter(e => e.status === "En cours" || e.status === undefined);
+              const totalEpargneActuel = ongoingGoals.reduce((sum, e) => sum + (e.currentAmount || 0), 0);
+              
+              // Calculate total required monthly savings
+              const now = new Date();
+              const totalMonthlyReq = ongoingGoals.reduce((sum, goal) => {
+                const remaining = Math.max(0, (goal.targetAmount || 0) - (goal.currentAmount || 0));
+                if (remaining <= 0) return sum;
+                let months = 12;
+                if (goal.deadline) {
+                  const dDate = new Date(goal.deadline);
+                  if (!isNaN(dDate.getTime())) {
+                    const daysDiff = Math.ceil((dDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    months = daysDiff <= 0 ? 0.5 : Math.max(0.5, daysDiff / 30.4375);
+                  }
+                }
+                return sum + Math.round(remaining / months);
+              }, 0);
+
+              return (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 pb-2">
+                  <h3 className="text-sm font-bold text-neutral-950 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-neutral-800" />
+                    <span>Progression de l'Épargne & Objectifs</span>
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold text-indigo-900 bg-indigo-50 border border-indigo-200/80 px-2.5 py-1 rounded-lg">
+                      Requise : {totalMonthlyReq.toLocaleString("fr-FR")} MAD/mois
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2.5 py-1 rounded-lg">
+                      Total Actuel : {totalEpargneActuel.toLocaleString("fr-FR")} MAD
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="space-y-3">
               {epargnes.map(goal => {
                 const rate = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+                const remaining = Math.max(0, goal.targetAmount - goal.currentAmount);
+                let monthlyReq = 0;
+                if (remaining > 0 && goal.deadline) {
+                  const dDate = new Date(goal.deadline);
+                  if (!isNaN(dDate.getTime())) {
+                    const daysDiff = Math.ceil((dDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                    const months = daysDiff <= 0 ? 0.5 : Math.max(0.5, daysDiff / 30.4375);
+                    monthlyReq = Math.round(remaining / months);
+                  }
+                }
+
                 return (
                   <div key={goal.id} className="bg-neutral-50/50 border border-neutral-200 p-3.5 rounded-xl space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <span className="text-xs font-bold text-neutral-800">{goal.name}</span>
-                        <span className="text-[9px] text-neutral-400 block font-mono">Échéance : {goal.deadline}</span>
+                        <div className="flex items-center gap-2 text-[9px] text-neutral-400 font-mono">
+                          <span>Échéance : {goal.deadline}</span>
+                          {monthlyReq > 0 && (
+                            <span className="text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
+                              + {monthlyReq.toLocaleString("fr-FR")} MAD/mois
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-neutral-900 text-white">
                         {rate.toFixed(0)}%

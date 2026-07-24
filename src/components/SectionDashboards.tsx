@@ -10,6 +10,7 @@ import MonthlyExpenseAnalysisCard from "./MonthlyExpenseAnalysisCard";
 import MonthlyNetIncomeWidget from "./MonthlyNetIncomeWidget";
 import MonthlySavingsGaugeCard from "./MonthlySavingsGaugeCard";
 import MonthlyComparisonCard from "./MonthlyComparisonCard";
+import RequiredMonthlySavingsCard from "./RequiredMonthlySavingsCard";
 import { 
   Account, FinanceBudget, FinanceEpargne, Abonnement, StockEntry, FinanceTransaction,
   DailyHabit, Action30Jours, WeeklyObjective, ProfilAmelioration, PossibiliteGoal, JournalEntry,
@@ -92,6 +93,12 @@ export function FinanceSectionDashboard({
   const totalStockValuation = stocks.reduce((sum, s) => sum + (s.currentPrice * s.quantity), 0);
   const totalEpargne = epargnes.reduce((sum, e) => sum + e.currentAmount, 0);
   const totalNetWorth = totalAccountBalance + totalStockValuation + totalEpargne;
+
+  // Total Épargné Actuel (total currentAmount of all ongoing savings goals)
+  const ongoingEpargnes = epargnes.filter(e => e.status === "En cours" || e.status === undefined);
+  const totalEpargneActuel = ongoingEpargnes.reduce((sum, e) => sum + (e.currentAmount || 0), 0);
+  const totalOngoingTarget = ongoingEpargnes.reduce((sum, e) => sum + (e.targetAmount || 0), 0);
+  const ongoingPct = totalOngoingTarget > 0 ? Math.round((totalEpargneActuel / totalOngoingTarget) * 100) : 0;
 
   // Budget exceeded/spent percentages
   const exceededBudgetsCount = budgets.filter(b => b.spentAmount > b.limitAmount).length;
@@ -303,7 +310,7 @@ export function FinanceSectionDashboard({
       </div>
 
       {/* Stats Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 text-white flex flex-col justify-between h-32 shadow-sm">
           <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Patrimoine Total</span>
           <div>
@@ -334,13 +341,28 @@ export function FinanceSectionDashboard({
           </div>
         </div>
 
+        <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-2xl p-5 flex flex-col justify-between h-32 shadow-3xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Total Épargné Actuel</span>
+            <PiggyBank className="w-4 h-4 text-emerald-600 shrink-0" />
+          </div>
+          <div>
+            <h4 className="text-xl font-black font-mono text-emerald-950 leading-none">
+              {totalEpargneActuel.toLocaleString("fr-FR")} MAD
+            </h4>
+            <span className="text-[10px] text-emerald-700 font-medium block mt-1">
+              {ongoingEpargnes.length} objectif(s) en cours ({ongoingPct}% de la cible)
+            </span>
+          </div>
+        </div>
+
         <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex flex-col justify-between h-32 shadow-3xs">
-          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Cagnottes Épargne</span>
+          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Cagnottes Épargne (Total)</span>
           <div>
             <h4 className="text-xl font-bold font-mono text-neutral-900 leading-none">
               {totalEpargne.toLocaleString("fr-FR")} MAD
             </h4>
-            <span className="text-[10px] text-neutral-400 block mt-1">Progression projets à long terme</span>
+            <span className="text-[10px] text-neutral-400 block mt-1">{epargnes.length} projets d'épargne enregistrés</span>
           </div>
         </div>
       </div>
@@ -356,6 +378,15 @@ export function FinanceSectionDashboard({
         transactions={transactions}
         abonnements={abonnements}
         salaires={salaires}
+      />
+
+      {/* Required Monthly Savings Calculator Card to reach all ongoing epargnes goals by their deadlines */}
+      <RequiredMonthlySavingsCard
+        epargnes={epargnes}
+        transactions={transactions}
+        abonnements={abonnements}
+        salaires={salaires}
+        onNavigate={onNavigate}
       />
 
       {/* Monthly Net Income Widget (Calculates automatically subtracting recurring expenses/subscriptions and monthly costs/budgets from revenues) */}
@@ -1648,10 +1679,10 @@ export function ProjetsSectionDashboard({ folders, formations, onNavigate }: Pro
           </div>
 
           <button 
-            onClick={() => onNavigate("project_folders")}
+            onClick={() => onNavigate("channels")}
             className="w-full py-2.5 bg-neutral-950 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer text-center"
           >
-            Ouvrir mes dossiers de projets
+            Accéder à mes Projets Médias & Canaux
           </button>
         </div>
 
