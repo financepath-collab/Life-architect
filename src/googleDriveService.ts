@@ -74,7 +74,13 @@ export const findBackupFile = async (accessToken: string): Promise<string | null
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to search Google Drive: ${response.statusText}`);
+      if (response.status === 401 || response.status === 403) {
+        console.warn(`Google Drive token invalid or expired (HTTP ${response.status})`);
+        return null;
+      }
+      const errDetail = response.statusText ? ` (${response.statusText})` : "";
+      console.warn(`Google Drive search response status: ${response.status}${errDetail}`);
+      return null;
     }
 
     const data = await response.json();
@@ -84,8 +90,8 @@ export const findBackupFile = async (accessToken: string): Promise<string | null
     }
     return null;
   } catch (error) {
-    console.error("Error in findBackupFile:", error);
-    throw error;
+    console.warn("Could not search Google Drive backup file:", error);
+    return null;
   }
 };
 
@@ -107,7 +113,8 @@ export const createBackupFile = async (accessToken: string, payload: any): Promi
     });
 
     if (!metaResponse.ok) {
-      throw new Error(`Failed to create file metadata: ${metaResponse.statusText}`);
+      const errDetail = metaResponse.statusText ? ` (${metaResponse.statusText})` : "";
+      throw new Error(`Failed to create file metadata: HTTP ${metaResponse.status}${errDetail}`);
     }
 
     const fileMeta = await metaResponse.json();
@@ -136,7 +143,8 @@ export const updateBackupFileContent = async (accessToken: string, fileId: strin
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to update file content: ${response.statusText}`);
+      const errDetail = response.statusText ? ` (${response.statusText})` : "";
+      throw new Error(`Failed to update file content: HTTP ${response.status}${errDetail}`);
     }
   } catch (error) {
     console.error("Error in updateBackupFileContent:", error);
@@ -155,7 +163,8 @@ export const readBackupFileContent = async (accessToken: string, fileId: string)
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to read file content: ${response.statusText}`);
+      const errDetail = response.statusText ? ` (${response.statusText})` : "";
+      throw new Error(`Failed to read file content: HTTP ${response.status}${errDetail}`);
     }
 
     return await response.json();

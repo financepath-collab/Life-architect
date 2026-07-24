@@ -143,7 +143,11 @@ async function executeBackup(target: "drive", isSilent: boolean) {
       });
 
       if (!searchRes.ok) {
-        throw new Error(`Recherche Google Drive échouée: ${searchRes.statusText}`);
+        if (searchRes.status === 401 || searchRes.status === 403) {
+          throw new Error(`Jeton Google Drive expiré ou non autorisé (HTTP ${searchRes.status}). Veuillez vous reconnecter.`);
+        }
+        const errDetail = searchRes.statusText ? ` (${searchRes.statusText})` : "";
+        throw new Error(`Recherche Google Drive échouée: HTTP ${searchRes.status}${errDetail}`);
       }
 
       const searchData = await searchRes.json();
