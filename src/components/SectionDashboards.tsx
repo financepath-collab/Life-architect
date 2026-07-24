@@ -4,7 +4,7 @@ import {
   ArrowRight, TrendingUp, TrendingDown, PiggyBank, Landmark, ClipboardCheck, CheckCircle2, 
   ListTodo, Calendar, Award, Target, Trophy, Sparkles, Smile, RefreshCw, 
   Plus, Trash2, Dumbbell, Play, Pause, ExternalLink, GraduationCap, Link2, 
-  BookOpenCheck, CheckSquare, Coffee, ChevronRight, Activity
+  BookOpenCheck, CheckSquare, Coffee, ChevronRight, Activity, FolderPlus
 } from "lucide-react";
 import MonthlyExpenseAnalysisCard from "./MonthlyExpenseAnalysisCard";
 import MonthlyNetIncomeWidget from "./MonthlyNetIncomeWidget";

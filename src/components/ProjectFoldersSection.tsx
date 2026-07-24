@@ -36,7 +36,12 @@ import {
   Compass,
   Tag,
   Filter,
-  Layers
+  Layers,
+  Key,
+  Lock,
+  Mail,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -90,7 +95,7 @@ export default function ProjectFoldersSection({
   }, [folders, selectedFolderId, displayedFolders]);
 
   // Tab control within selected folder
-  const [activeTab, setActiveTab] = useState<"overview" | "strategy" | "topics" | "formations" | "objectives" | "links" | "calendar">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "credentials" | "strategy" | "topics" | "formations" | "objectives" | "links" | "calendar">("overview");
 
   // Form states for creating/editing projects
   const [showProjectModal, setShowProjectModal] = useState(false);
@@ -98,10 +103,17 @@ export default function ProjectFoldersSection({
   const [projName, setProjName] = useState("");
   const [projDesc, setProjDesc] = useState("");
   const [projCategory, setProjCategory] = useState<ProjectFolder["category"]>("Autre");
+  const [projEmail, setProjEmail] = useState("");
+  const [projPassword, setProjPassword] = useState("");
+  const [projInitialLinkTitle, setProjInitialLinkTitle] = useState("");
+  const [projInitialLinkUrl, setProjInitialLinkUrl] = useState("");
+  const [projInitialObjectiveText, setProjInitialObjectiveText] = useState("");
+  const [projInitialObjectiveDueDate, setProjInitialObjectiveDueDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [projIsArchived, setProjIsArchived] = useState(false);
   const [projTargetAudienceModal, setProjTargetAudienceModal] = useState("");
   const [projCoreGoalModal, setProjCoreGoalModal] = useState("");
   const [projKeyMetricTargetModal, setProjKeyMetricTargetModal] = useState("");
+  const [showPasswordInDetails, setShowPasswordInDetails] = useState(false);
 
   // Strategy & Goal states for selected project
   const [projTargetAudience, setProjTargetAudience] = useState("");
@@ -309,6 +321,12 @@ export default function ProjectFoldersSection({
     setProjName("");
     setProjDesc("");
     setProjCategory("Autre");
+    setProjEmail("");
+    setProjPassword("");
+    setProjInitialLinkTitle("");
+    setProjInitialLinkUrl("");
+    setProjInitialObjectiveText("");
+    setProjInitialObjectiveDueDate(new Date().toISOString().split("T")[0]);
     setProjIsArchived(false);
     setProjTargetAudienceModal("");
     setProjCoreGoalModal("");
@@ -322,6 +340,12 @@ export default function ProjectFoldersSection({
     setProjName(proj.name);
     setProjDesc(proj.description);
     setProjCategory(proj.category);
+    setProjEmail(proj.email || "");
+    setProjPassword(proj.password || "");
+    setProjInitialLinkTitle("");
+    setProjInitialLinkUrl("");
+    setProjInitialObjectiveText("");
+    setProjInitialObjectiveDueDate(new Date().toISOString().split("T")[0]);
     setProjIsArchived(proj.isArchived || false);
     setProjTargetAudienceModal(proj.targetAudience || "");
     setProjCoreGoalModal(proj.coreGoal || "");
@@ -341,6 +365,8 @@ export default function ProjectFoldersSection({
         name: projName.trim(),
         description: projDesc.trim(),
         category: projCategory,
+        email: projEmail.trim() || undefined,
+        password: projPassword.trim() || undefined,
         isArchived: projIsArchived,
         archivedAt: projIsArchived ? (f.archivedAt || new Date().toISOString().split("T")[0]) : undefined,
         targetAudience: projTargetAudienceModal.trim(),
@@ -349,21 +375,47 @@ export default function ProjectFoldersSection({
       } : f));
     } else {
       // Create mode
+      const customLinks: { id: string; title: string; url: string; category: string }[] = [];
+      if (projInitialLinkTitle.trim() && projInitialLinkUrl.trim()) {
+        let formattedUrl = projInitialLinkUrl.trim();
+        if (!/^https?:\/\//i.test(formattedUrl)) {
+          formattedUrl = "https://" + formattedUrl;
+        }
+        customLinks.push({
+          id: "cl_" + Date.now(),
+          title: projInitialLinkTitle.trim(),
+          url: formattedUrl,
+          category: "Lien Utile"
+        });
+      }
+
+      const customObjectives: { id: string; text: string; completed: boolean; dueDate?: string }[] = [];
+      if (projInitialObjectiveText.trim()) {
+        customObjectives.push({
+          id: "co_" + Date.now(),
+          text: projInitialObjectiveText.trim(),
+          completed: false,
+          dueDate: projInitialObjectiveDueDate || undefined
+        });
+      }
+
       const newFolder: ProjectFolder = {
         id: "proj_" + Date.now(),
         name: projName.trim(),
         description: projDesc.trim(),
         category: projCategory,
         createdAt: new Date().toISOString().split('T')[0],
+        email: projEmail.trim() || undefined,
+        password: projPassword.trim() || undefined,
         targetAudience: projTargetAudienceModal.trim(),
         coreGoal: projCoreGoalModal.trim(),
         keyMetricTarget: projKeyMetricTargetModal.trim(),
         associatedFormationIds: [],
         associatedLinkIds: [],
         associatedGoalIds: [],
-        customObjectives: [],
+        customObjectives,
         topicsToCover: [],
-        customLinks: [],
+        customLinks,
         notes: "",
         isArchived: projIsArchived,
         archivedAt: projIsArchived ? new Date().toISOString().split("T")[0] : undefined
@@ -1022,6 +1074,18 @@ export default function ProjectFoldersSection({
                   </button>
 
                   <button
+                    onClick={() => setActiveTab("credentials")}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === "credentials" 
+                        ? "bg-neutral-900 text-white shadow-3xs" 
+                        : "bg-neutral-50 border border-neutral-100 text-neutral-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    <Key className="w-3.5 h-3.5 inline mr-1.5 -mt-0.5 text-amber-500" />
+                    <span>Identifiants & Accès</span>
+                  </button>
+
+                  <button
                     onClick={() => setActiveTab("strategy")}
                     className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       activeTab === "strategy" 
@@ -1215,7 +1279,69 @@ export default function ProjectFoldersSection({
                 </div>
               )}
 
-              {/* Tab 1.5: STRATEGY & OBJECTIVES */}
+              {/* Tab: IDENTIFIANTS & ACCÈS */}
+              {activeTab === "credentials" && (
+                <div className="bg-white border border-neutral-200/90 rounded-2xl p-5 space-y-6 animate-in fade-in duration-300 font-sans">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100">
+                    <div>
+                      <h4 className="text-xs font-black text-neutral-900 uppercase flex items-center gap-2">
+                        <Key className="w-4 h-4 text-amber-500" />
+                        <span>Identifiants & Accès du Projet</span>
+                      </h4>
+                      <p className="text-[10.5px] text-neutral-400 mt-0.5">
+                        Conservez les emails de contact, mots de passe et accès administratifs spécifiques à ce projet.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleOpenEditModal(selectedFolder)}
+                      className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border border-neutral-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Modifier les Accès</span>
+                    </button>
+                  </div>
+
+                  {/* Main email & password cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-neutral-50 border border-neutral-200/80 rounded-2xl space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
+                        <Mail className="w-4 h-4 text-indigo-500" />
+                        <span>Email Principal du Projet</span>
+                      </div>
+                      <div className="text-sm font-mono font-bold text-neutral-900 break-all select-all">
+                        {selectedFolder.email || <span className="text-neutral-400 italic text-xs font-normal">Non configuré</span>}
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-neutral-50 border border-neutral-200/80 rounded-2xl space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-neutral-500">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-amber-500" />
+                          <span>Mot de passe Principal</span>
+                        </div>
+                        {selectedFolder.password && (
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswordInDetails(!showPasswordInDetails)}
+                            className="text-[10px] text-neutral-500 hover:text-neutral-900 flex items-center gap-1 cursor-pointer font-normal"
+                          >
+                            {showPasswordInDetails ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            <span>{showPasswordInDetails ? "Masquer" : "Afficher"}</span>
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-sm font-mono font-bold text-neutral-900 select-all">
+                        {selectedFolder.password ? (
+                          showPasswordInDetails ? selectedFolder.password : "••••••••••••"
+                        ) : (
+                          <span className="text-neutral-400 italic text-xs font-normal">Non configuré</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               {activeTab === "strategy" && (
                 <div className="bg-white border border-neutral-200/90 rounded-2xl p-5 space-y-6 animate-in fade-in duration-300 font-sans">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100">
@@ -2368,6 +2494,96 @@ export default function ProjectFoldersSection({
                   className="w-full text-xs font-semibold bg-neutral-50/50 border border-neutral-200 rounded-xl p-3 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 focus:bg-white transition-all text-neutral-800 resize-none"
                 />
               </div>
+
+              {/* Credentials & Access Section */}
+              <div className="space-y-2 pt-2 border-t border-neutral-100 font-sans">
+                <span className="text-[10px] font-black text-amber-900 uppercase tracking-widest block flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Identifiants & Accès du Projet</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                      <Mail className="w-3 h-3 text-neutral-400" />
+                      <span>Email du Projet</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={projEmail}
+                      onChange={(e) => setProjEmail(e.target.value)}
+                      placeholder="projet@domaine.com"
+                      className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-amber-500 focus:bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase flex items-center gap-1">
+                      <Lock className="w-3 h-3 text-neutral-400" />
+                      <span>Mot de passe</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={projPassword}
+                      onChange={(e) => setProjPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full text-xs font-mono font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-amber-500 focus:bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Initial Resource Link & Initial Milestone (Creation only) */}
+              {!editingProject && (
+                <>
+                  <div className="space-y-2 pt-2 border-t border-neutral-100 font-sans">
+                    <span className="text-[10px] font-black text-sky-900 uppercase tracking-widest block flex items-center gap-1.5">
+                      <Link2 className="w-3.5 h-3.5 text-sky-600" />
+                      <span>Lien Utile Initial (Optionnel)</span>
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        value={projInitialLinkTitle}
+                        onChange={(e) => setProjInitialLinkTitle(e.target.value)}
+                        placeholder="Titre (ex: Dashboard Analytics)"
+                        className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-sky-500 focus:bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={projInitialLinkUrl}
+                        onChange={(e) => setProjInitialLinkUrl(e.target.value)}
+                        placeholder="URL (ex: https://...)"
+                        className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-sky-500 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-neutral-100 font-sans">
+                    <span className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Premier Jalon / Objectif (Optionnel)</span>
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <input
+                        type="text"
+                        value={projInitialObjectiveText}
+                        onChange={(e) => setProjInitialObjectiveText(e.target.value)}
+                        placeholder="ex: Lancer le premier module..."
+                        className="sm:col-span-2 w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 focus:bg-white"
+                      />
+                      <input
+                        type="date"
+                        value={projInitialObjectiveDueDate}
+                        onChange={(e) => setProjInitialObjectiveDueDate(e.target.value)}
+                        className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Strategic Objectives fields */}
               <div className="space-y-2 pt-2 border-t border-neutral-100 font-sans">

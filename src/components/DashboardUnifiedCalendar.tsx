@@ -323,7 +323,7 @@ export default function DashboardUnifiedCalendar({
       subtitle: o.isPriority ? "Objectif Hebdo Prioritaire" : "Objectif Hebdo",
       completed: o.completed,
       category: "PROJET" as CalendarFilterCategory,
-      moduleKey: "projets_dash",
+      moduleKey: "channels",
       typeLabel: "Objectif",
       rawType: "weekly",
       dueDate: (o as any).dueDate || selectedDateStr
@@ -1118,7 +1118,7 @@ export default function DashboardUnifiedCalendar({
           <div className="pt-3 border-t border-neutral-200/60 dark:border-zinc-700/60 grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => onNavigateToModule("projets_dash")}
+              onClick={() => onNavigateToModule("channels")}
               className="px-3 py-2 bg-white dark:bg-zinc-900 hover:bg-neutral-100 dark:hover:bg-zinc-800 border border-neutral-200 dark:border-zinc-800 rounded-xl text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center justify-between cursor-pointer transition-all"
             >
               <span className="flex items-center gap-1.5">

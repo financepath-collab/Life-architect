@@ -113,7 +113,6 @@ import {
   FinanceSectionDashboard, 
   ProductivitySectionDashboard, 
   HealthSectionDashboard, 
-  ProjetsSectionDashboard, 
   LecturesSectionDashboard 
 } from "./components/SectionDashboards";
 
@@ -2683,13 +2682,11 @@ export default function App() {
     },
     {
       id: "projets",
-      label: "Projets & Académie",
-      icon: FolderKanban,
+      label: "Projets Médias & Digitaux",
+      icon: Tv,
       items: [
-        { id: "projets_dash", label: "Dashboard Projets & Académie", icon: LayoutDashboard, desc: "Formations, projets médias et calendrier de publication." },
-        { id: "channels", label: "Projets Médias & Digitaux", icon: Tv, desc: "Tous vos projets digitaux (inc. l'Académie), identifiants, sujets, liens et deadlines." },
-        { id: "editorial_calendar", label: "Calendrier de Projets", icon: Calendar, desc: "Calendrier de vos événements, projets de communication et publications." },
-        { id: "links", label: "Liens Favoris", icon: Link2, desc: "Signets rapides vers vos ressources de marché bourse." }
+        { id: "channels", label: "Projets Médias & Digitaux", icon: Tv, desc: "Tous vos projets digitaux, identifiants, sujets, liens et deadlines." },
+        { id: "editorial_calendar", label: "Calendrier de Projets", icon: Calendar, desc: "Calendrier de vos événements, projets de communication et publications." }
       ]
     },
     {
@@ -3837,9 +3834,9 @@ export default function App() {
               
               // Responsive label to prevent overflow on medium screens
               const displayLabel = 
-                cat.label === "Projets & Académie" ? (
+                cat.label === "Projets Médias & Digitaux" ? (
                   <>
-                    <span className="hidden min-[1650px]:inline">Projets & Académie</span>
+                    <span className="hidden min-[1650px]:inline">Projets Médias & Digitaux</span>
                     <span className="min-[1650px]:hidden">Projets</span>
                   </>
                 ) : cat.label === "Lectures & Écrans" ? (
@@ -4939,12 +4936,6 @@ export default function App() {
                     <HealthSectionDashboard
                       skinTrackers={skinTrackers}
                       mealPlanners={mealPlanners}
-                      onNavigate={handleMenuClick}
-                    />
-                  ) : activeMenu === "projets_dash" ? (
-                    <ProjetsSectionDashboard
-                      folders={folders}
-                      formations={formations}
                       onNavigate={handleMenuClick}
                     />
                   ) : activeMenu === "formation_dash" ? (

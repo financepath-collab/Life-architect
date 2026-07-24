@@ -38,11 +38,17 @@ export default function MediaProjectDetailsModal({
   onUpdateChannel,
   onDeleteChannel
 }: MediaProjectDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<"credentials" | "ideas" | "links" | "deadlines" | "notes">("credentials");
+  const [activeTab, setActiveTab] = useState<"credentials" | "ideas" | "links" | "deadlines" | "notes" | "settings">("credentials");
   const [showPasswordMap, setShowPasswordMap] = useState<{ [key: string]: boolean }>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Editable local state initialized from channel
+  const [channelName, setChannelName] = useState<string>(channel.name || "");
+  const [channelPlatform, setChannelPlatform] = useState<ChannelInfo["platform"]>(channel.platform || "YouTube");
+  const [subscriberCount, setSubscriberCount] = useState<number>(channel.subscriberCount || 0);
+  const [niche, setNiche] = useState<string>(channel.niche || "");
+  const [frequency, setFrequency] = useState<string>(channel.frequency || "");
+
   const [credentials, setCredentials] = useState<MediaCredential[]>(channel.credentials || []);
   const [ideas, setIdeas] = useState<MediaIdea[]>(channel.ideas || []);
   const [usefulLinks, setUsefulLinks] = useState<MediaUsefulLink[]>(channel.usefulLinks || []);
@@ -75,10 +81,20 @@ export default function MediaProjectDetailsModal({
     updatedDeadlines = deadlines,
     updatedNotes = notes,
     updatedEmail = primaryEmail,
-    updatedPass = primaryPassword
+    updatedPass = primaryPassword,
+    updatedName = channelName,
+    updatedPlatform = channelPlatform,
+    updatedSubscribers = subscriberCount,
+    updatedNiche = niche,
+    updatedFrequency = frequency
   ) => {
     onUpdateChannel({
       ...channel,
+      name: updatedName,
+      platform: updatedPlatform,
+      subscriberCount: updatedSubscribers,
+      niche: updatedNiche,
+      frequency: updatedFrequency,
       email: updatedEmail,
       password: updatedPass,
       credentials: updatedCreds,
@@ -87,6 +103,24 @@ export default function MediaProjectDetailsModal({
       deadlines: updatedDeadlines,
       notes: updatedNotes
     });
+  };
+
+  const handleSaveSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveStateToParent(
+      credentials,
+      ideas,
+      usefulLinks,
+      deadlines,
+      notes,
+      primaryEmail,
+      primaryPassword,
+      channelName,
+      channelPlatform,
+      subscriberCount,
+      niche,
+      frequency
+    );
   };
 
   const toggleShowPass = (id: string) => {
@@ -372,6 +406,18 @@ export default function MediaProjectDetailsModal({
           >
             <FileText className="w-4 h-4" />
             <span>Notes & Stratégie</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all border-t border-x cursor-pointer shrink-0 ${
+              activeTab === "settings"
+                ? "bg-white border-neutral-200 text-indigo-700 shadow-2xs"
+                : "border-transparent text-neutral-600 hover:text-neutral-900"
+            }`}
+          >
+            <Edit3 className="w-4 h-4" />
+            <span>Paramètres du Projet</span>
           </button>
         </div>
 
@@ -925,6 +971,109 @@ export default function MediaProjectDetailsModal({
                 className="w-full bg-neutral-50 border border-neutral-200 rounded-2xl p-4 text-xs text-neutral-800 leading-relaxed focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-hidden"
               />
             </div>
+          )}
+
+          {/* 6. SETTINGS TAB */}
+          {activeTab === "settings" && (
+            <form onSubmit={handleSaveSettings} className="space-y-4">
+              <div className="flex items-center justify-between gap-2 border-b border-neutral-100 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900">Paramètres Généraux du Projet</h3>
+                  <p className="text-xs text-neutral-500">Modifiez le nom, la plateforme, l'audience et la niche éditoriale.</p>
+                </div>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Enregistrer les Modifs</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-neutral-50 p-5 rounded-2xl border border-neutral-200">
+                <div>
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Nom du Projet Digital / Média</label>
+                  <input
+                    type="text"
+                    required
+                    value={channelName}
+                    onChange={e => setChannelName(e.target.value)}
+                    className="w-full bg-white border border-neutral-200 rounded-xl p-2.5 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Plateforme / Réseau</label>
+                  <select
+                    value={channelPlatform}
+                    onChange={e => setChannelPlatform(e.target.value as any)}
+                    className="w-full bg-white border border-neutral-200 rounded-xl p-2.5 text-xs font-bold focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                  >
+                    <option value="YouTube">YouTube</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="LinkedIn">LinkedIn</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Spotify">Spotify</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Abonnés / Audience Cumulée</label>
+                  <input
+                    type="number"
+                    required
+                    value={subscriberCount}
+                    onChange={e => setSubscriberCount(Number(e.target.value))}
+                    className="w-full bg-white border border-neutral-200 rounded-xl p-2.5 text-xs font-mono font-bold text-emerald-600 focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Fréquence de publication / Format</label>
+                  <input
+                    type="text"
+                    value={frequency}
+                    onChange={e => setFrequency(e.target.value)}
+                    placeholder="Ex: 1 vidéo / semaine"
+                    className="w-full bg-white border border-neutral-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Niche Éditoriale / Thématique</label>
+                  <input
+                    type="text"
+                    value={niche}
+                    onChange={e => setNiche(e.target.value)}
+                    placeholder="Ex: Finance d'entreprise, géopolitique, interviews..."
+                    className="w-full bg-white border border-neutral-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {onDeleteChannel && (
+                <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between gap-4 mt-6">
+                  <div>
+                    <h4 className="text-xs font-bold text-rose-900">Zone de Danger</h4>
+                    <p className="text-[11px] text-rose-700">Supprimer définitivement ce projet média et tous ses identifiants, idées et notes associés.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Voulez-vous vraiment supprimer définitivement le projet "${channel.name}" ?`)) {
+                        onDeleteChannel(channel.id);
+                        onClose();
+                      }
+                    }}
+                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Supprimer ce projet</span>
+                  </button>
+                </div>
+              )}
+            </form>
           )}
         </div>
 

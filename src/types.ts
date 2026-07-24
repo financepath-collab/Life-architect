@@ -380,6 +380,9 @@ export interface ProjectFolder {
   description: string;
   category: "YouTube" | "Formation" | "E-commerce" | "Finance" | "Autre";
   createdAt: string;
+  email?: string;
+  password?: string;
+  credentials?: MediaCredential[];
   // Specific project goals & strategic attributes
   targetAudience?: string;
   coreGoal?: string;
