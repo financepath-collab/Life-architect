@@ -307,6 +307,14 @@ export function FinanceSectionDashboard({
             Aperçu global de votre patrimoine estimé, respect budgétaire d'élite et de vos actifs financiers.
           </p>
         </div>
+
+        <button
+          onClick={() => onNavigate("saisie_unifiee")}
+          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs border border-indigo-400/30"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Guichet Unique : Saisie Unifiée (Dispatch)</span>
+        </button>
       </div>
 
       {/* Stats Bento Grid */}

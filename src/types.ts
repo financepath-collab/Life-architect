@@ -88,9 +88,14 @@ export interface FinanceTransaction {
   date: string;
   description: string;
   category: string;
-  type: "Revenue" | "Dépense";
+  subCategory?: string;
+  type: "Revenue" | "Dépense" | "Épargne" | "Investissement" | string;
   amount: number; // MAD
   account: string;
+  recipient?: string;
+  recurrence?: "Ponctuel" | "Mensuel" | "Annuel" | string;
+  status?: "Effectué" | "En attente" | string;
+  note?: string;
 }
 
 export interface FinanceBudget {
@@ -242,13 +247,51 @@ export interface ResourceLink {
   rating: number; // 1-5
 }
 
+export interface MediaCredential {
+  id: string;
+  label: string;
+  email: string;
+  password?: string;
+  notes?: string;
+}
+
+export interface MediaIdea {
+  id: string;
+  title: string;
+  description?: string;
+  status: "Idée" | "En préparation" | "Prêt" | "Publié";
+  deadline?: string;
+}
+
+export interface MediaUsefulLink {
+  id: string;
+  title: string;
+  url: string;
+  category?: string;
+  notes?: string;
+}
+
+export interface MediaTaskDeadline {
+  id: string;
+  title: string;
+  dueDate: string;
+  status: "À faire" | "En cours" | "Terminé";
+}
+
 export interface ChannelInfo {
   id: string;
   name: string;
-  platform: "YouTube" | "TikTok" | "LinkedIn" | "Instagram" | "Spotify";
+  platform: "YouTube" | "TikTok" | "LinkedIn" | "Instagram" | "Spotify" | "Autre";
   subscriberCount: number;
   niche: string;
   frequency: string;
+  email?: string;
+  password?: string;
+  credentials?: MediaCredential[];
+  ideas?: MediaIdea[];
+  usefulLinks?: MediaUsefulLink[];
+  deadlines?: MediaTaskDeadline[];
+  notes?: string;
 }
 
 export interface WishListItem {

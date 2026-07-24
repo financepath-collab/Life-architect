@@ -1,37 +1,42 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Tv, GraduationCap, Sparkles, BookOpen, Layers } from "lucide-react";
+import { 
+  Tv, 
+  Key, 
+  Lightbulb, 
+  Link2, 
+  Calendar, 
+  Plus, 
+  ExternalLink, 
+  ChevronRight, 
+  Layers, 
+  Sparkles, 
+  Globe, 
+  Lock, 
+  Users,
+  Settings
+} from "lucide-react";
 import InteractiveModuleTable, { TableColumn } from "./InteractiveModuleTable";
-import FormationsSection from "./FormationsSection";
-import { ChannelInfo, Formation, ProjectFolder } from "../types";
+import MediaProjectDetailsModal from "./MediaProjectDetailsModal";
+import { ChannelInfo } from "../types";
 
-interface MediaAndAcademySectionProps {
+interface MediaProjectsSectionProps {
   channels: ChannelInfo[];
   setChannels: React.Dispatch<React.SetStateAction<ChannelInfo[]>>;
-  formations: Formation[];
-  setFormations: React.Dispatch<React.SetStateAction<Formation[]>>;
-  folders?: ProjectFolder[];
-  setFolders?: React.Dispatch<React.SetStateAction<ProjectFolder[]>>;
-  initialTab?: "channels" | "academy";
 }
 
-export default function MediaAndAcademySection({
+export default function MediaProjectsSection({
   channels,
-  setChannels,
-  formations,
-  setFormations,
-  folders = [],
-  setFolders,
-  initialTab = "channels"
-}: MediaAndAcademySectionProps) {
-  const [activeTab, setActiveTab] = useState<"channels" | "academy">(initialTab);
+  setChannels
+}: MediaProjectsSectionProps) {
+  const [selectedChannel, setSelectedChannel] = useState<ChannelInfo | null>(null);
 
   const channelsColumns: TableColumn[] = [
-    { key: "name", label: "Nom du Canal / Projet Médias", type: "text", required: true },
-    { key: "platform", label: "Réseau Social", type: "select", options: ["YouTube", "TikTok", "LinkedIn", "Instagram", "Spotify"] },
+    { key: "name", label: "Nom du Projet Digital / Média", type: "text", required: true },
+    { key: "platform", label: "Plateforme / Réseau", type: "select", options: ["YouTube", "TikTok", "LinkedIn", "Instagram", "Spotify", "Autre"] },
     { key: "subscriberCount", label: "Abonnés / Audience", type: "number", required: true },
     { key: "niche", label: "Niche Éditoriale", type: "text" },
-    { key: "frequency", label: "Fréquence de Publication", type: "text" }
+    { key: "frequency", label: "Fréquence / Type", type: "text" }
   ];
 
   const handleAddChannel = (item: any) => {
@@ -50,156 +55,149 @@ export default function MediaAndAcademySection({
     setChannels(prev => [...prev, ...items]);
   };
 
+  const handleUpdateSelectedChannel = (updatedChannel: ChannelInfo) => {
+    setChannels(prev => prev.map(c => c.id === updatedChannel.id ? updatedChannel : c));
+    setSelectedChannel(updatedChannel);
+  };
+
   const totalAudience = channels.reduce((sum, c) => sum + (c.subscriberCount || 0), 0);
 
   return (
     <div className="space-y-6">
-      {/* Top Banner Navigation & Context Switcher */}
-      <div className="bg-white border border-neutral-200/90 rounded-3xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Top Banner Navigation */}
+      <div className="bg-white border border-neutral-200/90 rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-black text-neutral-900 tracking-tight">
-              Projets Médias, Canaux & L'Académie THE MA CIRCLE
+            <div className="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-200/80 flex items-center justify-center text-indigo-700">
+              <Tv className="w-5 h-5" />
+            </div>
+            <h2 className="text-xl font-black text-neutral-900 tracking-tight">
+              Projets Médias & Digitaux
             </h2>
             <span className="text-[10px] font-bold px-2.5 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-full">
-              Ecosystème Unifié
+              {channels.length} Projets
             </span>
           </div>
-          <p className="text-xs text-neutral-500 mt-1">
-            Gérez vos canaux de diffusion média (YouTube, TikTok, Spotify...) ainsi que votre Académie de cours et formations certifiantes.
+          <p className="text-xs text-neutral-500 mt-1 max-w-2xl">
+            Espace centralisé de vos médias, canaux et projets digitaux (inc. L'Académie THE MA CIRCLE). Cliquez sur un projet pour ouvrir sa fenêtre dédiée (Emails, mots de passe, idées de sujets, liens utiles, deadlines).
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex bg-neutral-100 p-1 rounded-2xl shrink-0 self-start sm:self-center">
-          <button
-            onClick={() => setActiveTab("channels")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === "channels"
-                ? "bg-neutral-900 text-white shadow-sm"
-                : "text-neutral-600 hover:text-neutral-900"
-            }`}
-          >
-            <Tv className="w-4 h-4" />
-            <span>Projets Médias & Canaux</span>
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-white/20 rounded">
-              {channels.length}
+        <div className="flex items-center gap-3">
+          <div className="bg-neutral-900 text-white border border-neutral-800 rounded-2xl px-4 py-2 text-right">
+            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Audience Cumulée</span>
+            <span className="text-base font-black font-mono text-emerald-400">
+              {totalAudience.toLocaleString("fr-FR")} <span className="text-xs text-neutral-300 font-sans font-normal">Abonnés</span>
             </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("academy")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === "academy"
-                ? "bg-neutral-900 text-white shadow-sm"
-                : "text-neutral-600 hover:text-neutral-900"
-            }`}
-          >
-            <GraduationCap className="w-4 h-4" />
-            <span>Académie & Formations</span>
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 bg-white/20 rounded">
-              {formations.length}
-            </span>
-          </button>
+          </div>
         </div>
       </div>
 
-      {/* Content Rendering based on Active Tab */}
-      <AnimatePresence mode="wait">
-        {activeTab === "channels" ? (
-          <motion.div
-            key="channels-tab"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-6"
-          >
-            {/* Stats Summary Card for Media Channels */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-neutral-900 text-white border border-neutral-800 rounded-2xl p-4 shadow-3xs flex flex-col justify-between">
-                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
-                  Audience Globale Cumulée
-                </span>
-                <div className="mt-2">
-                  <h4 className="text-2xl font-black font-mono text-emerald-400">
-                    {totalAudience.toLocaleString("fr-FR")} <span className="text-xs text-neutral-300 font-sans">Abonnés</span>
-                  </h4>
-                  <span className="text-[10px] text-neutral-400 block mt-1">Sur l'ensemble de vos {channels.length} canaux médias</span>
+      {/* Grid of Interactive Project Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {channels.map(chan => {
+          const credCount = (chan.credentials?.length || 0) + (chan.email ? 1 : 0);
+          const ideaCount = chan.ideas?.length || 0;
+          const linkCount = chan.usefulLinks?.length || 0;
+          const deadlineCount = chan.deadlines?.length || 0;
+
+          return (
+            <motion.div
+              key={chan.id}
+              whileHover={{ y: -3 }}
+              transition={{ duration: 0.15 }}
+              onClick={() => setSelectedChannel(chan)}
+              className="bg-white border border-neutral-200 hover:border-indigo-400/80 rounded-3xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group relative overflow-hidden"
+            >
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
+                      {chan.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-neutral-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                        {chan.name}
+                      </h3>
+                      <span className="text-[10px] font-bold font-mono px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded-md">
+                        {chan.platform}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-1.5 rounded-xl bg-neutral-100 text-neutral-500 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <p className="text-xs text-neutral-500 line-clamp-2">
+                  {chan.niche || "Projet digital & diffusion média"}
+                </p>
+
+                <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-xs font-mono font-bold">
+                  <span className="text-neutral-400 text-[11px]">Audience / Abonnés :</span>
+                  <span className="text-emerald-600 font-extrabold">{chan.subscriberCount.toLocaleString("fr-FR")}</span>
                 </div>
               </div>
 
-              <div className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-3xs flex flex-col justify-between">
-                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">
-                  Canal Principal (Max Audience)
-                </span>
-                <div className="mt-2">
-                  {channels.length > 0 ? (() => {
-                    const topChan = [...channels].sort((a, b) => (b.subscriberCount || 0) - (a.subscriberCount || 0))[0];
-                    return (
-                      <>
-                        <h4 className="text-base font-bold text-neutral-900 truncate" title={topChan.name}>
-                          {topChan.name}
-                        </h4>
-                        <span className="text-xs font-bold font-mono text-indigo-600 block mt-0.5">
-                          {topChan.subscriberCount.toLocaleString("fr-FR")} Abonnés ({topChan.platform})
-                        </span>
-                      </>
-                    );
-                  })() : (
-                    <span className="text-xs text-neutral-400 italic">Aucun canal enregistré</span>
-                  )}
+              {/* Quick Summary Badges */}
+              <div className="grid grid-cols-4 gap-1.5 bg-neutral-50 border border-neutral-100 p-2 rounded-2xl text-[10px] font-mono text-center">
+                <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Identifiants & Mots de passe">
+                  <Key className="w-3.5 h-3.5 text-amber-600 mx-auto mb-0.5" />
+                  <span className="font-bold text-neutral-800">{credCount}</span>
+                </div>
+                <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Idées de sujets">
+                  <Lightbulb className="w-3.5 h-3.5 text-indigo-600 mx-auto mb-0.5" />
+                  <span className="font-bold text-neutral-800">{ideaCount}</span>
+                </div>
+                <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Liens utiles">
+                  <Link2 className="w-3.5 h-3.5 text-cyan-600 mx-auto mb-0.5" />
+                  <span className="font-bold text-neutral-800">{linkCount}</span>
+                </div>
+                <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Deadlines & tâches">
+                  <Calendar className="w-3.5 h-3.5 text-rose-600 mx-auto mb-0.5" />
+                  <span className="font-bold text-neutral-800">{deadlineCount}</span>
                 </div>
               </div>
 
-              <div className="bg-indigo-50/80 border border-indigo-200/90 rounded-2xl p-4 shadow-3xs flex flex-col justify-between">
-                <span className="text-[10px] font-bold text-indigo-900 uppercase tracking-wider block">
-                  Intégration Académie THE MA CIRCLE
-                </span>
-                <div className="mt-2">
-                  <p className="text-xs text-indigo-950 font-medium leading-snug">
-                    Vos canaux servent de vitrine pour promouvoir les cours et programmes de l'Académie.
-                  </p>
-                  <button
-                    onClick={() => setActiveTab("academy")}
-                    className="mt-2 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>Voir les cours de l'Académie</span> →
-                  </button>
-                </div>
-              </div>
-            </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedChannel(chan);
+                }}
+                className="w-full py-2.5 px-3 bg-neutral-900 group-hover:bg-indigo-600 text-white rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-3xs"
+              >
+                <span>Ouvrir la fenêtre du projet</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </motion.div>
+          );
+        })}
+      </div>
 
-            {/* Interactive Module Table for Channels */}
-            <InteractiveModuleTable
-              title="Projets Médias & Canaux de Communication"
-              description="Suivez vos statistiques d'audience, abonnés et fréquences de publication."
-              columns={channelsColumns}
-              data={channels}
-              onAdd={handleAddChannel}
-              onEdit={handleEditChannel}
-              onDelete={handleDeleteChannel}
-              onImport={handleImportChannels}
-              currencySymbol="Abonnés"
-              placeholderText="Rechercher un canal média par nom ou niche..."
-            />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="academy-tab"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
-          >
-            <FormationsSection
-              formations={formations}
-              setFormations={setFormations}
-              folders={folders}
-              setFolders={setFolders}
-              hideTabs={false}
-            />
-          </motion.div>
+      {/* Interactive Module Table for Channels */}
+      <InteractiveModuleTable
+        title="Liste & Statistiques des Projets Digitaux & Médias"
+        description="Gérez les paramètres globaux d'audience, plateformes et fréquences."
+        columns={channelsColumns}
+        data={channels}
+        onAdd={handleAddChannel}
+        onEdit={handleEditChannel}
+        onDelete={handleDeleteChannel}
+        onImport={handleImportChannels}
+        currencySymbol="Abonnés"
+        placeholderText="Rechercher un projet média par nom ou niche..."
+      />
+
+      {/* Modal for Project Details */}
+      <AnimatePresence>
+        {selectedChannel && (
+          <MediaProjectDetailsModal
+            channel={selectedChannel}
+            onClose={() => setSelectedChannel(null)}
+            onUpdateChannel={handleUpdateSelectedChannel}
+            onDeleteChannel={handleDeleteChannel}
+          />
         )}
       </AnimatePresence>
     </div>

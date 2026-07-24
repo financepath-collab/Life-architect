@@ -235,10 +235,120 @@ export const INITIAL_RESOURCELINKS: ResourceLink[] = [
 ];
 
 export const INITIAL_CHANNELS: ChannelInfo[] = [
-  { id: "ch1", name: "The Moroccan Analyst", platform: "YouTube", subscriberCount: 24500, niche: "Analyse économique marocaine", frequency: "1 vidéo / semaine" },
-  { id: "ch2", name: "The Moroccan CFO", platform: "TikTok", subscriberCount: 42000, niche: "Finance d'entreprise & astuces PME", frequency: "3 vidéos / semaine" },
-  { id: "ch3", name: "The Moroccan Economist", platform: "LinkedIn", subscriberCount: 11200, niche: "Analyses géopolitiques & Macroéconomie", frequency: "2 articles / semaine" },
-  { id: "ch4", name: "Moroccan CFO Podcast", platform: "Spotify", subscriberCount: 1500, niche: "Interviews avec des leaders économiques", frequency: "1 épisode / 2 semaines" }
+  { 
+    id: "ch1", 
+    name: "The Moroccan Analyst", 
+    platform: "YouTube", 
+    subscriberCount: 24500, 
+    niche: "Analyse économique marocaine", 
+    frequency: "1 vidéo / semaine",
+    email: "contact.analyst@themacircle.ma",
+    credentials: [
+      { id: "cred1", label: "Studio YouTube & Google Workspace", email: "yt.analyst@themacircle.ma", password: "••••••••", notes: "Accès créateur YouTube Studio" },
+      { id: "cred2", label: "Compte Canva Pro Design", email: "graphics@themacircle.ma", password: "••••••••", notes: "Templates miniatures YouTube" }
+    ],
+    ideas: [
+      { id: "id1", title: "Analyse de la Bourse de Casablanca - T3 2026", description: "Revue des tops actions BVC et dividendes 2026", status: "En préparation", deadline: "2026-08-05" },
+      { id: "id2", title: "Décryptage Inflation & Taux Directeur BAM", description: "Impact sur les crédits immobiliers au Maroc", status: "Idée", deadline: "2026-08-20" }
+    ],
+    usefulLinks: [
+      { id: "link1", title: "YouTube Creator Studio", url: "https://studio.youtube.com", category: "Production" },
+      { id: "link2", title: "LeBoursier Maroc - LeBoursier.ma", url: "https://www.leboursier.ma", category: "Sources" }
+    ],
+    deadlines: [
+      { id: "d1", title: "Tournage Épisode 48 - BVC", dueDate: "2026-08-02", status: "En cours" },
+      { id: "d2", title: "Validation de la miniature & Titre SEO", dueDate: "2026-08-04", status: "À faire" }
+    ]
+  },
+  { 
+    id: "ch2", 
+    name: "The Moroccan CFO", 
+    platform: "TikTok", 
+    subscriberCount: 42000, 
+    niche: "Finance d'entreprise & astuces PME", 
+    frequency: "3 vidéos / semaine",
+    email: "cfo@themacircle.ma",
+    credentials: [
+      { id: "cred3", label: "Compte TikTok Entreprise", email: "tiktok.cfo@themacircle.ma", password: "••••••••", notes: "Accès mobile TikTok Business" }
+    ],
+    ideas: [
+      { id: "id3", title: "3 erreurs de trésorerie mortelles en PME", description: "Format court TikTok 60 secondes", status: "Prêt", deadline: "2026-07-28" },
+      { id: "id4", title: "Comment négocier son salaire de DAF au Maroc", description: "Conseils pratiques pour financiers", status: "Idée", deadline: "2026-08-10" }
+    ],
+    usefulLinks: [
+      { id: "link3", title: "TikTok Ads Manager", url: "https://ads.tiktok.com", category: "Marketing" }
+    ],
+    deadlines: [
+      { id: "d3", title: "Montage des 3 Short Reels de la semaine", dueDate: "2026-07-29", status: "En cours" }
+    ]
+  },
+  { 
+    id: "ch3", 
+    name: "The Moroccan Economist", 
+    platform: "LinkedIn", 
+    subscriberCount: 11200, 
+    niche: "Analyses géopolitiques & Macroéconomie", 
+    frequency: "2 articles / semaine",
+    email: "economist@themacircle.ma",
+    credentials: [
+      { id: "cred4", label: "Page LinkedIn Entreprise", email: "linkedin@themacircle.ma", password: "••••••••", notes: "Administration de la page LinkedIn" }
+    ],
+    ideas: [
+      { id: "id5", title: "Perspectives de la Banque Mondiale Maroc 2026", description: "Synthèse infographique carrousel PDF", status: "En préparation", deadline: "2026-08-01" }
+    ],
+    usefulLinks: [
+      { id: "link4", title: "Haut-Commissariat au Plan (HCP)", url: "https://www.hcp.ma", category: "Statistiques" }
+    ],
+    deadlines: [
+      { id: "d4", title: "Publication Article Macroéconomie", dueDate: "2026-07-31", status: "À faire" }
+    ]
+  },
+  { 
+    id: "ch4", 
+    name: "Moroccan CFO Podcast", 
+    platform: "Spotify", 
+    subscriberCount: 1500, 
+    niche: "Interviews avec des leaders économiques", 
+    frequency: "1 épisode / 2 semaines",
+    email: "podcast@themacircle.ma",
+    credentials: [
+      { id: "cred5", label: "Spotify for Podcasters", email: "spotify.podcast@themacircle.ma", password: "••••••••", notes: "Flux RSS & Analytics Spotify" }
+    ],
+    ideas: [
+      { id: "id6", title: "Interview DAF d'un grand groupe bancaire", description: "Sujet : Transformation digitale des services financiers", status: "Idée", deadline: "2026-08-15" }
+    ],
+    usefulLinks: [
+      { id: "link5", title: "Spotify Podcasters Dashboard", url: "https://podcasters.spotify.com", category: "Diffusion" }
+    ],
+    deadlines: [
+      { id: "d5", title: "Mixage Audio Épisode #12", dueDate: "2026-08-08", status: "À faire" }
+    ]
+  },
+  { 
+    id: "ch5", 
+    name: "L'Académie THE MA CIRCLE", 
+    platform: "Autre", 
+    subscriberCount: 3800, 
+    niche: "Formations en Finance, Modélisation, BVC & Carrière", 
+    frequency: "Projet Digital & Plateforme E-learning",
+    email: "academie@themacircle.ma",
+    credentials: [
+      { id: "cred6", label: "Plateforme LMS & Portail Élèves", email: "admin.lms@themacircle.ma", password: "••••••••", notes: "Backoffice de gestion des cours et certifications" },
+      { id: "cred7", label: "Passerelle de Paiement CMI", email: "payments@themacircle.ma", password: "••••••••", notes: "Gestion des encaissements abonnements & cours" }
+    ],
+    ideas: [
+      { id: "id7", title: "Lancement du Module Modélisation Financière LBO", description: "Cas pratique Excel & Valorisation d'entreprise", status: "En préparation", deadline: "2026-09-01" },
+      { id: "id8", title: "Masterclass Bourse de Casablanca & Trading BVC", description: "Guide complet pour investisseurs particuliers marocains", status: "Idée", deadline: "2026-09-15" }
+    ],
+    usefulLinks: [
+      { id: "link6", title: "Portail Formations THE MA CIRCLE", url: "https://academie.themacircle.ma", category: "LMS" },
+      { id: "link7", title: "Espace Étudiants & Replays", url: "https://academie.themacircle.ma/e-learning", category: "Cours" }
+    ],
+    deadlines: [
+      { id: "d6", title: "Mise à jour des supports du cours Modélisation", dueDate: "2026-08-10", status: "En cours" },
+      { id: "d7", title: "Session Q&A en Direct avec les étudiants", dueDate: "2026-08-25", status: "À faire" }
+    ]
+  }
 ];
 
 export const INITIAL_WISHLIST: WishListItem[] = [

@@ -94,6 +94,7 @@ import BudgetOptimizer from "./components/BudgetOptimizer";
 import SettingsModal from "./components/SettingsModal";
 import ThemeSelectorModal, { ThemePresetId, THEME_PRESETS } from "./components/ThemeSelectorModal";
 import LifeGoalsSection from "./components/LifeGoalsSection";
+import UnifiedFinancialEntrySection from "./components/UnifiedFinancialEntrySection";
 import {
   initDriveAuth,
   driveSignIn,
@@ -2643,16 +2644,13 @@ export default function App() {
       label: "Finance",
       icon: Coins,
       items: [
+        { id: "saisie_unifiee", label: "Saisie Unifiée des Flux", icon: Layers, desc: "Guichet unique de saisie avec catégories & sous-catégories détaillées, dispatch automatique vers salaires, abonnements, charges et comptes." },
         { id: "finance_dash", label: "Dashboard Finance", icon: LayoutDashboard, desc: "Indicateurs financiers clés, budgets et analyses." },
         { id: "comptes", label: "Comptes Bancaires", icon: Landmark, desc: "Gestion des comptes pro, perso et liquidités." },
-        { id: "transactions", label: "Transactions", icon: Briefcase, desc: "Historique complet de vos entrées d'argent et d'une rigueur absolue de vos charges." },
-        { id: "stocks", label: "Portefeuille Bourse", icon: Wallet, desc: "Suivi de vos investissements en BVC." },
         { id: "budgets", label: "Budgets Mensuels", icon: Landmark, desc: "Gestion de vos plafonds de dépenses par enveloppe." },
-        { id: "salaires", label: "Salaires & Revenus", icon: TrendingUp, desc: "Suivi de vos rentrées professionnelles et AdSense." },
         { id: "epargnes", label: "Objectifs Épargne", icon: PiggyBank, desc: "Progression vers vos projets immobiliers ou d'équipements." },
+        { id: "stocks", label: "Portefeuille Bourse", icon: Wallet, desc: "Suivi de vos investissements en BVC." },
         { id: "charts", label: "Graphiques & Analyses", icon: BarChart3, desc: "Visualisation complète de votre santé financière." },
-        { id: "achats", label: "Achats Mensuels", icon: ShoppingCart, desc: "Liste de shopping, matériel pro et fournitures." },
-        { id: "abonnements", label: "Abonnements & Charges", icon: Bell, desc: "Contrôle de vos dépenses récurrentes et hébergement." },
         { id: "wishlist", label: "Wish List", icon: Gift, desc: "Objets de désir et grands projets d'achat à long terme." },
         { id: "achats_couteux", label: "Achats Coûteux", icon: Hourglass, desc: "Achats importants de moyenne échelle prévus à moyen terme." }
       ]
@@ -2689,7 +2687,7 @@ export default function App() {
       icon: FolderKanban,
       items: [
         { id: "projets_dash", label: "Dashboard Projets & Académie", icon: LayoutDashboard, desc: "Formations, projets médias et calendrier de publication." },
-        { id: "channels", label: "Projets Médias, Canaux & Académie", icon: Tv, desc: "Canaux de diffusion, statistiques d'audience et l'Académie THE MA CIRCLE." },
+        { id: "channels", label: "Projets Médias & Digitaux", icon: Tv, desc: "Tous vos projets digitaux (inc. l'Académie), identifiants, sujets, liens et deadlines." },
         { id: "editorial_calendar", label: "Calendrier de Projets", icon: Calendar, desc: "Calendrier de vos événements, projets de communication et publications." },
         { id: "links", label: "Liens Favoris", icon: Link2, desc: "Signets rapides vers vos ressources de marché bourse." }
       ]
@@ -4886,7 +4884,25 @@ export default function App() {
 
                 {/* Interactive Content Card */}
                 <div className="bg-white border border-neutral-200 rounded-3xl p-6 shadow-xs min-h-[420px]">
-                  {activeMenu === "finance_dash" ? (
+                  {(activeMenu === "saisie_unifiee" || activeMenu === "transactions" || activeMenu === "salaires" || activeMenu === "abonnements" || activeMenu === "achats") ? (
+                    <UnifiedFinancialEntrySection
+                      transactions={transactions}
+                      setTransactions={setTransactions}
+                      salaires={salaires}
+                      setSalaires={setSalaires}
+                      abonnements={abonnements}
+                      setAbonnements={setAbonnements}
+                      achatsMensuels={achatsMensuels}
+                      setAchatsMensuels={setAchatsMensuels}
+                      accounts={accounts}
+                      setAccounts={setAccounts}
+                      budgets={budgets}
+                      setBudgets={setBudgets}
+                      epargnes={epargnes}
+                      setEpargnes={setEpargnes}
+                      triggerToast={triggerToast}
+                    />
+                  ) : activeMenu === "finance_dash" ? (
                     <FinanceSectionDashboard
                       accounts={accounts}
                       budgets={budgets}
@@ -5034,11 +5050,6 @@ export default function App() {
                     <MediaAndAcademySection
                       channels={channels}
                       setChannels={setChannels}
-                      formations={formations}
-                      setFormations={setFormations}
-                      folders={folders}
-                      setFolders={setFolders}
-                      initialTab={activeMenu === "formations" ? "academy" : "channels"}
                     />
                   ) : activeMenu === "monthly_goals" ? (
                     <MonthlyGoalsSection 
