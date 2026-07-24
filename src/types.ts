@@ -281,7 +281,7 @@ export interface MediaTaskDeadline {
 export interface ChannelInfo {
   id: string;
   name: string;
-  platform: "YouTube" | "TikTok" | "LinkedIn" | "Instagram" | "Spotify" | "Autre";
+  platform: "YouTube" | "TikTok" | "LinkedIn" | "Instagram" | "Spotify" | "Udemy / Formation" | "Produit Digital" | "Site Web / Blog" | "Autre" | string;
   subscriberCount: number;
   niche: string;
   frequency: string;

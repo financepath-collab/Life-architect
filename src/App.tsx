@@ -2685,7 +2685,7 @@ export default function App() {
       label: "Projets Médias & Digitaux",
       icon: Tv,
       items: [
-        { id: "channels", label: "Projets Médias & Digitaux", icon: Tv, desc: "Tous vos projets digitaux, identifiants, sujets, liens et deadlines." },
+        { id: "channels", label: "Projets Médias & Digitaux", icon: Tv, desc: "Cours Udemy, produits digitaux, chaînes médias, identifiants, sujets et deadlines." },
         { id: "editorial_calendar", label: "Calendrier de Projets", icon: Calendar, desc: "Calendrier de vos événements, projets de communication et publications." }
       ]
     },

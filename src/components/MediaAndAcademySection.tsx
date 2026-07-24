@@ -120,7 +120,7 @@ export default function MediaProjectsSection({
             </span>
           </div>
           <p className="text-xs text-neutral-500 mt-1 max-w-2xl">
-            Cliquez sur la carte d'un projet pour ouvrir sa fenêtre dédiée (Mots de passe, Idées de sujets, Liens utiles, Deadlines et Paramètres) ou créez / supprimez un projet directement.
+            Gérez tous vos projets digitaux (cours Udemy, produits digitaux, chaînes médias, sites web). Cliquez sur une carte pour ouvrir sa fenêtre dédiée (Identifiants, Sujets, Liens, Deadlines).
           </p>
         </div>
 
@@ -328,6 +328,9 @@ export default function MediaProjectsSection({
                       <option value="LinkedIn">LinkedIn</option>
                       <option value="Instagram">Instagram</option>
                       <option value="Spotify">Spotify</option>
+                      <option value="Udemy / Formation">Udemy / Formation</option>
+                      <option value="Produit Digital">Produit Digital (Ebook, SaaS...)</option>
+                      <option value="Site Web / Blog">Site Web / Blog</option>
                       <option value="Autre">Autre</option>
                     </select>
                   </div>
