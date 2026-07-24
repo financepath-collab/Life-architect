@@ -186,6 +186,9 @@ export interface MealPlanner {
   description: string;
   calories: number;
   prepared: boolean;
+  ingredients?: string;
+  recipeNotes?: string;
+  prepTimeMinutes?: number;
 }
 
 // 4. Achats Submodules

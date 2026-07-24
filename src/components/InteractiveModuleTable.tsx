@@ -1296,7 +1296,7 @@ export default function InteractiveModuleTable({
                         ) : col.type === "date" ? (
                           <span className="text-neutral-500 font-mono">{value}</span>
                         ) : (
-                          <span className="truncate max-w-xs block text-neutral-800">
+                          <span className="truncate max-w-xl block text-neutral-800 dark:text-neutral-200">
                             {typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://")) ? (
                               <a 
                                 href={value} 

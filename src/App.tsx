@@ -65,6 +65,7 @@ import NetSavingsChart from "./components/NetSavingsChart";
 import SavingsTrendChart from "./components/SavingsTrendChart";
 import FocusSport from "./components/FocusSport";
 import SkinTrackerSection from "./components/SkinTrackerSection";
+import MealPlannerSection from "./components/MealPlannerSection";
 import PerformanceCorrelations from "./components/PerformanceCorrelations";
 import MediaHubSection from "./components/MediaHubSection";
 import FormationsSection from "./components/FormationsSection";
@@ -5018,6 +5019,8 @@ export default function App() {
                     />
                   ) : activeMenu === "skin" ? (
                     <SkinTrackerSection skinTrackers={skinTrackers} setSkinTrackers={setSkinTrackers} />
+                  ) : activeMenu === "meal" ? (
+                    <MealPlannerSection mealPlanners={mealPlanners} setMealPlanners={setMealPlanners} />
                   ) : activeMenu === "books" ? (
                     <MediaHubSection books={books} setBooks={setBooks} screenMedia={screenMedia} setScreenMedia={setScreenMedia} initialFormatFilter="Livre" />
                   ) : activeMenu === "screenmedia" ? (

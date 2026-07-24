@@ -777,31 +777,6 @@ export default function SkinTrackerSection({
                 </div>
               </div>
 
-              {/* ADD PHOTO (OPTIONAL) */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Photo du jour (Optionnel)</label>
-                <div className="flex gap-2">
-                  <label className="flex-1 bg-white border border-neutral-200 rounded-xl px-3 py-2 flex items-center justify-center gap-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 cursor-pointer transition-all">
-                    <Upload className="w-4 h-4 text-neutral-400" />
-                    {photoUrl ? "✓ Image importée" : "Importer un selfie"}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={(e) => handleImageUpload(e)} 
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleSimulateScan()}
-                    className="bg-neutral-900 hover:bg-neutral-800 text-white px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-3xs"
-                  >
-                    <Camera className="w-4 h-4 text-amber-400" />
-                    Simuler Scan
-                  </button>
-                </div>
-              </div>
-
               {/* SUBMIT */}
               <button
                 type="submit"
