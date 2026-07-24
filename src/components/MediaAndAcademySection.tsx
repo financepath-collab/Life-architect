@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import MediaProjectDetailsModal from "./MediaProjectDetailsModal";
 import { ChannelInfo } from "../types";
+import { getProjectFrequencyConfig } from "../utils/projectFrequencyUtils";
 
 interface MediaProjectsSectionProps {
   channels: ChannelInfo[];
@@ -317,10 +318,18 @@ export default function MediaProjectsSection({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-bold text-neutral-800 block mb-1">Plateforme / Réseau</label>
+                    <label className="text-xs font-bold text-neutral-800 block mb-1">Plateforme / Nature du Projet</label>
                     <select
                       value={newChannel.platform}
-                      onChange={e => setNewChannel({ ...newChannel, platform: e.target.value as any })}
+                      onChange={e => {
+                        const selectedPlatform = e.target.value as any;
+                        const config = getProjectFrequencyConfig(selectedPlatform);
+                        setNewChannel({
+                          ...newChannel,
+                          platform: selectedPlatform,
+                          frequency: config.defaultFrequency
+                        });
+                      }}
                       className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-hidden font-bold"
                     >
                       <option value="YouTube">YouTube</option>
@@ -348,28 +357,57 @@ export default function MediaProjectsSection({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-3">
                   <div>
-                    <label className="text-xs font-bold text-neutral-800 block mb-1">Niche Éditoriale</label>
+                    <label className="text-xs font-bold text-neutral-800 block mb-1">Niche Éditoriale / Thématique</label>
                     <input
                       type="text"
-                      placeholder="Ex: Tech & Startups Maroc"
+                      placeholder="Ex: Tech & Startups, Ebook SaaS, Formation Finance..."
                       value={newChannel.niche}
                       onChange={e => setNewChannel({ ...newChannel, niche: e.target.value })}
                       className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-hidden"
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-neutral-800 block mb-1">Fréquence de publication</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: 2 vidéos / semaine"
-                      value={newChannel.frequency}
-                      onChange={e => setNewChannel({ ...newChannel, frequency: e.target.value })}
-                      className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-hidden"
-                    />
-                  </div>
+                  {(() => {
+                    const freqConfig = getProjectFrequencyConfig(newChannel.platform);
+                    return (
+                      <div className="space-y-1.5 p-3 bg-neutral-50/70 border border-neutral-200/60 rounded-2xl">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-neutral-900 block">
+                            {freqConfig.label}
+                          </label>
+                          <span className="text-[10px] text-neutral-500 font-medium italic">
+                            {freqConfig.sublabel}
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder={freqConfig.placeholder}
+                          value={newChannel.frequency}
+                          onChange={e => setNewChannel({ ...newChannel, frequency: e.target.value })}
+                          className="w-full bg-white border border-neutral-200 rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-hidden font-medium"
+                        />
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          <span className="text-[10px] font-bold text-neutral-400 mr-0.5">Suggestions :</span>
+                          {freqConfig.presets.map(preset => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => setNewChannel({ ...newChannel, frequency: preset })}
+                              className={`text-[10px] px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                                newChannel.frequency === preset
+                                  ? "bg-indigo-600 border-indigo-600 text-white font-bold shadow-3xs"
+                                  : "bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                              }`}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-neutral-100">

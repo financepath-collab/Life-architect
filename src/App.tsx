@@ -149,6 +149,8 @@ import {
   Tv, 
   ChevronDown, 
   ChevronRight, 
+  ChevronLeft,
+  GripVertical,
   Menu, 
   X,
   Plus,
@@ -527,6 +529,100 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  // --- DASHBOARD CARDS DRAG & DROP REORDERING STATE ---
+  const [dashboardCardOrder, setDashboardCardOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("mp_dashboard_card_order_v1");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (
+          Array.isArray(parsed) &&
+          parsed.length === 3 &&
+          parsed.includes("project_tasks") &&
+          parsed.includes("skin_routine") &&
+          parsed.includes("alerts")
+        ) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      // ignore error
+    }
+    return ["project_tasks", "skin_routine", "alerts"];
+  });
+
+  const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+  const [dragOverCardId, setDragOverCardId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mp_dashboard_card_order_v1", JSON.stringify(dashboardCardOrder));
+    } catch (e) {
+      // ignore error
+    }
+  }, [dashboardCardOrder]);
+
+  const handleCardDragStart = (e: React.DragEvent, cardId: string) => {
+    e.dataTransfer.setData("text/plain", cardId);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedCardId(cardId);
+  };
+
+  const handleCardDragOver = (e: React.DragEvent, cardId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverCardId !== cardId) {
+      setDragOverCardId(cardId);
+    }
+  };
+
+  const handleCardDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleCardDrop = (e: React.DragEvent, targetCardId: string) => {
+    e.preventDefault();
+    const sourceCardId = e.dataTransfer.getData("text/plain") || draggedCardId;
+    if (sourceCardId && sourceCardId !== targetCardId) {
+      setDashboardCardOrder(prev => {
+        const oldIndex = prev.indexOf(sourceCardId);
+        const newIndex = prev.indexOf(targetCardId);
+        if (oldIndex === -1 || newIndex === -1) return prev;
+        const newOrder = [...prev];
+        newOrder.splice(oldIndex, 1);
+        newOrder.splice(newIndex, 0, sourceCardId);
+        return newOrder;
+      });
+      triggerToast("Ordre des cartes mis à jour !", "success");
+    }
+    setDraggedCardId(null);
+    setDragOverCardId(null);
+  };
+
+  const handleCardDragEnd = () => {
+    setDraggedCardId(null);
+    setDragOverCardId(null);
+  };
+
+  const moveCardInOrder = (cardId: string, direction: "left" | "right") => {
+    setDashboardCardOrder(prev => {
+      const idx = prev.indexOf(cardId);
+      if (idx === -1) return prev;
+      const targetIdx = direction === "left" ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= prev.length) return prev;
+      const newOrder = [...prev];
+      const [moved] = newOrder.splice(idx, 1);
+      newOrder.splice(targetIdx, 0, moved);
+      return newOrder;
+    });
+    triggerToast("Disposition mise à jour !", "info");
+  };
+
+  const resetDashboardCardOrder = () => {
+    setDashboardCardOrder(["project_tasks", "skin_routine", "alerts"]);
+    triggerToast("Ordre des cartes réinitialisé !", "info");
+  };
 
   // --- HABIT HISTORY (HEATMAP TRACKER) ---
   const [habitHistory, setHabitHistory] = useState<Record<string, string[]>>(() => {
@@ -4274,499 +4370,659 @@ export default function App() {
                 triggerToast={triggerToast}
               />
 
-              {/* 3-Column Responsive Bento-style Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                {/* COLUMN 1: TACHES DE PROJETS */}
-                <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-6 flex flex-col justify-between">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
-                          <FolderKanban className="w-4 h-4" />
-                        </span>
-                        <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
-                          Objectifs de Projets
-                        </h3>
-                      </div>
-                      <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
-                        {folders.reduce((acc, f) => acc + f.customObjectives.filter(o => !o.completed).length, 0)} en attente
-                      </span>
-                    </div>
-
-                    {/* Task checklist */}
-                    <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
-                      {(() => {
-                        const pendingTasks = folders.flatMap(f => 
-                          f.customObjectives.filter(o => !o.completed).map(o => ({
-                            folderId: f.id,
-                            folderName: f.name,
-                            folderCategory: f.category,
-                            ...o
-                          }))
-                        );
-
-                        if (pendingTasks.length === 0) {
-                          return (
-                            <div className="flex flex-col items-center justify-center text-center py-8 px-4 space-y-3 bg-neutral-50/50 border border-neutral-150/60 rounded-2xl">
-                              <div className="relative w-16 h-16 flex items-center justify-center">
-                                <div className="absolute inset-0 rounded-full bg-neutral-100/70 border border-neutral-200/50 scale-95" />
-                                <svg 
-                                  id="svg-empty-tasks"
-                                  className="w-10 h-10 text-neutral-400 relative z-10" 
-                                  viewBox="0 0 24 24" 
-                                  fill="none" 
-                                  stroke="currentColor" 
-                                  strokeWidth="1.5" 
-                                  strokeLinecap="round" 
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" className="stroke-neutral-200" />
-                                  <path d="m9 12 2 2 4-4" className="stroke-neutral-400" strokeWidth="2" />
-                                  <path d="M8 6h8" className="stroke-neutral-200/50" />
-                                  <path d="M8 18h8" className="stroke-neutral-200/50" />
-                                </svg>
-                                <div className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                <div className="absolute bottom-2 left-1 w-1 h-1 rounded-full bg-neutral-300" />
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-xs font-black text-neutral-800 uppercase tracking-wider">Aucun objectif en attente</p>
-                                <p className="text-[10px] text-neutral-500 font-medium max-w-[200px] mx-auto leading-relaxed">
-                                  Tous vos objectifs de projets ont été complétés ! Ajoutez-en de nouveaux dans vos dossiers.
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return pendingTasks.map(task => (
-                          <div 
-                            key={task.id} 
-                            onClick={() => handleToggleProjectObjective(task.folderId, task.id)}
-                            className="flex items-start gap-3 p-3 bg-neutral-50 hover:bg-neutral-100/75 border border-neutral-200/50 rounded-xl transition-all cursor-pointer group"
-                          >
-                            <button className="mt-0.5 text-neutral-400 group-hover:text-neutral-900 transition-colors">
-                              <Square className="w-4 h-4" />
-                            </button>
-                            <div className="space-y-1">
-                              <span className="inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-white text-neutral-700 border border-neutral-200">
-                                {task.folderName}
-                              </span>
-                              <p className="text-xs font-semibold text-neutral-800 leading-tight">
-                                {task.text}
-                              </p>
-                            </div>
-                          </div>
-                        ));
-                      })()}
-                    </div>
+              {/* Reorderable 3-Column Responsive Bento-style Grid */}
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1 text-xs text-neutral-500">
+                  <div className="flex items-center gap-2">
+                    <GripVertical className="w-4 h-4 text-neutral-400 shrink-0" />
+                    <span className="font-semibold text-neutral-600 dark:text-neutral-400">
+                      Agencement réordonnable : glissez-déposez les cartes par leur poignée ou utilisez les flèches pour personnaliser l'ordre.
+                    </span>
                   </div>
-
-                  <button
-                    onClick={() => handleNavigateToModule("project_folders")}
-                    className="w-full py-2.5 mt-4 text-center bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer"
-                  >
-                    Gérer mes dossiers de projets
-                  </button>
+                  {JSON.stringify(dashboardCardOrder) !== JSON.stringify(["project_tasks", "skin_routine", "alerts"]) && (
+                    <button
+                      onClick={resetDashboardCardOrder}
+                      className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 underline cursor-pointer self-start sm:self-auto transition-colors"
+                    >
+                      Réinitialiser l'ordre
+                    </button>
+                  )}
                 </div>
 
-                {/* COLUMN 2: SKIN CARE & ROUTINES */}
-                <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-6 flex flex-col justify-between">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
-                          <Sparkles className="w-4 h-4" />
-                        </span>
-                        <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
-                          Routines Skin Care
-                        </h3>
-                      </div>
-                      <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
-                        Aujourd'hui
-                      </span>
-                    </div>
-
-                    {/* Skin Routine togglers */}
-                    {(() => {
-                      const todayStr = new Date().toISOString().split("T")[0];
-                      const todayLog = skinTrackers.find(s => s.date === todayStr);
-                      const isMorningDone = todayLog?.morningRoutine || false;
-                      const isEveningDone = todayLog?.eveningRoutine || false;
-
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {dashboardCardOrder.map((cardKey, cardIndex) => {
+                    // 1. PROJECT TASKS CARD
+                    if (cardKey === "project_tasks") {
                       return (
-                        <div className="space-y-4">
-                          <div className="p-4 bg-neutral-50 border border-neutral-200/50 rounded-2xl space-y-3">
-                            <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">État des routines</h4>
-                            
-                            {/* Morning */}
-                            <div 
-                              onClick={() => handleToggleTodaySkinRoutine("morning")}
-                              className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
-                                isMorningDone 
-                                  ? "bg-emerald-50/50 border-emerald-200 text-emerald-950" 
-                                  : "bg-white border-neutral-200 text-neutral-800 hover:border-neutral-300"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <span className="text-lg">☀️</span>
-                                <div className="space-y-0.5">
-                                  <span className="text-xs font-extrabold block">Routine Matin (SPF)</span>
-                                  <span className="text-[10px] text-neutral-400 font-medium">Protection solaire anti-UV</span>
+                        <div
+                          key="project_tasks"
+                          draggable
+                          onDragStart={(e) => handleCardDragStart(e, "project_tasks")}
+                          onDragOver={(e) => handleCardDragOver(e, "project_tasks")}
+                          onDragLeave={handleCardDragLeave}
+                          onDrop={(e) => handleCardDrop(e, "project_tasks")}
+                          onDragEnd={handleCardDragEnd}
+                          className={`bg-white dark:bg-neutral-900 border rounded-3xl p-6 shadow-xs space-y-6 flex flex-col justify-between transition-all duration-200 ${
+                            draggedCardId === "project_tasks"
+                              ? "opacity-30 border-amber-400 border-dashed scale-[0.98] bg-amber-50/20"
+                              : "border-neutral-200/80 hover:border-neutral-300"
+                          } ${
+                            dragOverCardId === "project_tasks" && draggedCardId !== "project_tasks"
+                              ? "ring-2 ring-neutral-900 border-neutral-900 shadow-lg scale-[1.01]"
+                              : ""
+                          }`}
+                        >
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="cursor-grab active:cursor-grabbing p-1 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-700 transition-colors flex items-center shrink-0"
+                                  title="Maintenir et glisser pour réordonner cette carte"
+                                >
+                                  <GripVertical className="w-4 h-4" />
                                 </div>
+                                <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
+                                  <FolderKanban className="w-4 h-4" />
+                                </span>
+                                <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
+                                  Objectifs de Projets
+                                </h3>
                               </div>
-                              {isMorningDone ? (
-                                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                              ) : (
-                                <Square className="w-5 h-5 text-neutral-300 shrink-0" />
-                              )}
-                            </div>
-
-                            {/* Evening */}
-                            <div 
-                              onClick={() => handleToggleTodaySkinRoutine("evening")}
-                              className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
-                                isEveningDone 
-                                  ? "bg-emerald-50/50 border-emerald-200 text-emerald-950" 
-                                  : "bg-white border-neutral-200 text-neutral-800 hover:border-neutral-300"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <span className="text-lg">🌙</span>
-                                <div className="space-y-0.5">
-                                  <span className="text-xs font-extrabold block">Routine Soir (Sérum)</span>
-                                  <span className="text-[10px] text-neutral-400 font-medium">Hydratation profonde & soin</span>
+                              <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-0.5 mr-1">
+                                  <button
+                                    onClick={() => moveCardInOrder("project_tasks", "left")}
+                                    disabled={cardIndex === 0}
+                                    title="Déplacer vers la gauche"
+                                    className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                  >
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => moveCardInOrder("project_tasks", "right")}
+                                    disabled={cardIndex === dashboardCardOrder.length - 1}
+                                    title="Déplacer vers la droite"
+                                    className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                  >
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
+                                <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
+                                  {folders.reduce((acc, f) => acc + f.customObjectives.filter(o => !o.completed).length, 0)} en attente
+                                </span>
                               </div>
-                              {isEveningDone ? (
-                                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                              ) : (
-                                <Square className="w-5 h-5 text-neutral-300 shrink-0" />
-                              )}
                             </div>
-                          </div>
 
-                          {/* Water intake shortcut */}
-                          <div className="p-4 bg-neutral-50 border border-neutral-200/50 rounded-2xl flex items-center justify-between">
-                            <div className="space-y-1">
-                              <span className="text-xs font-extrabold block text-neutral-800">Hydratation (L)</span>
-                              <span className="text-[10px] text-neutral-400 block font-medium">Objectif quotidien : 2.5 L</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => {
-                                  setSkinTrackers(prev => {
-                                    const log = prev.find(s => s.date === todayStr);
-                                    if (log) {
-                                      return prev.map(s => s.date === todayStr ? { ...s, waterIntakeLiters: Math.max(0, (s.waterIntakeLiters || 0) - 0.25) } : s);
-                                    } else {
-                                      return [{ id: Math.random().toString(36).substr(2, 9), date: todayStr, morningRoutine: false, eveningRoutine: false, skinCondition: "Bonne", productsUsed: "", waterIntakeLiters: 0 }, ...prev];
-                                    }
-                                  });
-                                  triggerToast("Eau bue diminuée !", "info");
-                                }}
-                                className="w-8 h-8 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-50 flex items-center justify-center font-bold text-neutral-600 select-none cursor-pointer"
-                              >
-                                -
-                              </button>
-                              <span className="text-sm font-mono font-black text-neutral-900">
-                                {(todayLog?.waterIntakeLiters || 0).toFixed(2)}
-                              </span>
-                              <button 
-                                onClick={() => {
-                                  setSkinTrackers(prev => {
-                                    const log = prev.find(s => s.date === todayStr);
-                                    if (log) {
-                                      return prev.map(s => s.date === todayStr ? { ...s, waterIntakeLiters: (s.waterIntakeLiters || 0) + 0.25 } : s);
-                                    } else {
-                                      return [{ id: Math.random().toString(36).substr(2, 9), date: todayStr, morningRoutine: false, eveningRoutine: false, skinCondition: "Bonne", productsUsed: "", waterIntakeLiters: 0.25 }, ...prev];
-                                    }
-                                  });
-                                  triggerToast("Eau bue augmentée !", "success");
-                                }}
-                                className="w-8 h-8 rounded-lg bg-neutral-900 hover:bg-neutral-800 flex items-center justify-center font-bold text-white select-none cursor-pointer"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
+                            {/* Task checklist */}
+                            <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
+                              {(() => {
+                                const pendingTasks = folders.flatMap(f => 
+                                  f.customObjectives.filter(o => !o.completed).map(o => ({
+                                    folderId: f.id,
+                                    folderName: f.name,
+                                    folderCategory: f.category,
+                                    ...o
+                                  }))
+                                );
 
-                  <button
-                    onClick={() => handleNavigateToModule("skin")}
-                    className="w-full py-2.5 mt-4 text-center bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer"
-                  >
-                    Ouvrir le suivi de peau complet
-                  </button>
-                </div>
+                                if (pendingTasks.length === 0) {
+                                  return (
+                                    <div className="flex flex-col items-center justify-center text-center py-8 px-4 space-y-3 bg-neutral-50/50 border border-neutral-150/60 rounded-2xl">
+                                      <div className="relative w-16 h-16 flex items-center justify-center">
+                                        <div className="absolute inset-0 rounded-full bg-neutral-100/70 border border-neutral-200/50 scale-95" />
+                                        <svg 
+                                          id="svg-empty-tasks"
+                                          className="w-10 h-10 text-neutral-400 relative z-10" 
+                                          viewBox="0 0 24 24" 
+                                          fill="none" 
+                                          stroke="currentColor" 
+                                          strokeWidth="1.5" 
+                                          strokeLinecap="round" 
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" className="stroke-neutral-200" />
+                                          <path d="m9 12 2 2 4-4" className="stroke-neutral-400" strokeWidth="2" />
+                                          <path d="M8 6h8" className="stroke-neutral-200/50" />
+                                          <path d="M8 18h8" className="stroke-neutral-200/50" />
+                                        </svg>
+                                        <div className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                        <div className="absolute bottom-2 left-1 w-1 h-1 rounded-full bg-neutral-300" />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <p className="text-xs font-black text-neutral-800 uppercase tracking-wider">Aucun objectif en attente</p>
+                                        <p className="text-[10px] text-neutral-500 font-medium max-w-[200px] mx-auto leading-relaxed">
+                                          Tous vos objectifs de projets ont été complétés ! Ajoutez-en de nouveaux dans vos dossiers.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                }
 
-                {/* COLUMN 3: ALERTES ET RAPPELS FINANCE */}
-                <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-6 flex flex-col justify-between">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
-                          <Coins className="w-4 h-4" />
-                        </span>
-                        <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
-                          Alertes de Finance
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {Object.keys(snoozedAlerts).length > 0 && (
-                          <button
-                            onClick={() => {
-                              setSnoozedAlerts({});
-                              triggerToast("Toutes les alertes ont été réactivées !", "success");
-                            }}
-                            className="text-[9px] text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer transition-all"
-                            title="Réactiver toutes les alertes masquées temporairement"
-                          >
-                            Réactiver ({Object.keys(snoozedAlerts).length})
-                          </button>
-                        )}
-                        <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
-                          Attention
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Real-time Alerts */}
-                    <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-                      {(() => {
-                        const alerts: React.ReactNode[] = [];
-                        const nowMs = Date.now();
-
-                        // 1. Low balances
-                        accounts.forEach(acc => {
-                          const alertId = `acc-alert-${acc.id}`;
-                          if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
-
-                          if (acc.balance < 1000) {
-                            alerts.push(
-                              <div 
-                                key={alertId}
-                                onClick={() => handleNavigateToModule("comptes")}
-                                className="group relative p-3 bg-red-50 border border-red-100 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-red-50/80 transition-all"
-                              >
-                                <div className="flex gap-2.5">
-                                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                                  <div className="space-y-0.5">
-                                    <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Trésorerie Basse</span>
-                                    <p className="text-xs font-bold text-neutral-850">
-                                      Compte {acc.name} est à {acc.balance.toLocaleString("fr-FR")} {acc.currency}.
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSnoozeAlert(alertId);
-                                  }}
-                                  title="Masquer pendant 24h"
-                                  className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-red-600 hover:border-red-200 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0"
-                                >
-                                  <Clock className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            );
-                          }
-                        });
-
-                        // 2. Exceeded Budgets
-                        budgets.forEach((b, index) => {
-                          if (b.spentAmount > b.limitAmount) {
-                            const alertId = `budget-alert-${b.category}`;
-                            if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
-
-                            alerts.push(
-                              <motion.div 
-                                key={alertId}
-                                onClick={() => handleNavigateToModule("budgets")}
-                                className="group relative p-3 bg-red-50/70 border border-red-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-red-55/90 transition-all shadow-3xs"
-                                animate={{
-                                  scale: [1, 1.015, 1],
-                                  boxShadow: [
-                                    "0px 0px 0px rgba(239, 68, 68, 0)",
-                                    "0px 0px 8px rgba(239, 68, 68, 0.25)",
-                                    "0px 0px 0px rgba(239, 68, 68, 0)"
-                                  ]
-                                }}
-                                transition={{
-                                  duration: 2,
-                                  repeat: Infinity,
-                                  ease: "easeInOut"
-                                }}
-                              >
-                                <div className="flex gap-2.5">
-                                  <div className="relative shrink-0 mt-0.5">
-                                    <AlertCircle className="w-4 h-4 text-red-600" />
-                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-600" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Budget Dépassé</span>
-                                    <p className="text-xs font-bold text-neutral-850 leading-snug">
-                                      Enveloppe {b.category} : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSnoozeAlert(alertId);
-                                  }}
-                                  title="Masquer pendant 24h"
-                                  className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-red-600 hover:border-red-200 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0"
-                                >
-                                  <Clock className="w-3.5 h-3.5" />
-                                </button>
-                              </motion.div>
-                            );
-                          } else if (b.spentAmount >= b.limitAmount * 0.9) {
-                            const alertId = `budget-alert-warning-${b.category}`;
-                            if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
-
-                            alerts.push(
-                              <motion.div 
-                                key={alertId}
-                                onClick={() => handleNavigateToModule("budgets")}
-                                className="group relative p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-amber-55/90 transition-all shadow-3xs"
-                                animate={{
-                                  scale: [1, 1.015, 1],
-                                  boxShadow: [
-                                    "0px 0px 0px rgba(245, 158, 11, 0)",
-                                    "0px 0px 8px rgba(245, 158, 11, 0.25)",
-                                    "0px 0px 0px rgba(245, 158, 11, 0)"
-                                  ]
-                                }}
-                                transition={{
-                                  duration: 2.2,
-                                  repeat: Infinity,
-                                  ease: "easeInOut"
-                                }}
-                              >
-                                <div className="flex gap-2.5">
-                                  <div className="relative shrink-0 mt-0.5">
-                                    <AlertCircle className="w-4 h-4 text-amber-600" />
-                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-600" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <span className="text-[10px] font-black text-amber-800 uppercase block tracking-wider font-mono">Budget Critique</span>
-                                    <p className="text-xs font-bold text-neutral-850 leading-snug">
-                                      Enveloppe {b.category} à 90%+ : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSnoozeAlert(alertId);
-                                  }}
-                                  title="Snoozer pendant 24h"
-                                  className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-250 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0 animate-in fade-in"
-                                >
-                                  <Clock className="w-3.5 h-3.5" />
-                                </button>
-                              </motion.div>
-                            );
-                          }
-                        });
-
-                        // 3. Imminent Subscriptions
-                        const today = new Date();
-                        abonnements.forEach(ab => {
-                          const alertId = `sub_${ab.id}`;
-                          if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
-
-                          if (ab.status === "Actif" && ab.nextBillingDate) {
-                            const bDate = new Date(ab.nextBillingDate);
-                            const diffDays = Math.ceil((bDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
-                            if (diffDays >= 0 && diffDays <= 7) {
-                              alerts.push(
-                                <div 
-                                  key={alertId}
-                                  onClick={() => handleNavigateToModule("abonnements")}
-                                  className="group relative p-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer transition-all"
-                                >
-                                  <div className="flex gap-2.5">
-                                    <Bell className="w-4 h-4 text-neutral-600 shrink-0 mt-0.5" />
-                                    <div className="space-y-0.5">
-                                      <span className="text-[10px] font-black text-neutral-500 uppercase block tracking-wider font-mono">Facture Imminente</span>
-                                      <p className="text-xs font-bold text-neutral-850 leading-snug">
-                                        {ab.serviceName} prélevé de {ab.costMonthly} MAD dans {diffDays} jours.
+                                return pendingTasks.map(task => (
+                                  <div 
+                                    key={task.id} 
+                                    onClick={() => handleToggleProjectObjective(task.folderId, task.id)}
+                                    className="flex items-start gap-3 p-3 bg-neutral-50 hover:bg-neutral-100/75 border border-neutral-200/50 rounded-xl transition-all cursor-pointer group"
+                                  >
+                                    <button className="mt-0.5 text-neutral-400 group-hover:text-neutral-900 transition-colors">
+                                      <Square className="w-4 h-4" />
+                                    </button>
+                                    <div className="space-y-1">
+                                      <span className="inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-white text-neutral-700 border border-neutral-200">
+                                        {task.folderName}
+                                      </span>
+                                      <p className="text-xs font-semibold text-neutral-800 leading-tight">
+                                        {task.text}
                                       </p>
                                     </div>
                                   </div>
+                                ));
+                              })()}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => handleNavigateToModule("project_folders")}
+                            className="w-full py-2.5 mt-4 text-center bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer"
+                          >
+                            Gérer mes dossiers de projets
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    // 2. SKIN ROUTINE CARD
+                    if (cardKey === "skin_routine") {
+                      return (
+                        <div
+                          key="skin_routine"
+                          draggable
+                          onDragStart={(e) => handleCardDragStart(e, "skin_routine")}
+                          onDragOver={(e) => handleCardDragOver(e, "skin_routine")}
+                          onDragLeave={handleCardDragLeave}
+                          onDrop={(e) => handleCardDrop(e, "skin_routine")}
+                          onDragEnd={handleCardDragEnd}
+                          className={`bg-white dark:bg-neutral-900 border rounded-3xl p-6 shadow-xs space-y-6 flex flex-col justify-between transition-all duration-200 ${
+                            draggedCardId === "skin_routine"
+                              ? "opacity-30 border-amber-400 border-dashed scale-[0.98] bg-amber-50/20"
+                              : "border-neutral-200/80 hover:border-neutral-300"
+                          } ${
+                            dragOverCardId === "skin_routine" && draggedCardId !== "skin_routine"
+                              ? "ring-2 ring-neutral-900 border-neutral-900 shadow-lg scale-[1.01]"
+                              : ""
+                          }`}
+                        >
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="cursor-grab active:cursor-grabbing p-1 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-700 transition-colors flex items-center shrink-0"
+                                  title="Maintenir et glisser pour réordonner cette carte"
+                                >
+                                  <GripVertical className="w-4 h-4" />
+                                </div>
+                                <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
+                                  <Sparkles className="w-4 h-4" />
+                                </span>
+                                <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
+                                  Routines Skin Care
+                                </h3>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-0.5 mr-1">
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSnoozeAlert(alertId);
-                                    }}
-                                    title="Snoozer pendant 24h"
-                                    className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-250 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0 animate-in fade-in"
+                                    onClick={() => moveCardInOrder("skin_routine", "left")}
+                                    disabled={cardIndex === 0}
+                                    title="Déplacer vers la gauche"
+                                    className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
                                   >
-                                    <Clock className="w-3.5 h-3.5" />
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => moveCardInOrder("skin_routine", "right")}
+                                    disabled={cardIndex === dashboardCardOrder.length - 1}
+                                    title="Déplacer vers la droite"
+                                    className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                  >
+                                    <ChevronRight className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
-                              );
-                            }
-                          }
-                        });
-
-                        if (alerts.length === 0) {
-                          return (
-                            <div className="flex flex-col items-center justify-center text-center py-8 px-4 space-y-3 bg-emerald-50/20 border border-emerald-100/60 rounded-2xl">
-                              <div className="relative w-16 h-16 flex items-center justify-center">
-                                <div className="absolute inset-0 rounded-full bg-emerald-50 border border-emerald-100/50 scale-95" />
-                                <svg 
-                                  id="svg-empty-alerts"
-                                  className="w-10 h-10 text-emerald-600 relative z-10" 
-                                  viewBox="0 0 24 24" 
-                                  fill="none" 
-                                  stroke="currentColor" 
-                                  strokeWidth="1.5" 
-                                  strokeLinecap="round" 
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" className="stroke-emerald-200" fill="url(#shieldGrad)" />
-                                  <path d="m9 12 2 2 4-4" className="stroke-emerald-500" strokeWidth="2.5" />
-                                  <defs>
-                                    <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="0%" stopColor="#ecfdf5" stopOpacity="0.4" />
-                                      <stop offset="100%" stopColor="#d1fae5" stopOpacity="0.8" />
-                                    </linearGradient>
-                                  </defs>
-                                </svg>
-                                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-xs font-black text-emerald-950 uppercase tracking-wider">Tout est au vert !</p>
-                                <p className="text-[10px] text-emerald-600 font-medium max-w-[200px] mx-auto leading-relaxed">
-                                  Aucun budget dépassé ou facture urgente détectée. Votre santé financière est optimale.
-                                </p>
+                                <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
+                                  Aujourd'hui
+                                </span>
                               </div>
                             </div>
-                          );
-                        }
 
-                        return alerts;
-                      })()}
-                    </div>
-                  </div>
+                            {/* Skin Routine togglers */}
+                            {(() => {
+                              const todayStr = new Date().toISOString().split("T")[0];
+                              const todayLog = skinTrackers.find(s => s.date === todayStr);
+                              const isMorningDone = todayLog?.morningRoutine || false;
+                              const isEveningDone = todayLog?.eveningRoutine || false;
 
-                  <button
-                    onClick={() => handleNavigateToModule("finance_dash")}
-                    className="w-full py-2.5 mt-4 text-center bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer"
-                  >
-                    Ouvrir le Tableau de bord Financier
-                  </button>
+                              return (
+                                <div className="space-y-4">
+                                  <div className="p-4 bg-neutral-50 border border-neutral-200/50 rounded-2xl space-y-3">
+                                    <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">État des routines</h4>
+                                    
+                                    {/* Morning */}
+                                    <div 
+                                      onClick={() => handleToggleTodaySkinRoutine("morning")}
+                                      className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                                        isMorningDone 
+                                          ? "bg-emerald-50/50 border-emerald-200 text-emerald-950" 
+                                          : "bg-white border-neutral-200 text-neutral-800 hover:border-neutral-300"
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2.5">
+                                        <span className="text-lg">☀️</span>
+                                        <div className="space-y-0.5">
+                                          <span className="text-xs font-extrabold block">Routine Matin (SPF)</span>
+                                          <span className="text-[10px] text-neutral-400 font-medium">Protection solaire anti-UV</span>
+                                        </div>
+                                      </div>
+                                      {isMorningDone ? (
+                                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                                      ) : (
+                                        <Square className="w-5 h-5 text-neutral-300 shrink-0" />
+                                      )}
+                                    </div>
+
+                                    {/* Evening */}
+                                    <div 
+                                      onClick={() => handleToggleTodaySkinRoutine("evening")}
+                                      className={`flex items-center justify-between p-3.5 rounded-xl border transition-all cursor-pointer ${
+                                        isEveningDone 
+                                          ? "bg-emerald-50/50 border-emerald-200 text-emerald-950" 
+                                          : "bg-white border-neutral-200 text-neutral-800 hover:border-neutral-300"
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2.5">
+                                        <span className="text-lg">🌙</span>
+                                        <div className="space-y-0.5">
+                                          <span className="text-xs font-extrabold block">Routine Soir (Sérum)</span>
+                                          <span className="text-[10px] text-neutral-400 font-medium">Hydratation profonde & soin</span>
+                                        </div>
+                                      </div>
+                                      {isEveningDone ? (
+                                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                                      ) : (
+                                        <Square className="w-5 h-5 text-neutral-300 shrink-0" />
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Water intake shortcut */}
+                                  <div className="p-4 bg-neutral-50 border border-neutral-200/50 rounded-2xl flex items-center justify-between">
+                                    <div className="space-y-1">
+                                      <span className="text-xs font-extrabold block text-neutral-800">Hydratation (L)</span>
+                                      <span className="text-[10px] text-neutral-400 block font-medium">Objectif quotidien : 2.5 L</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <button 
+                                        onClick={() => {
+                                          setSkinTrackers(prev => {
+                                            const log = prev.find(s => s.date === todayStr);
+                                            if (log) {
+                                              return prev.map(s => s.date === todayStr ? { ...s, waterIntakeLiters: Math.max(0, (s.waterIntakeLiters || 0) - 0.25) } : s);
+                                            } else {
+                                              return [{ id: Math.random().toString(36).substr(2, 9), date: todayStr, morningRoutine: false, eveningRoutine: false, skinCondition: "Bonne", productsUsed: "", waterIntakeLiters: 0 }, ...prev];
+                                            }
+                                          });
+                                          triggerToast("Eau bue diminuée !", "info");
+                                        }}
+                                        className="w-8 h-8 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-50 flex items-center justify-center font-bold text-neutral-600 select-none cursor-pointer"
+                                      >
+                                        -
+                                      </button>
+                                      <span className="text-sm font-mono font-black text-neutral-900">
+                                        {(todayLog?.waterIntakeLiters || 0).toFixed(2)}
+                                      </span>
+                                      <button 
+                                        onClick={() => {
+                                          setSkinTrackers(prev => {
+                                            const log = prev.find(s => s.date === todayStr);
+                                            if (log) {
+                                              return prev.map(s => s.date === todayStr ? { ...s, waterIntakeLiters: (s.waterIntakeLiters || 0) + 0.25 } : s);
+                                            } else {
+                                              return [{ id: Math.random().toString(36).substr(2, 9), date: todayStr, morningRoutine: false, eveningRoutine: false, skinCondition: "Bonne", productsUsed: "", waterIntakeLiters: 0.25 }, ...prev];
+                                            }
+                                          });
+                                          triggerToast("Eau bue augmentée !", "success");
+                                        }}
+                                        className="w-8 h-8 rounded-lg bg-neutral-900 hover:bg-neutral-800 flex items-center justify-center font-bold text-white select-none cursor-pointer"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+
+                          <button
+                            onClick={() => handleNavigateToModule("skin")}
+                            className="w-full py-2.5 mt-4 text-center bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer"
+                          >
+                            Ouvrir le suivi de peau complet
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    // 3. ALERTS CARD
+                    if (cardKey === "alerts") {
+                      return (
+                        <div
+                          key="alerts"
+                          draggable
+                          onDragStart={(e) => handleCardDragStart(e, "alerts")}
+                          onDragOver={(e) => handleCardDragOver(e, "alerts")}
+                          onDragLeave={handleCardDragLeave}
+                          onDrop={(e) => handleCardDrop(e, "alerts")}
+                          onDragEnd={handleCardDragEnd}
+                          className={`bg-white dark:bg-neutral-900 border rounded-3xl p-6 shadow-xs space-y-6 flex flex-col justify-between transition-all duration-200 ${
+                            draggedCardId === "alerts"
+                              ? "opacity-30 border-amber-400 border-dashed scale-[0.98] bg-amber-50/20"
+                              : "border-neutral-200/80 hover:border-neutral-300"
+                          } ${
+                            dragOverCardId === "alerts" && draggedCardId !== "alerts"
+                              ? "ring-2 ring-neutral-900 border-neutral-900 shadow-lg scale-[1.01]"
+                              : ""
+                          }`}
+                        >
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="cursor-grab active:cursor-grabbing p-1 hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-700 transition-colors flex items-center shrink-0"
+                                  title="Maintenir et glisser pour réordonner cette carte"
+                                >
+                                  <GripVertical className="w-4 h-4" />
+                                </div>
+                                <span className="p-1.5 bg-neutral-900 text-white rounded-lg">
+                                  <Coins className="w-4 h-4" />
+                                </span>
+                                <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
+                                  Alertes de Finance
+                                </h3>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-0.5 mr-1">
+                                  <button
+                                    onClick={() => moveCardInOrder("alerts", "left")}
+                                    disabled={cardIndex === 0}
+                                    title="Déplacer vers la gauche"
+                                    className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                  >
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => moveCardInOrder("alerts", "right")}
+                                    disabled={cardIndex === dashboardCardOrder.length - 1}
+                                    title="Déplacer vers la droite"
+                                    className="p-1 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                  >
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                                {Object.keys(snoozedAlerts).length > 0 && (
+                                  <button
+                                    onClick={() => {
+                                      setSnoozedAlerts({});
+                                      triggerToast("Toutes les alertes ont été réactivées !", "success");
+                                    }}
+                                    className="text-[9px] text-indigo-600 hover:text-indigo-800 font-bold underline cursor-pointer transition-all"
+                                    title="Réactiver toutes les alertes masquées temporairement"
+                                  >
+                                    Réactiver ({Object.keys(snoozedAlerts).length})
+                                  </button>
+                                )}
+                                <span className="text-[10px] font-bold text-neutral-500 bg-neutral-50 border border-neutral-150 px-2 py-0.5 rounded-full font-mono">
+                                  Attention
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Real-time Alerts */}
+                            <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+                              {(() => {
+                                const alerts: React.ReactNode[] = [];
+                                const nowMs = Date.now();
+
+                                // 1. Low balances
+                                accounts.forEach(acc => {
+                                  const alertId = `acc-alert-${acc.id}`;
+                                  if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
+
+                                  if (acc.balance < 1000) {
+                                    alerts.push(
+                                      <div 
+                                        key={alertId}
+                                        onClick={() => handleNavigateToModule("comptes")}
+                                        className="group relative p-3 bg-red-50 border border-red-100 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-red-50/80 transition-all"
+                                      >
+                                        <div className="flex gap-2.5">
+                                          <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                                          <div className="space-y-0.5">
+                                            <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Trésorerie Basse</span>
+                                            <p className="text-xs font-bold text-neutral-850">
+                                              Compte {acc.name} est à {acc.balance.toLocaleString("fr-FR")} {acc.currency}.
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSnoozeAlert(alertId);
+                                          }}
+                                          title="Masquer pendant 24h"
+                                          className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-red-600 hover:border-red-200 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0"
+                                        >
+                                          <Clock className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    );
+                                  }
+                                });
+
+                                // 2. Exceeded Budgets
+                                budgets.forEach((b, index) => {
+                                  if (b.spentAmount > b.limitAmount) {
+                                    const alertId = `budget-alert-${b.category}`;
+                                    if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
+
+                                    alerts.push(
+                                      <motion.div 
+                                        key={alertId}
+                                        onClick={() => handleNavigateToModule("budgets")}
+                                        className="group relative p-3 bg-red-50/70 border border-red-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-red-55/90 transition-all shadow-3xs"
+                                        animate={{
+                                          scale: [1, 1.015, 1],
+                                          boxShadow: [
+                                            "0px 0px 0px rgba(239, 68, 68, 0)",
+                                            "0px 0px 8px rgba(239, 68, 68, 0.25)",
+                                            "0px 0px 0px rgba(239, 68, 68, 0)"
+                                          ]
+                                        }}
+                                        transition={{
+                                          duration: 2,
+                                          repeat: Infinity,
+                                          ease: "easeInOut"
+                                        }}
+                                      >
+                                        <div className="flex gap-2.5">
+                                          <div className="relative shrink-0 mt-0.5">
+                                            <AlertCircle className="w-4 h-4 text-red-600" />
+                                            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                                            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-600" />
+                                          </div>
+                                          <div className="space-y-0.5">
+                                            <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Budget Dépassé</span>
+                                            <p className="text-xs font-bold text-neutral-850 leading-snug">
+                                              Enveloppe {b.category} : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSnoozeAlert(alertId);
+                                          }}
+                                          title="Masquer pendant 24h"
+                                          className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-red-600 hover:border-red-200 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0"
+                                        >
+                                          <Clock className="w-3.5 h-3.5" />
+                                        </button>
+                                      </motion.div>
+                                    );
+                                  } else if (b.spentAmount >= b.limitAmount * 0.9) {
+                                    const alertId = `budget-alert-warning-${b.category}`;
+                                    if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
+
+                                    alerts.push(
+                                      <motion.div 
+                                        key={alertId}
+                                        onClick={() => handleNavigateToModule("budgets")}
+                                        className="group relative p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-amber-55/90 transition-all shadow-3xs"
+                                        animate={{
+                                          scale: [1, 1.015, 1],
+                                          boxShadow: [
+                                            "0px 0px 0px rgba(245, 158, 11, 0)",
+                                            "0px 0px 8px rgba(245, 158, 11, 0.25)",
+                                            "0px 0px 0px rgba(245, 158, 11, 0)"
+                                          ]
+                                        }}
+                                        transition={{
+                                          duration: 2.2,
+                                          repeat: Infinity,
+                                          ease: "easeInOut"
+                                        }}
+                                      >
+                                        <div className="flex gap-2.5">
+                                          <div className="relative shrink-0 mt-0.5">
+                                            <AlertCircle className="w-4 h-4 text-amber-600" />
+                                            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-600" />
+                                          </div>
+                                          <div className="space-y-0.5">
+                                            <span className="text-[10px] font-black text-amber-800 uppercase block tracking-wider font-mono">Budget Critique</span>
+                                            <p className="text-xs font-bold text-neutral-850 leading-snug">
+                                              Enveloppe {b.category} à 90%+ : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSnoozeAlert(alertId);
+                                          }}
+                                          title="Snoozer pendant 24h"
+                                          className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-250 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0 animate-in fade-in"
+                                        >
+                                          <Clock className="w-3.5 h-3.5" />
+                                        </button>
+                                      </motion.div>
+                                    );
+                                  }
+                                });
+
+                                // 3. Imminent Subscriptions
+                                const today = new Date();
+                                abonnements.forEach(ab => {
+                                  const alertId = `sub_${ab.id}`;
+                                  if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
+
+                                  if (ab.status === "Actif" && ab.nextBillingDate) {
+                                    const bDate = new Date(ab.nextBillingDate);
+                                    const diffDays = Math.ceil((bDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+                                    if (diffDays >= 0 && diffDays <= 7) {
+                                      alerts.push(
+                                        <div 
+                                          key={alertId}
+                                          onClick={() => handleNavigateToModule("abonnements")}
+                                          className="group relative p-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer transition-all"
+                                        >
+                                          <div className="flex gap-2.5">
+                                            <Bell className="w-4 h-4 text-neutral-600 shrink-0 mt-0.5" />
+                                            <div className="space-y-0.5">
+                                              <span className="text-[10px] font-black text-neutral-500 uppercase block tracking-wider font-mono">Facture Imminente</span>
+                                              <p className="text-xs font-bold text-neutral-850 leading-snug">
+                                                {ab.serviceName} prélevé de {ab.costMonthly} MAD dans {diffDays} jours.
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleSnoozeAlert(alertId);
+                                            }}
+                                            title="Snoozer pendant 24h"
+                                            className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-250 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0 animate-in fade-in"
+                                          >
+                                            <Clock className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      );
+                                    }
+                                  }
+                                });
+
+                                if (alerts.length === 0) {
+                                  return (
+                                    <div className="flex flex-col items-center justify-center text-center py-8 px-4 space-y-3 bg-emerald-50/20 border border-emerald-100/60 rounded-2xl">
+                                      <div className="relative w-16 h-16 flex items-center justify-center">
+                                        <div className="absolute inset-0 rounded-full bg-emerald-50 border border-emerald-100/50 scale-95" />
+                                        <svg 
+                                          id="svg-empty-alerts"
+                                          className="w-10 h-10 text-emerald-600 relative z-10" 
+                                          viewBox="0 0 24 24" 
+                                          fill="none" 
+                                          stroke="currentColor" 
+                                          strokeWidth="1.5" 
+                                          strokeLinecap="round" 
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" className="stroke-emerald-200" fill="url(#shieldGrad)" />
+                                          <path d="m9 12 2 2 4-4" className="stroke-emerald-500" strokeWidth="2.5" />
+                                          <defs>
+                                            <linearGradient id="shieldGrad" x1="0" y1="0" x2="0" y2="1">
+                                              <stop offset="0%" stopColor="#ecfdf5" stopOpacity="0.4" />
+                                              <stop offset="100%" stopColor="#d1fae5" stopOpacity="0.8" />
+                                            </linearGradient>
+                                          </defs>
+                                        </svg>
+                                        <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <p className="text-xs font-black text-emerald-950 uppercase tracking-wider">Tout est au vert !</p>
+                                        <p className="text-[10px] text-emerald-600 font-medium max-w-[200px] mx-auto leading-relaxed">
+                                          Aucun budget dépassé ou facture urgente détectée. Votre santé financière est optimale.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                return alerts;
+                              })()}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => handleNavigateToModule("finance_dash")}
+                            className="w-full py-2.5 mt-4 text-center bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer"
+                          >
+                            Ouvrir le Tableau de bord Financier
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })}
                 </div>
-
               </div>
 
               {/* Weekly Category Habits Stats Gauges */}
