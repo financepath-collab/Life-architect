@@ -68,6 +68,7 @@ import SkinTrackerSection from "./components/SkinTrackerSection";
 import PerformanceCorrelations from "./components/PerformanceCorrelations";
 import MediaHubSection from "./components/MediaHubSection";
 import FormationsSection from "./components/FormationsSection";
+import MediaAndAcademySection from "./components/MediaAndAcademySection";
 import CareerSection from "./components/CareerSection";
 import ProjectFoldersSection from "./components/ProjectFoldersSection";
 import AlertsBanner from "./components/AlertsBanner";
@@ -2688,8 +2689,7 @@ export default function App() {
       icon: FolderKanban,
       items: [
         { id: "projets_dash", label: "Dashboard Projets & Académie", icon: LayoutDashboard, desc: "Formations, projets médias et calendrier de publication." },
-        { id: "channels", label: "Projets Médias & Canaux", icon: Tv, desc: "Statistiques et fréquences de publication de vos canaux de communication." },
-        { id: "formations", label: "Formations & Académie", icon: GraduationCap, desc: "Suivi de vos formations suivies, cours et l'Académie THE MA CIRCLE." },
+        { id: "channels", label: "Projets Médias, Canaux & Académie", icon: Tv, desc: "Canaux de diffusion, statistiques d'audience et l'Académie THE MA CIRCLE." },
         { id: "editorial_calendar", label: "Calendrier de Projets", icon: Calendar, desc: "Calendrier de vos événements, projets de communication et publications." },
         { id: "links", label: "Liens Favoris", icon: Link2, desc: "Signets rapides vers vos ressources de marché bourse." }
       ]
@@ -5030,8 +5030,16 @@ export default function App() {
                     />
                   ) : ["career_dash", "career_mobility", "career_pipeline", "career_sites", "career_companies", "career_skills", "career_certificates"].includes(activeMenu) ? (
                     <CareerSection activeTab={activeMenu.replace("career_", "") as any} onNavigate={handleMenuClick} />
-                  ) : activeMenu === "formations" ? (
-                    <FormationsSection formations={formations} setFormations={setFormations} folders={folders} setFolders={setFolders} hideTabs={false} />
+                  ) : (activeMenu === "channels" || activeMenu === "formations") ? (
+                    <MediaAndAcademySection
+                      channels={channels}
+                      setChannels={setChannels}
+                      formations={formations}
+                      setFormations={setFormations}
+                      folders={folders}
+                      setFolders={setFolders}
+                      initialTab={activeMenu === "formations" ? "academy" : "channels"}
+                    />
                   ) : activeMenu === "monthly_goals" ? (
                     <MonthlyGoalsSection 
                       goals={monthlyGoals} 

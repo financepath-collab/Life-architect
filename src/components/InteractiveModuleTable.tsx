@@ -414,17 +414,29 @@ export default function InteractiveModuleTable({
 
   // Real-time Category Breakdown calculation for Pie Chart
   const categoryPieData = useMemo(() => {
-    if (!processedData || processedData.length === 0) return { items: [], total: 0 };
+    if (!processedData || processedData.length === 0) return { items: [], total: 0, unit: currencySymbol, chartTitle: "Répartition des Données" };
 
     const firstItem = processedData[0];
-    if (!firstItem) return { items: [], total: 0 };
+    if (!firstItem) return { items: [], total: 0, unit: currencySymbol, chartTitle: "Répartition des Données" };
 
-    // Find numerical key (spentAmount, spent, amount, montant, limitAmount, costMonthly, etc.)
-    const possibleNumKeys = ["spentAmount", "spent", "amount", "montant", "costMonthly", "limitAmount", "cost", "price", "prix", "balance"];
+    // Find numerical key (spentAmount, spent, amount, montant, limitAmount, costMonthly, subscriberCount, etc.)
+    const possibleNumKeys = ["subscriberCount", "subscribers", "spentAmount", "spent", "amount", "montant", "costMonthly", "limitAmount", "cost", "price", "prix", "balance"];
     let numKey = possibleNumKeys.find(k => k in firstItem);
     if (!numKey) {
       const numCol = columns.find(c => c.type === "number");
       if (numCol) numKey = numCol.key;
+    }
+
+    // Determine unit and title based on numKey or title
+    let unit = currencySymbol;
+    let chartTitle = "Répartition par Catégorie";
+
+    if (numKey === "subscriberCount" || numKey === "subscribers" || title.toLowerCase().includes("canal") || title.toLowerCase().includes("médias") || title.toLowerCase().includes("media")) {
+      unit = "Abonnés";
+      chartTitle = "Répartition de l'Audience par Canal";
+    } else if (title.toLowerCase().includes("budget") || title.toLowerCase().includes("dépense") || title.toLowerCase().includes("achat") || title.toLowerCase().includes("compte") || title.toLowerCase().includes("financ")) {
+      unit = currencySymbol;
+      chartTitle = "Répartition des Dépenses par Catégorie";
     }
 
     // Find category key
@@ -435,7 +447,7 @@ export default function InteractiveModuleTable({
       if (textCol) catKey = textCol.key;
     }
 
-    if (!numKey || !catKey) return { items: [], total: 0 };
+    if (!numKey || !catKey) return { items: [], total: 0, unit, chartTitle };
 
     const categoryTotals: { [key: string]: number } = {};
     let totalAmount = 0;
@@ -704,7 +716,7 @@ export default function InteractiveModuleTable({
               </div>
               <div>
                 <h3 className="text-xs font-black uppercase tracking-wider text-white font-mono flex items-center gap-2 flex-wrap">
-                  Répartition des Dépenses par Catégorie
+                  {categoryPieData.chartTitle}
                   <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded text-[10px] normal-case font-mono font-bold">
                     Temps réel
                   </span>
@@ -717,7 +729,7 @@ export default function InteractiveModuleTable({
 
             <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
               <div className="px-3 py-1.5 bg-neutral-800/90 border border-neutral-700/80 rounded-xl text-xs font-mono font-bold text-neutral-200">
-                Total filtré : <span className="text-emerald-400 font-extrabold">{categoryPieData.total.toLocaleString("fr-FR")} {currencySymbol}</span>
+                Total filtré : <span className="text-emerald-400 font-extrabold">{categoryPieData.total.toLocaleString("fr-FR")} {categoryPieData.unit}</span>
               </div>
               <button
                 onClick={() => setShowPieChart(false)}
@@ -749,9 +761,9 @@ export default function InteractiveModuleTable({
                               <span className="font-bold text-white text-sm">{data.name}</span>
                             </div>
                             <div className="pt-1.5 border-t border-neutral-800/80 flex items-center justify-between gap-4 font-mono">
-                              <span className="text-neutral-400">Montant :</span>
+                              <span className="text-neutral-400">Total :</span>
                               <span className="font-bold text-emerald-400">
-                                {data.value.toLocaleString("fr-FR")} {currencySymbol}
+                                {data.value.toLocaleString("fr-FR")} {categoryPieData.unit}
                               </span>
                             </div>
                             <div className="flex items-center justify-between gap-4 font-mono">
@@ -792,13 +804,13 @@ export default function InteractiveModuleTable({
               {/* Center Donut Badge */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
                 <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-neutral-400">
-                  {categoryPieData.items.length} Catégorie{categoryPieData.items.length > 1 ? "s" : ""}
+                  {categoryPieData.items.length} {categoryPieData.unit === "Abonnés" ? "Canaux" : "Catégories"}
                 </span>
                 <span className="text-base font-black font-mono text-white mt-0.5">
                   {categoryPieData.total.toLocaleString("fr-FR")}
                 </span>
                 <span className="text-[10px] font-bold text-emerald-400 font-mono">
-                  {currencySymbol}
+                  {categoryPieData.unit}
                 </span>
               </div>
             </div>

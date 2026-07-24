@@ -150,11 +150,14 @@ export default function RequiredMonthlySavingsCard({
 
     const estimatedNetSurplus = Math.max(0, totalIncome - (totalSubsCost + totalExpenses));
 
+    const requiredSavingsRate = totalIncome > 0 ? (calculationData.totalMonthlyRequired / totalIncome) * 100 : 0;
     const gap = calculationData.totalMonthlyRequired - estimatedNetSurplus;
     const isCoverageFull = estimatedNetSurplus >= calculationData.totalMonthlyRequired;
 
     return {
+      totalIncome,
       estimatedNetSurplus,
+      requiredSavingsRate,
       gap,
       isCoverageFull,
       coveragePct: calculationData.totalMonthlyRequired > 0 
@@ -215,6 +218,13 @@ export default function RequiredMonthlySavingsCard({
               </h4>
               <span className="text-xs font-bold text-indigo-200">/ mois</span>
             </div>
+            {monthlyCapacityStats.totalIncome > 0 && (
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-xs font-mono font-bold">
+                <span>Taux d'Épargne Requis :</span>
+                <span className="text-white font-black">{monthlyCapacityStats.requiredSavingsRate.toFixed(1)}%</span>
+                <span className="text-[10px] text-indigo-300 font-sans font-normal">(du revenu)</span>
+              </div>
+            )}
           </div>
           <p className="text-[11px] text-neutral-300 font-medium mt-3 border-t border-white/10 pt-2.5">
             Necessaire pour financer simultanément vos <strong className="text-white font-bold">{calculationData.goalCount} objectifs</strong>.
