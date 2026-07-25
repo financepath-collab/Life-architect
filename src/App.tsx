@@ -1126,7 +1126,24 @@ export default function App() {
 
   const [channels, setChannels] = useState<ChannelInfo[]>(() => {
     const saved = localStorage.getItem("mp_channels_v2");
-    return saved ? JSON.parse(saved) : INITIAL_CHANNELS;
+    if (saved) {
+      const parsed: ChannelInfo[] = JSON.parse(saved);
+      // Merge initial ideas into existing channels like "The Moroccan CFO"
+      return parsed.map(c => {
+        const initChan = INITIAL_CHANNELS.find(ic => ic.name === c.name || ic.id === c.id);
+        if (initChan && initChan.ideas) {
+          const currentIdeas = c.ideas || [];
+          const missingIdeas = initChan.ideas.filter(
+            initIdea => !currentIdeas.some(i => i.id === initIdea.id || i.title.toLowerCase() === initIdea.title.toLowerCase())
+          );
+          if (missingIdeas.length > 0) {
+            return { ...c, ideas: [...currentIdeas, ...missingIdeas] };
+          }
+        }
+        return c;
+      });
+    }
+    return INITIAL_CHANNELS;
   });
 
   const [wishList, setWishList] = useState<WishListItem[]>(() => {
@@ -1167,7 +1184,18 @@ export default function App() {
 
   const [editorialEvents, setEditorialEvents] = useState<EditorialEvent[]>(() => {
     const saved = localStorage.getItem("mp_editorial_events_v2");
-    return saved ? JSON.parse(saved) : INITIAL_EDITORIAL_EVENTS;
+    if (saved) {
+      const parsed: EditorialEvent[] = JSON.parse(saved);
+      const merged = [...parsed];
+      INITIAL_EDITORIAL_EVENTS.forEach(initEv => {
+        const exists = parsed.some(e => e.id === initEv.id || e.title.toLowerCase() === initEv.title.toLowerCase());
+        if (!exists) {
+          merged.push(initEv);
+        }
+      });
+      return merged;
+    }
+    return INITIAL_EDITORIAL_EVENTS;
   });
 
   const [folders, setFolders] = useState<ProjectFolder[]>(() => {

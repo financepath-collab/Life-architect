@@ -273,7 +273,12 @@ export const INITIAL_CHANNELS: ChannelInfo[] = [
     ],
     ideas: [
       { id: "id3", title: "3 erreurs de trésorerie mortelles en PME", description: "Format court TikTok 60 secondes", status: "Prêt", deadline: "2026-07-28" },
-      { id: "id4", title: "Comment négocier son salaire de DAF au Maroc", description: "Conseils pratiques pour financiers", status: "Idée", deadline: "2026-08-10" }
+      { id: "id4", title: "Comment négocier son salaire de DAF au Maroc", description: "Conseils pratiques pour financiers", status: "Idée", deadline: "2026-08-10" },
+      { id: "cfo_idea_1", title: "Une Annuité : Définition, Calcul & Amortissement d'Emprunt", description: "Comprendre les annuités constantes, la capitalisation et le remboursement d'emprunt bancaire.", status: "Idée", deadline: "2026-08-05" },
+      { id: "cfo_idea_2", title: "Valeur Vénale : Évaluation d'Actif, Immobilier & Entreprise", description: "Comprendre la différence fondamentale entre valeur comptable nette (VCN) et valeur vénale de marché.", status: "Idée", deadline: "2026-08-12" },
+      { id: "cfo_idea_3", title: "Encours Financier & Maîtrise de la Trésorerie / BFR", description: "Gestion de l'encours client et fournisseur, réduction du BFR et prévention des impayés.", status: "Idée", deadline: "2026-08-19" },
+      { id: "cfo_idea_4", title: "Charges Fixes vs Charges Variables & Seuil de Rentabilité", description: "Calculer la Marge sur Coût Variable (MCV), le Seuil de Rentabilité (SR) et le Point Mort.", status: "Idée", deadline: "2026-08-26" },
+      { id: "cfo_idea_5", title: "Comptabilité Analytique vs Comptabilité Générale", description: "Pourquoi la compta légale obligatoire ne suffit pas et comment la compta de gestion pilote l'entreprise.", status: "Idée", deadline: "2026-09-02" }
     ],
     usefulLinks: [
       { id: "link3", title: "TikTok Ads Manager", url: "https://ads.tiktok.com", category: "Marketing" }
@@ -457,6 +462,56 @@ export const INITIAL_EDITORIAL_EVENTS: EditorialEvent[] = [
     status: "Brouillon",
     contentType: "Post Écrit",
     notes: "Post d'analyse macro-économique rapide avec infographie."
+  },
+  {
+    id: "ee_cfo_1",
+    title: "Une Annuité : Définition, Calcul & Amortissement d'Emprunt",
+    channelName: "The Moroccan CFO",
+    platform: "YouTube",
+    scheduledDate: "2026-08-05",
+    status: "Brouillon",
+    contentType: "Vidéo Longue",
+    notes: "Explication claire des annuités, valeur actuelle/future et tableau d'amortissement d'emprunt."
+  },
+  {
+    id: "ee_cfo_2",
+    title: "Valeur Vénale : Évaluation d'Actif, Immobilier & PME (VCN vs Marché)",
+    channelName: "The Moroccan CFO",
+    platform: "YouTube",
+    scheduledDate: "2026-08-12",
+    status: "Brouillon",
+    contentType: "Vidéo Longue",
+    notes: "Différence entre valeur comptable au bilan et valeur vénale. Méthodes d'évaluation d'actifs."
+  },
+  {
+    id: "ee_cfo_3",
+    title: "Encours Financier & Maîtrise de la Trésorerie / BFR",
+    channelName: "The Moroccan CFO",
+    platform: "YouTube",
+    scheduledDate: "2026-08-19",
+    status: "Brouillon",
+    contentType: "Vidéo Longue",
+    notes: "Optimisation de l'encours clients et fournisseurs pour réduire le besoin en fonds de roulement."
+  },
+  {
+    id: "ee_cfo_4",
+    title: "Charges Fixes vs Charges Variables : Seuil de Rentabilité",
+    channelName: "The Moroccan CFO",
+    platform: "YouTube",
+    scheduledDate: "2026-08-26",
+    status: "Brouillon",
+    contentType: "Vidéo Longue",
+    notes: "Calcul pratique de la Marge sur Coût Variable (MCV), du Seuil de Rentabilité et du Point Mort."
+  },
+  {
+    id: "ee_cfo_5",
+    title: "Comptabilité Analytique vs Comptabilité Générale",
+    channelName: "The Moroccan CFO",
+    platform: "YouTube",
+    scheduledDate: "2026-09-02",
+    status: "Brouillon",
+    contentType: "Vidéo Longue",
+    notes: "Comparatif entre comptabilité financière obligatoire et comptabilité de gestion/analytique."
   }
 ];
 
