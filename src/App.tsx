@@ -4876,54 +4876,58 @@ export default function App() {
                                         </button>
                                       </motion.div>
                                     );
-                                  } else if (b.spentAmount >= b.limitAmount * 0.9) {
-                                    const alertId = `budget-alert-warning-${b.category}`;
-                                    if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
+                                  } else {
+                                    const thresholdPct = b.alertThresholdPct ?? 80;
+                                    const thresholdRatio = thresholdPct / 100;
+                                    if (b.spentAmount >= b.limitAmount * thresholdRatio) {
+                                      const alertId = `budget-alert-warning-${b.category}`;
+                                      if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
 
-                                    alerts.push(
-                                      <motion.div 
-                                        key={alertId}
-                                        onClick={() => handleNavigateToModule("budgets")}
-                                        className="group relative p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-amber-55/90 transition-all shadow-3xs"
-                                        animate={{
-                                          scale: [1, 1.015, 1],
-                                          boxShadow: [
-                                            "0px 0px 0px rgba(245, 158, 11, 0)",
-                                            "0px 0px 8px rgba(245, 158, 11, 0.25)",
-                                            "0px 0px 0px rgba(245, 158, 11, 0)"
-                                          ]
-                                        }}
-                                        transition={{
-                                          duration: 2.2,
-                                          repeat: Infinity,
-                                          ease: "easeInOut"
-                                        }}
-                                      >
-                                        <div className="flex gap-2.5">
-                                          <div className="relative shrink-0 mt-0.5">
-                                            <AlertCircle className="w-4 h-4 text-amber-600" />
-                                            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                                            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-600" />
-                                          </div>
-                                          <div className="space-y-0.5">
-                                            <span className="text-[10px] font-black text-amber-800 uppercase block tracking-wider font-mono">Budget Critique</span>
-                                            <p className="text-xs font-bold text-neutral-850 leading-snug">
-                                              Enveloppe {b.category} à 90%+ : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
-                                            </p>
-                                          </div>
-                                        </div>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleSnoozeAlert(alertId);
+                                      alerts.push(
+                                        <motion.div 
+                                          key={alertId}
+                                          onClick={() => handleNavigateToModule("budgets")}
+                                          className="group relative p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-amber-55/90 transition-all shadow-3xs"
+                                          animate={{
+                                            scale: [1, 1.015, 1],
+                                            boxShadow: [
+                                              "0px 0px 0px rgba(245, 158, 11, 0)",
+                                              "0px 0px 8px rgba(245, 158, 11, 0.25)",
+                                              "0px 0px 0px rgba(245, 158, 11, 0)"
+                                            ]
                                           }}
-                                          title="Snoozer pendant 24h"
-                                          className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-250 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0 animate-in fade-in"
+                                          transition={{
+                                            duration: 2.2,
+                                            repeat: Infinity,
+                                            ease: "easeInOut"
+                                          }}
                                         >
-                                          <Clock className="w-3.5 h-3.5" />
-                                        </button>
-                                      </motion.div>
-                                    );
+                                          <div className="flex gap-2.5">
+                                            <div className="relative shrink-0 mt-0.5">
+                                              <AlertCircle className="w-4 h-4 text-amber-600" />
+                                              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                                              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-600" />
+                                            </div>
+                                            <div className="space-y-0.5">
+                                              <span className="text-[10px] font-black text-amber-800 uppercase block tracking-wider font-mono">Budget Critique ({thresholdPct}%)</span>
+                                              <p className="text-xs font-bold text-neutral-850 leading-snug">
+                                                Enveloppe {b.category} à {thresholdPct}%+ : dépensé {b.spentAmount.toLocaleString("fr-FR")} MAD / limite {b.limitAmount.toLocaleString("fr-FR")} MAD.
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleSnoozeAlert(alertId);
+                                            }}
+                                            title="Snoozer pendant 24h"
+                                            className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-250 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0 animate-in fade-in"
+                                          >
+                                            <Clock className="w-3.5 h-3.5" />
+                                          </button>
+                                        </motion.div>
+                                      );
+                                    }
                                   }
                                 });
 
@@ -5600,6 +5604,7 @@ export default function App() {
         dailyHabits={dailyHabits}
         weeklyObjectives={weeklyObjectives}
         budgets={budgets}
+        onUpdateBudgets={(updated) => setBudgets(updated)}
         epargnes={epargnes}
         abonnements={abonnements}
         stocks={stocks}

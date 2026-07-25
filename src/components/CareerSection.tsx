@@ -2168,79 +2168,219 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
           }));
         };
 
+        // Active / priority sites unvisited today for Hero banner
+        const activeTodayList = recruitmentSites.filter(s => !isVisitedOnDate(s, todayStr));
+
         return (
-          <div className="space-y-5 animate-in fade-in duration-300">
+          <div className="space-y-6 animate-in fade-in duration-300">
             
-            {/* 1. TOP METRICS HEADER */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="bg-white border border-neutral-200/90 rounded-2xl p-4 shadow-3xs space-y-1">
-                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-wider block font-mono">Portails Référencés</span>
-                <p className="text-xl font-black text-neutral-900 font-mono">{totalSites} sites</p>
-              </div>
-
-              <div className="bg-white border border-indigo-100 rounded-2xl p-4 shadow-3xs space-y-1 bg-indigo-50/20">
-                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wider block font-mono">Visités Aujourd'hui</span>
-                <p className="text-xl font-black text-indigo-700 font-mono">{todayVisitedCount} / {totalSites}</p>
-              </div>
-
-              <div className="bg-white border border-emerald-100 rounded-2xl p-4 shadow-3xs space-y-1 bg-emerald-50/20">
-                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block font-mono">Discipline Quotidienne</span>
-                <div className="flex items-center gap-2">
-                  <p className="text-xl font-black text-emerald-700 font-mono">{visitRate}%</p>
-                  <div className="flex-1 bg-emerald-100 rounded-full h-2 overflow-hidden">
-                    <div className="bg-emerald-500 h-2 rounded-full transition-all duration-300" style={{ width: `${visitRate}%` }} />
+            {/* 1. HERO - ACTIVE PORTALS BANNER (MEDIAHUB / BOOKS & MOVIES STYLE) */}
+            <div className="bg-neutral-900 text-white rounded-3xl p-6 shadow-md border border-neutral-800 relative overflow-hidden">
+              <div className="absolute top-[-30%] right-[-10%] w-[45%] h-[160%] rounded-full bg-indigo-900 blur-3xl pointer-events-none opacity-40" />
+              
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[10px] font-black tracking-widest text-neutral-300 uppercase font-mono">Routine Recrutement Quotidienne</span>
                   </div>
+                  <span className="text-xs text-neutral-400 font-mono">
+                    {todayVisitedCount} / {totalSites} sites visités aujourd'hui ({visitRate}%)
+                  </span>
                 </div>
-              </div>
 
-              <div className="bg-white border border-neutral-200/90 rounded-2xl p-4 shadow-3xs space-y-1">
-                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-wider block font-mono">Pays Ciblés</span>
-                <p className="text-xl font-black text-neutral-900 font-mono">{uniqueCountries.length} zones</p>
+                {activeTodayList.length === 0 ? (
+                  <div className="py-6 text-center text-neutral-300 max-w-md mx-auto space-y-2">
+                    <CheckCircle className="w-10 h-10 mx-auto text-emerald-400" />
+                    <p className="text-xs font-bold text-white">
+                      Félicitations ! Vous avez consulté l'ensemble de vos portails cibles aujourd'hui.
+                    </p>
+                    <p className="text-[10px] text-neutral-400">
+                      Votre discipline de recherche est à 100%. Revenez demain pour maintenir votre série !
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-neutral-300">Portails à consulter en priorité aujourd'hui :</span>
+                      <span className="text-[10px] text-indigo-400 font-mono font-bold">{activeTodayList.length} en attente</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {activeTodayList.slice(0, 4).map(site => {
+                        // Calculate 7-day visit count
+                        const visited7Count = last7Days.filter(d => isVisitedOnDate(site, d.dateStr)).length;
+                        const pct7 = Math.round((visited7Count / 7) * 100);
+
+                        return (
+                          <div key={site.id} className="bg-neutral-800/60 border border-neutral-700/60 rounded-2xl p-4 space-y-3 transition-all hover:bg-neutral-800/90">
+                            <div className="flex justify-between items-start gap-3">
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[9px] bg-indigo-500/30 text-indigo-200 border border-indigo-500/40 px-2 py-0.5 rounded-md font-bold font-mono uppercase">
+                                    {site.country === "Germany" ? "Allemagne" : site.country || "International"}
+                                  </span>
+                                  {site.identifiant && site.identifiant !== "N/A" && (
+                                    <span className="text-[9px] bg-neutral-700 text-neutral-300 px-1.5 py-0.5 rounded font-mono">
+                                      ID: {site.identifiant}
+                                    </span>
+                                  )}
+                                </div>
+                                <h4 className="text-xs md:text-sm font-black text-white leading-snug truncate" title={site.name}>
+                                  {site.name}
+                                </h4>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <a
+                                  href={site.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 bg-neutral-700 hover:bg-indigo-600 text-neutral-200 hover:text-white rounded-lg transition-colors"
+                                  title={`Ouvrir ${site.name}`}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleVisitDate(site.id, todayStr)}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1 shadow-3xs cursor-pointer"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Valider Visite</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Streak progress bar */}
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between items-center text-[10px] font-mono text-neutral-400">
+                                <span>Régularité 7J : {visited7Count}/7 jours ({pct7}%)</span>
+                                <span>Aujourd'hui : Non visité</span>
+                              </div>
+                              <div className="w-full bg-neutral-700 rounded-full h-1.5 overflow-hidden">
+                                <div className="bg-indigo-500 h-1.5 rounded-full transition-all duration-300" style={{ width: `${pct7}%` }} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* 2. CONTROLS BAR */}
-            <div className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-3xs space-y-3">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* 2. TOP METRICS HEADER CARDS */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">Portails Référencés</span>
+                  <p className="text-base font-extrabold font-mono text-neutral-950 block">{totalSites} sites</p>
+                </div>
+                <div className="p-2.5 bg-neutral-50 rounded-xl text-neutral-950 border border-neutral-100 shrink-0">
+                  <Globe className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">Visités Aujourd'hui</span>
+                  <p className="text-base font-extrabold font-mono text-indigo-600 block">{todayVisitedCount} / {totalSites}</p>
+                </div>
+                <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100 shrink-0">
+                  <CheckCircle className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">Discipline Quotidienne</span>
+                  <div className="flex items-center gap-2">
+                    <p className="text-base font-extrabold font-mono text-emerald-600 block">{visitRate}%</p>
+                  </div>
+                </div>
+                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 shrink-0">
+                  <Activity className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">Pays Ciblés</span>
+                  <p className="text-base font-extrabold font-mono text-neutral-950 block">{uniqueCountries.length} zones</p>
+                </div>
+                <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 shrink-0">
+                  <Building2 className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+
+            {/* 3. CONTROLS BAR (BOOKS & MOVIES STYLE) */}
+            <div className="bg-white border border-neutral-200/80 rounded-3xl p-5 shadow-xs space-y-4">
+              <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 pb-4 border-b border-neutral-100">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-indigo-600" />
-                  <h3 className="text-xs font-black text-neutral-950 uppercase tracking-tight">
+                  <h3 className="text-xs font-black text-neutral-950 uppercase tracking-tight font-mono">
                     Portails & Plateformes de Recrutement Cibles
                   </h3>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* View Mode Toggle */}
-                  <div className="bg-neutral-100 p-1 rounded-xl flex items-center gap-1 border border-neutral-200/80">
+                <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-between xl:justify-end">
+                  {/* View Mode Toggle (Tableau vs Cartes) */}
+                  <div className="flex items-center gap-1 bg-neutral-100/80 p-1 rounded-2xl border border-neutral-200/50">
                     <button
+                      type="button"
                       onClick={() => setSiteViewMode("grid")}
-                      className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                         siteViewMode === "grid"
-                          ? "bg-white text-neutral-900 shadow-3xs font-extrabold"
-                          : "text-neutral-500 hover:text-neutral-900"
+                          ? "bg-neutral-950 text-white shadow-xs"
+                          : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
                       }`}
-                      title="Vue Grille / Cartes"
+                      title="Vue Cartes (Grille)"
                     >
                       <LayoutGrid className="w-3.5 h-3.5" />
-                      <span className="text-[11px] hidden sm:inline">Cartes</span>
+                      <span>Cartes</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => setSiteViewMode("table")}
-                      className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                         siteViewMode === "table"
-                          ? "bg-white text-neutral-900 shadow-3xs font-extrabold"
-                          : "text-neutral-500 hover:text-neutral-900"
+                          ? "bg-neutral-950 text-white shadow-xs"
+                          : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
                       }`}
-                      title="Vue Tableau Synthétique"
+                      title="Vue Tableau synthétique"
                     >
                       <List className="w-3.5 h-3.5" />
-                      <span className="text-[11px] hidden sm:inline">Tableau</span>
+                      <span>Tableau</span>
                     </button>
                   </div>
 
+                  {/* Search Input */}
+                  <div className="relative w-full sm:w-60">
+                    <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Rechercher portail, mot-clé..."
+                      value={siteSearch}
+                      onChange={(e) => setSiteSearch(e.target.value)}
+                      className="w-full bg-neutral-50 hover:bg-neutral-100/80 border border-neutral-200 rounded-xl pl-9 pr-8 py-2 text-xs font-bold text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white transition-all"
+                    />
+                    {siteSearch && (
+                      <button 
+                        onClick={() => setSiteSearch("")} 
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-900"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Add New Portal */}
                   <button
                     onClick={() => setShowSiteForm(true)}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer select-none shadow-3xs"
+                    className="flex items-center gap-1.5 bg-neutral-950 hover:bg-neutral-800 text-white px-4 py-2 rounded-xl text-xs font-black transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Nouveau portail</span>
@@ -2248,81 +2388,241 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                 </div>
               </div>
 
-              {/* Filters & Search */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-neutral-100">
-                {/* Country Filter Pills */}
-                <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
-                  {["Tous", "Maroc", "France", "Canada", "Suisse", "Germany", "Worldwide"].map(countryKey => {
-                    const label = countryKey === "Worldwide" ? "International" : countryKey === "Germany" ? "Allemagne" : countryKey;
-                    const count = countryKey === "Tous" 
-                      ? recruitmentSites.length 
-                      : recruitmentSites.filter(s => s.country === countryKey).length;
-                    const isActive = siteCountryFilter === countryKey;
+              {/* Country Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full pb-1 scrollbar-none">
+                {["Tous", "Maroc", "France", "Canada", "Suisse", "Germany", "Worldwide"].map(countryKey => {
+                  const label = countryKey === "Worldwide" ? "International" : countryKey === "Germany" ? "Allemagne" : countryKey;
+                  const count = countryKey === "Tous" 
+                    ? recruitmentSites.length 
+                    : recruitmentSites.filter(s => s.country === countryKey).length;
+                  const isActive = siteCountryFilter === countryKey;
 
-                    return (
-                      <button
-                        key={countryKey}
-                        onClick={() => setSiteCountryFilter(countryKey)}
-                        className={`text-[11px] font-bold px-2.5 py-1 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                          isActive
-                            ? "bg-neutral-900 text-white font-extrabold shadow-3xs"
-                            : "bg-neutral-50 hover:bg-neutral-100 text-neutral-600 border border-neutral-200/60"
-                        }`}
-                      >
-                        <span>{label}</span>
-                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full ${
-                          isActive ? "bg-neutral-700 text-white" : "bg-neutral-200 text-neutral-700"
-                        }`}>
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Search Box */}
-                <div className="relative w-full sm:w-64">
-                  <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Rechercher portail, mot-clé..."
-                    value={siteSearch}
-                    onChange={(e) => setSiteSearch(e.target.value)}
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-8 pr-3 py-1 text-xs font-sans focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
+                  return (
+                    <button
+                      key={countryKey}
+                      onClick={() => setSiteCountryFilter(countryKey)}
+                      className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                        isActive
+                          ? "bg-neutral-950 text-white font-black shadow-xs"
+                          : "bg-neutral-100/80 hover:bg-neutral-200/80 text-neutral-600 border border-neutral-200/60"
+                      }`}
+                    >
+                      <span>{label}</span>
+                      <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full ${
+                        isActive ? "bg-neutral-700 text-white" : "bg-neutral-200 text-neutral-700"
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* 3. PORTALS CONTENT DISPLAY */}
+            {/* 4. MEDIAHUB FORMATTED CONTENT DISPLAY (TABLE OR GRID) */}
             {filteredSites.length === 0 ? (
-              <div className="bg-white border border-neutral-200 rounded-2xl p-10 text-center space-y-2">
-                <p className="text-xs font-bold text-neutral-500">Aucun portail trouvé pour ces filtres.</p>
-                <p className="text-[11px] text-neutral-400">Cliquez sur "Nouveau portail" pour ajouter un site de recherche.</p>
+              <div className="text-center py-16 text-neutral-400 italic bg-neutral-50/50 rounded-3xl border border-dashed border-neutral-200 font-medium text-xs">
+                Aucun portail de recrutement ne correspond à vos critères.
               </div>
-            ) : siteViewMode === "grid" ? (
-              /* GRID CARDS VIEW (ELEGANT EXECUTIVE STYLE) */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ) : siteViewMode === "table" ? (
+              /* TABLE VIEW (MEDIAMUB / BOOKS & MOVIES STYLE) */
+              <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 shadow-3xs bg-white">
+                <table className="w-full text-left border-collapse font-sans text-xs min-w-[950px]">
+                  <thead>
+                    <tr className="bg-neutral-50/80 border-b border-neutral-200/80 text-neutral-500 font-extrabold uppercase tracking-wider text-[10px] font-mono">
+                      <th className="py-3 px-4">Portail / Plateforme</th>
+                      <th className="py-3 px-4 w-32">Zone / Pays</th>
+                      <th className="py-3 px-4">Identifiant & Mots-clés</th>
+                      <th className="py-3 px-4 w-48">Discipline & Série 7J</th>
+                      <th className="py-3 px-4 w-36 text-center">Statut Visite</th>
+                      <th className="py-3 px-4 text-right w-24">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {filteredSites.map((site) => {
+                      const visitedToday = isVisitedOnDate(site, todayStr);
+                      const visited7Count = last7Days.filter(d => isVisitedOnDate(site, d.dateStr)).length;
+                      const pct7 = Math.round((visited7Count / 7) * 100);
+
+                      const getCountryBadgeStyle = (country?: string) => {
+                        switch (country) {
+                          case "France": return "bg-indigo-50 text-indigo-700 border-indigo-200/80";
+                          case "Maroc": return "bg-emerald-50 text-emerald-700 border-emerald-200/80";
+                          case "Canada": return "bg-rose-50 text-rose-700 border-rose-200/80";
+                          case "Suisse": return "bg-purple-50 text-purple-700 border-purple-200/80";
+                          case "Germany": return "bg-amber-50 text-amber-700 border-amber-200/80";
+                          default: return "bg-neutral-100 text-neutral-700 border-neutral-200";
+                        }
+                      };
+
+                      return (
+                        <tr key={site.id} className="hover:bg-neutral-50/70 transition-colors group">
+                          {/* Title & Icon Avatar */}
+                          <td className="py-3.5 px-4 font-black text-neutral-900 max-w-[280px]">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                visitedToday ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700"
+                              }`}>
+                                <Globe className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <a
+                                  href={site.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-extrabold text-xs text-neutral-900 hover:text-indigo-600 transition-colors flex items-center gap-1 truncate"
+                                  title={site.name}
+                                >
+                                  <span className="truncate">{site.name}</span>
+                                  <ExternalLink className="w-3 h-3 text-neutral-400 shrink-0" />
+                                </a>
+                                {site.notes && (
+                                  <p className="text-[10.5px] text-neutral-500 font-normal truncate max-w-[220px]" title={site.notes}>
+                                    {site.notes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Country Badge */}
+                          <td className="py-3.5 px-4">
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border uppercase tracking-wider font-mono ${getCountryBadgeStyle(site.country)}`}>
+                              {site.country === "Germany" ? "Allemagne" : site.country || "International"}
+                            </span>
+                          </td>
+
+                          {/* ID & Keywords */}
+                          <td className="py-3.5 px-4 space-y-1">
+                            {site.identifiant && site.identifiant !== "N/A" && (
+                              <span className="inline-block text-[10px] font-mono font-bold text-neutral-600 bg-neutral-100 px-2 py-0.5 rounded-md">
+                                ID: {site.identifiant}
+                              </span>
+                            )}
+                            {site.keywords && site.keywords.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {site.keywords.slice(0, 3).map((kw, idx) => (
+                                  <span key={idx} className="text-[9px] bg-indigo-50 text-indigo-700 border border-indigo-100 px-1.5 py-0.2 rounded font-mono font-bold">
+                                    #{kw}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* 7-Day Streak & Meter */}
+                          <td className="py-3.5 px-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-[10px] font-mono font-bold">
+                                <span className="text-neutral-900">{pct7}% régulier</span>
+                                <span className="text-neutral-400">{visited7Count}/7 j</span>
+                              </div>
+                              <div className="w-full bg-neutral-150 rounded-full h-1.5 overflow-hidden">
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-300 ${
+                                    pct7 >= 80 ? "bg-emerald-500" : pct7 >= 40 ? "bg-indigo-600" : "bg-amber-500"
+                                  }`} 
+                                  style={{ width: `${pct7}%` }} 
+                                />
+                              </div>
+                              <div className="flex items-center gap-0.5 pt-0.5">
+                                {last7Days.map(day => {
+                                  const checked = isVisitedOnDate(site, day.dateStr);
+                                  return (
+                                    <button
+                                      key={day.dateStr}
+                                      type="button"
+                                      onClick={() => toggleVisitDate(site.id, day.dateStr)}
+                                      className={`w-4 h-4 rounded text-[8px] font-black font-mono transition-all cursor-pointer flex items-center justify-center ${
+                                        checked
+                                          ? "bg-indigo-600 text-white font-extrabold"
+                                          : "bg-neutral-100 text-neutral-400 hover:bg-neutral-200"
+                                      } ${day.isToday ? "ring-1 ring-indigo-500" : ""}`}
+                                      title={`${day.label} ${day.num}`}
+                                    >
+                                      {day.num}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Visit Today Button Badge */}
+                          <td className="py-3.5 px-4 text-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleVisitDate(site.id, todayStr)}
+                              className={`w-full py-1.5 px-3 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-3xs ${
+                                visitedToday
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200 font-black"
+                                  : "bg-neutral-100 hover:bg-indigo-50 text-neutral-700 hover:text-indigo-700 border border-neutral-200 font-bold"
+                              }`}
+                            >
+                              {visitedToday ? (
+                                <>
+                                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Visité</span>
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 text-neutral-400" />
+                                  <span>Marquer visité</span>
+                                </>
+                              )}
+                            </button>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-3.5 px-4 text-right space-x-1">
+                            <a
+                              href={site.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 text-neutral-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors inline-block"
+                              title="Ouvrir le site"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
+                              className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors inline-block cursor-pointer"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* GRID CARDS VIEW (MEDIAHUB / BOOKS & MOVIES STYLE) */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredSites.map(site => {
                   const visitedToday = isVisitedOnDate(site, todayStr);
+                  const visited7Count = last7Days.filter(d => isVisitedOnDate(site, d.dateStr)).length;
+                  const pct7 = Math.round((visited7Count / 7) * 100);
 
                   return (
                     <div 
                       key={site.id} 
-                      className={`bg-white border rounded-2xl p-4.5 space-y-3.5 shadow-3xs transition-all flex flex-col justify-between ${
+                      className={`bg-white border rounded-3xl p-5 space-y-4 shadow-3xs transition-all flex flex-col justify-between hover:shadow-xs ${
                         visitedToday 
-                          ? "border-emerald-200 bg-emerald-50/10" 
+                          ? "border-emerald-200/90 bg-emerald-50/10" 
                           : "border-neutral-200 hover:border-neutral-300"
                       }`}
                     >
-                      <div className="space-y-2.5">
+                      <div className="space-y-3">
                         {/* Header: Title, Country Tag, External Link */}
                         <div className="flex justify-between items-start gap-2">
-                          <div className="space-y-0.5 min-w-0">
-                            <h5 className="text-sm font-extrabold text-neutral-900 truncate">{site.name}</h5>
+                          <div className="space-y-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {site.country && (
-                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700 font-mono">
+                                <span className="text-[9px] font-black uppercase px-2.5 py-0.5 rounded-md bg-neutral-100 text-neutral-700 font-mono">
                                   {site.country === "Germany" ? "Allemagne" : site.country}
                                 </span>
                               )}
@@ -2332,6 +2632,9 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                                 </span>
                               )}
                             </div>
+                            <h5 className="text-sm font-black text-neutral-950 truncate" title={site.name}>
+                              {site.name}
+                            </h5>
                           </div>
 
                           <a
@@ -2347,7 +2650,7 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
 
                         {/* Notes / Description */}
                         {site.notes && (
-                          <p className="text-[11px] text-neutral-600 font-medium leading-relaxed bg-neutral-50/60 p-2.5 rounded-xl border border-neutral-100 line-clamp-2">
+                          <p className="text-[11px] text-neutral-600 font-medium leading-relaxed bg-neutral-50/80 p-3 rounded-2xl border border-neutral-150 line-clamp-2">
                             {site.notes}
                           </p>
                         )}
@@ -2364,14 +2667,30 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                         )}
                       </div>
 
-                      {/* Bottom Section: 1-Click Check-in + 7-Day Streak Dots */}
-                      <div className="pt-3 border-t border-neutral-100 space-y-2.5">
+                      {/* Bottom Section: 1-Click Check-in + 7-Day Streak Meter & Buttons */}
+                      <div className="pt-3 border-t border-neutral-100 space-y-3">
+                        {/* Progress Meter Bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-[10px] font-mono font-bold text-neutral-500">
+                            <span>Série 7J : {visited7Count}/7 jours</span>
+                            <span className="text-neutral-900 font-extrabold">{pct7}%</span>
+                          </div>
+                          <div className="w-full bg-neutral-150 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                pct7 >= 80 ? "bg-emerald-500" : pct7 >= 40 ? "bg-indigo-600" : "bg-amber-500"
+                              }`} 
+                              style={{ width: `${pct7}%` }} 
+                            />
+                          </div>
+                        </div>
+
+                        {/* Visit Today Main Button + Trash */}
                         <div className="flex items-center justify-between gap-2">
-                          {/* Visit Today Main Button */}
                           <button
                             type="button"
                             onClick={() => toggleVisitDate(site.id, todayStr)}
-                            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            className={`flex-1 py-2.5 px-3 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-3xs ${
                               visitedToday
                                 ? "bg-emerald-600 text-white shadow-3xs"
                                 : "bg-neutral-100 hover:bg-indigo-50 text-neutral-700 hover:text-indigo-700 border border-neutral-200"
@@ -2379,12 +2698,12 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                           >
                             {visitedToday ? (
                               <>
-                                <CheckCircle className="w-3.5 h-3.5" />
+                                <CheckCircle className="w-4 h-4" />
                                 <span>Visité Aujourd'hui</span>
                               </>
                             ) : (
                               <>
-                                <RefreshCw className="w-3.5 h-3.5 text-neutral-400" />
+                                <RefreshCw className="w-4 h-4 text-neutral-400" />
                                 <span>Marquer comme visité</span>
                               </>
                             )}
@@ -2393,16 +2712,16 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                           <button
                             type="button"
                             onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
-                            className="p-2 text-neutral-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
+                            className="p-2.5 text-neutral-400 hover:text-rose-600 rounded-2xl hover:bg-rose-50 transition-colors cursor-pointer border border-transparent hover:border-rose-100"
                             title="Supprimer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
 
-                        {/* 7-Day Streak Pills */}
-                        <div className="flex items-center justify-between gap-1 pt-1">
-                          <span className="text-[8.5px] font-bold text-neutral-400 uppercase font-mono">Série 7J :</span>
+                        {/* 7-Day Interactive Streak Buttons */}
+                        <div className="flex items-center justify-between gap-1 pt-1 border-t border-neutral-100/80">
+                          <span className="text-[9px] font-bold text-neutral-400 uppercase font-mono">7J :</span>
                           <div className="flex items-center gap-1">
                             {last7Days.map(day => {
                               const checked = isVisitedOnDate(site, day.dateStr);
@@ -2411,9 +2730,9 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                                   key={day.dateStr}
                                   type="button"
                                   onClick={() => toggleVisitDate(site.id, day.dateStr)}
-                                  className={`w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-black font-mono transition-all cursor-pointer ${
+                                  className={`w-5.5 h-5.5 rounded-lg flex items-center justify-center text-[8.5px] font-black font-mono transition-all cursor-pointer ${
                                     checked
-                                      ? "bg-indigo-600 text-white font-extrabold"
+                                      ? "bg-indigo-600 text-white font-extrabold shadow-3xs"
                                       : "bg-neutral-100 text-neutral-400 hover:bg-neutral-200"
                                   } ${day.isToday ? "ring-1 ring-indigo-500" : ""}`}
                                   title={`${day.label} ${day.num}`}
@@ -2428,84 +2747,6 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                     </div>
                   );
                 })}
-              </div>
-            ) : (
-              /* TABLE VIEW */
-              <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-3xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-neutral-50 border-b border-neutral-200 text-[10px] font-black uppercase text-neutral-500 font-mono tracking-wider">
-                        <th className="p-3.5">Portail / Plateforme</th>
-                        <th className="p-3.5">Pays & Identifiant</th>
-                        <th className="p-3.5">Notes</th>
-                        <th className="p-3.5 text-center">Visite Aujourd'hui</th>
-                        <th className="p-3.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100">
-                      {filteredSites.map(site => {
-                        const visitedToday = isVisitedOnDate(site, todayStr);
-
-                        return (
-                          <tr key={site.id} className="hover:bg-neutral-50/60 transition-colors">
-                            <td className="p-3.5 space-y-0.5">
-                              <a
-                                href={site.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-extrabold text-neutral-900 hover:text-indigo-600 transition-colors flex items-center gap-1.5"
-                              >
-                                <span>{site.name}</span>
-                                <ExternalLink className="w-3 h-3 text-neutral-400" />
-                              </a>
-                            </td>
-
-                            <td className="p-3.5 space-y-1">
-                              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-neutral-100 text-neutral-700 font-mono">
-                                {site.country === "Germany" ? "Allemagne" : site.country}
-                              </span>
-                              {site.identifiant && site.identifiant !== "N/A" && (
-                                <p className="text-[10px] font-mono text-neutral-500">
-                                  ID: <strong className="text-neutral-700">{site.identifiant}</strong>
-                                </p>
-                              )}
-                            </td>
-
-                            <td className="p-3.5 max-w-[280px]">
-                              <p className="text-[11px] text-neutral-600 font-medium line-clamp-2">{site.notes || "—"}</p>
-                            </td>
-
-                            <td className="p-3.5 text-center">
-                              <button
-                                type="button"
-                                onClick={() => toggleVisitDate(site.id, todayStr)}
-                                className={`px-3 py-1 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer ${
-                                  visitedToday
-                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                                }`}
-                              >
-                                {visitedToday ? "✓ Visité" : "+ Effectuer"}
-                              </button>
-                            </td>
-
-                            <td className="p-3.5 text-right">
-                              <button
-                                type="button"
-                                onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
-                                className="text-neutral-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
-                                title="Supprimer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             )}
           </div>

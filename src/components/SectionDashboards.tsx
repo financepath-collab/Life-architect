@@ -102,7 +102,10 @@ export function FinanceSectionDashboard({
 
   // Budget exceeded/spent percentages
   const exceededBudgetsCount = budgets.filter(b => b.spentAmount > b.limitAmount).length;
-  const criticalBudgetsCount = budgets.filter(b => b.spentAmount >= b.limitAmount * 0.9 && b.spentAmount <= b.limitAmount).length;
+  const criticalBudgetsCount = budgets.filter(b => {
+    const pct = b.alertThresholdPct ?? 80;
+    return b.spentAmount >= b.limitAmount * (pct / 100) && b.spentAmount <= b.limitAmount;
+  }).length;
 
   // Find the latest year and month among transactions to align the 6-month chart timeline perfectly
   const referenceDate = React.useMemo(() => {

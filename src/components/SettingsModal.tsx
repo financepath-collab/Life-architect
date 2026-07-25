@@ -18,7 +18,10 @@ import {
   Check,
   HardDrive,
   Palette,
-  Sparkles
+  Sparkles,
+  AlertTriangle,
+  AlertCircle,
+  Target
 } from "lucide-react";
 import { ThemePresetId, THEME_PRESETS } from "./ThemeSelectorModal";
 import { motion, AnimatePresence } from "motion/react";
@@ -61,7 +64,7 @@ interface SettingsModalProps {
   onSelectTheme?: (theme: ThemePresetId) => void;
   onOpenThemeModal?: () => void;
   
-  // Data props for CSV Export
+  // Data props for CSV Export & Budget Thresholds
   accounts?: Account[];
   transactions?: FinanceTransaction[];
   dailyHabits?: DailyHabit[];
@@ -71,9 +74,12 @@ interface SettingsModalProps {
   abonnements?: Abonnement[];
   stocks?: StockEntry[];
   journalEntries?: JournalEntry[];
+  
+  // Callback to update budget threshold configurations
+  onUpdateBudgets?: (updatedBudgets: FinanceBudget[]) => void;
 }
 
-type TabType = "account" | "cloud_sync" | "drive_backup" | "appearance" | "export";
+type TabType = "account" | "cloud_sync" | "drive_backup" | "appearance" | "budget_thresholds" | "export";
 
 interface TabItem {
   id: TabType;
@@ -106,6 +112,12 @@ const TABS: TabItem[] = [
     label: "Apparence",
     description: "Thème sombre automatique",
     icon: Sliders,
+  },
+  {
+    id: "budget_thresholds",
+    label: "Seuils d'Alerte",
+    description: "Alertes budget par catégorie",
+    icon: AlertTriangle,
   },
   {
     id: "export",
@@ -147,7 +159,8 @@ export default function SettingsModal({
   epargnes = [],
   abonnements = [],
   stocks = [],
-  journalEntries = []
+  journalEntries = [],
+  onUpdateBudgets
 }: SettingsModalProps) {
   
   if (!isOpen) return null;
@@ -155,6 +168,9 @@ export default function SettingsModal({
   const [activeTab, setActiveTab] = useState<TabType>("account");
   const isIframe = typeof window !== "undefined" && window.self !== window.top;
   const [authError, setAuthError] = useState<{ code: string; message: string; hostname: string } | null>(null);
+
+  // Budget thresholds state
+  const [thresholdSaveFeedback, setThresholdSaveFeedback] = useState<string | null>(null);
 
   // CSV Export states & logic
   const [selectedExportModule, setSelectedExportModule] = useState<string>("accounts");
@@ -323,6 +339,21 @@ export default function SettingsModal({
             Auto
           </span>
         ) : null;
+      case "budget_thresholds": {
+        const alertsActive = budgets.filter(b => {
+          const pct = b.alertThresholdPct ?? 80;
+          return b.limitAmount > 0 && b.spentAmount >= (b.limitAmount * pct / 100);
+        }).length;
+        return alertsActive > 0 ? (
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 rounded" title={`${alertsActive} alerte(s) active(s)`}>
+            {alertsActive} ⚠️
+          </span>
+        ) : (
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 bg-neutral-200 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-400 rounded">
+            {budgets.length}
+          </span>
+        );
+      }
       case "export":
         const totalRecords = accounts.length + transactions.length + dailyHabits.length + weeklyObjectives.length + budgets.length + epargnes.length + abonnements.length + stocks.length + journalEntries.length;
         return (
@@ -842,6 +873,188 @@ export default function SettingsModal({
                           })}
                         </div>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: BUDGET ALERT THRESHOLDS */}
+                {activeTab === "budget_thresholds" && (
+                  <div className="space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-500" />
+                          Seuils d'Alerte Personnalisés par Catégorie
+                        </h4>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                          Configurez le pourcentage d'utilisation à partir duquel une alerte visuelle s'affiche pour chaque enveloppe budgétaire.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Global Preset Actions */}
+                    <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/40 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                          <Target className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                          Appliquer un seuil global à toutes les catégories
+                        </span>
+                        <span className="text-[10px] font-mono font-bold text-amber-700 dark:text-amber-400">
+                          {budgets.length} catégories
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {[50, 70, 80, 85, 90, 95].map((pct) => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => {
+                              const updated = budgets.map(b => ({ ...b, alertThresholdPct: pct }));
+                              if (onUpdateBudgets) onUpdateBudgets(updated);
+                              setThresholdSaveFeedback(`Seuil de ${pct}% appliqué à toutes les catégories !`);
+                              setTimeout(() => setThresholdSaveFeedback(null), 3500);
+                            }}
+                            className="px-3 py-1.5 bg-white dark:bg-zinc-900 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-bold text-amber-900 dark:text-amber-200 transition-all cursor-pointer shadow-2xs flex items-center gap-1"
+                          >
+                            <span>{pct}%</span>
+                            {pct === 80 && <span className="text-[9px] text-amber-600 font-normal">(défaut)</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {thresholdSaveFeedback && (
+                      <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/50 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-2 animate-in fade-in">
+                        <Check className="w-4 h-4 shrink-0" />
+                        <span>{thresholdSaveFeedback}</span>
+                      </div>
+                    )}
+
+                    {/* Category List Cards */}
+                    <div className="space-y-3">
+                      {budgets.length === 0 ? (
+                        <div className="p-8 text-center text-xs text-neutral-400 dark:text-neutral-500 bg-neutral-50 dark:bg-zinc-800/30 rounded-2xl border border-neutral-200 dark:border-zinc-800">
+                          Aucune catégorie de budget n'est disponible.
+                        </div>
+                      ) : (
+                        budgets.map((b) => {
+                          const currentPct = b.alertThresholdPct ?? 80;
+                          const limit = b.limitAmount || 1;
+                          const spent = b.spentAmount || 0;
+                          const spentRatio = Math.min(100, Math.round((spent / limit) * 100));
+                          const alertTriggerAmount = Math.round((limit * currentPct) / 100);
+                          const isOverBudget = spent > limit;
+                          const isAlertTriggered = !isOverBudget && spent >= alertTriggerAmount;
+
+                          return (
+                            <div
+                              key={b.id}
+                              className={`p-4 rounded-2xl border transition-all shadow-2xs ${
+                                isOverBudget
+                                  ? "bg-rose-50/50 dark:bg-rose-950/20 border-rose-200/90 dark:border-rose-900/50"
+                                  : isAlertTriggered
+                                  ? "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/90 dark:border-amber-900/50"
+                                  : "bg-neutral-50 dark:bg-zinc-800/40 border-neutral-200/80 dark:border-zinc-700/60"
+                              }`}
+                            >
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                                <div className="flex items-center gap-2.5">
+                                  <div className={`w-3 h-3 rounded-full shrink-0 ${
+                                    isOverBudget ? "bg-rose-500 animate-ping" : isAlertTriggered ? "bg-amber-500 animate-pulse" : "bg-emerald-500"
+                                  }`} />
+                                  <div>
+                                    <h5 className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                      {b.category}
+                                      <span className="text-[10px] font-mono text-neutral-400 font-normal">
+                                        ({b.period})
+                                      </span>
+                                    </h5>
+                                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                                      Plafond : <strong className="text-neutral-800 dark:text-neutral-200">{limit.toLocaleString("fr-FR")} MAD</strong> — Dépensé : <strong className="text-neutral-800 dark:text-neutral-200">{spent.toLocaleString("fr-FR")} MAD</strong> ({spentRatio}%)
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Status badge */}
+                                <div className="self-start sm:self-center">
+                                  {isOverBudget ? (
+                                    <span className="px-2.5 py-1 bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3" />
+                                      Dépassé ({spentRatio}%)
+                                    </span>
+                                  ) : isAlertTriggered ? (
+                                    <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                                      <AlertTriangle className="w-3 h-3" />
+                                      Alerte Activée
+                                    </span>
+                                  ) : (
+                                    <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                                      <CheckCircle className="w-3 h-3" />
+                                      Normal ({spentRatio}%)
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Visual progress bar with threshold line */}
+                              <div className="relative w-full h-3 bg-neutral-200 dark:bg-zinc-700 rounded-full overflow-hidden mb-3">
+                                <div
+                                  className={`h-full transition-all duration-300 ${
+                                    isOverBudget ? "bg-rose-500" : isAlertTriggered ? "bg-amber-500" : "bg-emerald-500"
+                                  }`}
+                                  style={{ width: `${Math.min(100, spentRatio)}%` }}
+                                />
+                                {/* Threshold marker */}
+                                <div
+                                  className="absolute top-0 bottom-0 w-1 bg-neutral-900 dark:bg-white z-10 rounded-full shadow-xs"
+                                  style={{ left: `${currentPct}%` }}
+                                  title={`Seuil d'alerte configuré à ${currentPct}% (${alertTriggerAmount.toLocaleString("fr-FR")} MAD)`}
+                                />
+                              </div>
+
+                              {/* Threshold controls */}
+                              <div className="pt-2 border-t border-neutral-200/60 dark:border-zinc-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 flex-1">
+                                  <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 whitespace-nowrap min-w-[70px]">
+                                    Seuil : <strong className="text-indigo-600 dark:text-indigo-400 font-mono text-sm">{currentPct}%</strong>
+                                  </span>
+                                  <input
+                                    type="range"
+                                    min="30"
+                                    max="100"
+                                    step="5"
+                                    value={currentPct}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value);
+                                      const updated = budgets.map(x => x.id === b.id ? { ...x, alertThresholdPct: val } : x);
+                                      if (onUpdateBudgets) onUpdateBudgets(updated);
+                                    }}
+                                    className="flex-1 h-2 bg-neutral-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                  />
+                                </div>
+
+                                <div className="flex items-center gap-2 justify-between sm:justify-end">
+                                  <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400">
+                                    Déclenchement à <strong className="text-neutral-800 dark:text-neutral-200 font-bold">{alertTriggerAmount.toLocaleString("fr-FR")} MAD</strong>
+                                  </span>
+                                  {currentPct !== 80 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = budgets.map(x => x.id === b.id ? { ...x, alertThresholdPct: 80 } : x);
+                                        if (onUpdateBudgets) onUpdateBudgets(updated);
+                                      }}
+                                      className="text-[10px] font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 underline cursor-pointer"
+                                    >
+                                      Reset (80%)
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 )}

@@ -104,6 +104,8 @@ export interface FinanceBudget {
   limitAmount: number; // MAD
   spentAmount: number; // MAD
   period: "Mensuel" | "Annuel";
+  alertThresholdPct?: number; // Custom threshold percentage (e.g. 80 for 80%)
+  alertThresholdAmount?: number; // Custom threshold amount in MAD
 }
 
 export interface FinanceSalaire {
