@@ -94,7 +94,6 @@ import CommandCenterModal from "./components/CommandCenterModal";
 import BudgetOptimizer from "./components/BudgetOptimizer";
 import SettingsModal from "./components/SettingsModal";
 import ThemeSelectorModal, { ThemePresetId, THEME_PRESETS } from "./components/ThemeSelectorModal";
-import LifeGoalsSection from "./components/LifeGoalsSection";
 import UnifiedFinancialEntrySection from "./components/UnifiedFinancialEntrySection";
 import {
   initDriveAuth,
@@ -1367,13 +1366,6 @@ export default function App() {
           data: profilAmeliorations,
           onImport: (parsedData: any[], mode: "append" | "replace") => {
             setProfilAmeliorations(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
-          }
-        };
-      case "goals":
-        return {
-          data: possibilitesGoals,
-          onImport: (parsedData: any[], mode: "append" | "replace") => {
-            setPossibilitesGoals(prev => mode === "replace" ? parsedData : [...prev, ...parsedData]);
           }
         };
       case "monthly_goals":
@@ -2789,7 +2781,6 @@ export default function App() {
         { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." },
         { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour vos projets pro et perso." },
         { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." },
-        { id: "goals", label: "Possibilités & Goals", icon: Award, desc: "Planification de vos buts de vie majeurs." },
         { id: "monthly_goals", label: "Objectifs Mensuels", icon: Target, desc: "Cibles de progression mensuelle pour vos finances, projets et vie pro/perso." },
         { id: "journal", label: "Journal de Bord", icon: BookOpen, desc: "Réflexions quotidiennes, pensées et notes de progrès." }
       ]
@@ -3048,24 +3039,6 @@ export default function App() {
             { key: "status", label: "Statut Actuel", type: "select", options: ["À travailler", "En cours", "Maîtrisé"] },
             { key: "targetDate", label: "Date de Maîtrise", type: "date" },
             { key: "actionPlan", label: "Plan d'Action / Exercices", type: "text" }
-          ] as TableColumn[]
-        };
-
-      case "goals":
-        return {
-          title: "Possibilités & Goals (Objectifs de Vie)",
-          description: "Réglez vos objectifs stratégiques à court, moyen et long terme.",
-          data: possibilitesGoals,
-          onAdd: (item: any) => setPossibilitesGoals(prev => [...prev, item]),
-          onEdit: (id: string, updated: any) => setPossibilitesGoals(prev => prev.map(x => x.id === id ? updated : x)),
-          onDelete: (id: string) => setPossibilitesGoals(prev => prev.filter(x => x.id !== id)),
-          onImport: (items: any[]) => setPossibilitesGoals(prev => [...prev, ...items]),
-          columns: [
-            { key: "title", label: "Intitulé du Goal", type: "text", required: true },
-            { key: "type", label: "Période", type: "select", options: ["Court Terme", "Moyen Terme", "Long Terme"] },
-            { key: "targetYear", label: "Année Cible", type: "text", required: true },
-            { key: "description", label: "Pourquoi & Comment", type: "text" },
-            { key: "completed", label: "Atteint", type: "boolean" }
           ] as TableColumn[]
         };
 
@@ -5381,13 +5354,6 @@ export default function App() {
                           />
                         );
                       })()}
-                    </div>
-                  ) : activeMenu === "goals" ? (
-                    <div>
-                      <LifeGoalsSection
-                        possibilitesGoals={possibilitesGoals}
-                        setPossibilitesGoals={setPossibilitesGoals}
-                      />
                     </div>
                   ) : (
                     <div>
