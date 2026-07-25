@@ -5278,9 +5278,9 @@ export default function App() {
                   ) : activeMenu === "meal" ? (
                     <MealPlannerSection mealPlanners={mealPlanners} setMealPlanners={setMealPlanners} />
                   ) : activeMenu === "books" ? (
-                    <MediaHubSection books={books} setBooks={setBooks} screenMedia={screenMedia} setScreenMedia={setScreenMedia} initialFormatFilter="Livre" />
+                    <MediaHubSection key="books" books={books} setBooks={setBooks} screenMedia={screenMedia} setScreenMedia={setScreenMedia} initialFormatFilter="Livre" />
                   ) : activeMenu === "screenmedia" ? (
-                    <MediaHubSection books={books} setBooks={setBooks} screenMedia={screenMedia} setScreenMedia={setScreenMedia} initialFormatFilter="Tous" />
+                    <MediaHubSection key="screenmedia" books={books} setBooks={setBooks} screenMedia={screenMedia} setScreenMedia={setScreenMedia} initialFormatFilter="Série" />
                   ) : activeMenu === "project_folders" ? (
                     <ProjectFoldersSection
                       folders={folders}

@@ -45,7 +45,9 @@ import {
   Globe2,
   ShieldCheck,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  LayoutGrid,
+  List
 } from "lucide-react";
 
 // --- MOBILITY DEFAULT DATA CONSTANTS (SERROU MOHAMMED - CARRIÈRE EPM FINANCE) ---
@@ -425,6 +427,10 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
   const [oppDateApplied, setOppDateApplied] = useState("");
   const [oppNextAction, setOppNextAction] = useState("");
   const [oppNotes, setOppNotes] = useState("");
+
+  const [oppStatusFilter, setOppStatusFilter] = useState<"Tous" | JobOpportunity["status"]>("Tous");
+  const [oppSearchQuery, setOppSearchQuery] = useState("");
+  const [oppViewMode, setOppViewMode] = useState<"table" | "grid">("table");
 
   // --- METRIC CALCS ---
   const acquiredSkillsCount = skills.filter(s => s.status === "Acquise").length;
@@ -1439,127 +1445,320 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
       )}
 
       {/* ==================================================== */}
-      {/* --- TAB: PIPELINE DES CANDIDATURES --- */}
+      {/* --- TAB: PIPELINE DES CANDIDATURES & OPPORTUNITÉS --- */}
       {/* ==================================================== */}
-      {careerTab === "pipeline" && (
-        <div className="space-y-4 animate-in fade-in duration-300">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-50 border border-neutral-200/60 p-4 rounded-2xl">
-            <div>
-              <h3 className="text-xs font-black text-neutral-900 uppercase tracking-tight flex items-center gap-1.5">
-                <Briefcase className="w-4 h-4 text-amber-500" />
-                <span>Pipeline Interactif des Candidatures</span>
-              </h3>
-              <p className="text-[11px] text-neutral-400 font-medium">Gérez votre entonnoir d'embauche de la détection technique jusqu'aux entretiens et offres d'emploi.</p>
+      {careerTab === "pipeline" && (() => {
+        const filteredOpps = jobOpportunities.filter(opp => {
+          const matchesStatus = oppStatusFilter === "Tous" || opp.status === oppStatusFilter;
+          const matchesQuery = opp.title.toLowerCase().includes(oppSearchQuery.toLowerCase()) ||
+                               opp.company.toLowerCase().includes(oppSearchQuery.toLowerCase()) ||
+                               (opp.notes || "").toLowerCase().includes(oppSearchQuery.toLowerCase());
+          return matchesStatus && matchesQuery;
+        });
+
+        const counts = {
+          total: jobOpportunities.length,
+          aPostuler: jobOpportunities.filter(o => o.status === "À postuler").length,
+          postule: jobOpportunities.filter(o => o.status === "Postulé").length,
+          entretien: jobOpportunities.filter(o => o.status === "Entretien").length,
+          offre: jobOpportunities.filter(o => o.status === "Offre").length,
+          refuse: jobOpportunities.filter(o => o.status === "Refusé").length
+        };
+
+        const getStatusBadge = (status: JobOpportunity["status"]) => {
+          switch (status) {
+            case "À postuler":
+              return "bg-neutral-100 text-neutral-700 border-neutral-200";
+            case "Postulé":
+              return "bg-indigo-50 text-indigo-700 border-indigo-200";
+            case "Entretien":
+              return "bg-amber-50 text-amber-700 border-amber-200";
+            case "Offre":
+              return "bg-emerald-50 text-emerald-700 border-emerald-200";
+            case "Refusé":
+              return "bg-red-50 text-red-700 border-red-200";
+            default:
+              return "bg-neutral-100 text-neutral-600 border-neutral-200";
+          }
+        };
+
+        return (
+          <div className="space-y-5 animate-in fade-in duration-300">
+            {/* KPI Metrics Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="bg-white border border-neutral-200 rounded-2xl p-3.5 shadow-3xs space-y-1">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Total Offres</span>
+                <p className="text-xl font-black text-neutral-900 font-mono">{counts.total}</p>
+              </div>
+              <div className="bg-white border border-neutral-200 rounded-2xl p-3.5 shadow-3xs space-y-1">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">À Postuler</span>
+                <p className="text-xl font-black text-neutral-700 font-mono">{counts.aPostuler}</p>
+              </div>
+              <div className="bg-white border border-indigo-100 rounded-2xl p-3.5 shadow-3xs space-y-1 bg-indigo-50/20">
+                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">Postulées</span>
+                <p className="text-xl font-black text-indigo-700 font-mono">{counts.postule}</p>
+              </div>
+              <div className="bg-white border border-amber-100 rounded-2xl p-3.5 shadow-3xs space-y-1 bg-amber-50/20">
+                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Entretiens</span>
+                <p className="text-xl font-black text-amber-700 font-mono">{counts.entretien}</p>
+              </div>
+              <div className="bg-white border border-emerald-100 rounded-2xl p-3.5 shadow-3xs space-y-1 bg-emerald-50/20 col-span-2 sm:col-span-1">
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Offres Obtenues</span>
+                <p className="text-xl font-black text-emerald-700 font-mono">{counts.offre}</p>
+              </div>
             </div>
-            <button
-              onClick={() => setShowOppForm(true)}
-              className="bg-neutral-950 hover:bg-neutral-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Créer une opportunité</span>
-            </button>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            {["À postuler", "Postulé", "Entretien", "Offre"].map((colTitle) => {
-              const statusKey = colTitle as JobOpportunity["status"];
-              const oppsInCol = jobOpportunities.filter(o => o.status === statusKey);
-              
-              return (
-                <div key={colTitle} className="bg-neutral-50/70 border border-neutral-200/60 rounded-2xl p-4 flex flex-col space-y-3">
-                  <div className="flex justify-between items-center border-b border-neutral-200 pb-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-neutral-700 font-mono">{colTitle}</span>
-                    <span className="text-[10px] bg-neutral-200 text-neutral-800 font-bold px-2 py-0.5 rounded-full font-mono">{oppsInCol.length}</span>
-                  </div>
-
-                  <div className="space-y-3 overflow-y-auto max-h-[420px] pr-1">
-                    {oppsInCol.length === 0 ? (
-                      <div className="py-8 text-center text-[10px] text-neutral-400 italic bg-white/40 border border-dashed border-neutral-200/50 rounded-xl">
-                        Aucune opportunité.
-                      </div>
-                    ) : (
-                      oppsInCol.map(opp => (
-                        <div key={opp.id} className="bg-white border border-neutral-200 rounded-xl p-3.5 space-y-2.5 shadow-3xs hover:border-neutral-300 transition-colors relative">
-                          <div className="space-y-1">
-                            <h5 className="text-[11px] font-black text-neutral-900 leading-snug">{opp.title}</h5>
-                            <p className="text-[10.5px] font-bold text-indigo-600 flex items-center gap-1">
-                              <Building2 className="w-3 h-3" />
-                              <span>{opp.company}</span>
-                            </p>
-                          </div>
-
-                          {opp.salary && (
-                            <span className="inline-block text-[9px] bg-emerald-50 border border-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold font-mono">
-                              {opp.salary}
-                            </span>
-                          )}
-
-                          <p className="text-[10px] text-neutral-500 leading-snug font-medium line-clamp-2">{opp.notes}</p>
-
-                          {opp.nextAction && (
-                            <div className="bg-amber-50/60 border border-amber-100 p-2 rounded-lg space-y-0.5">
-                              <span className="text-[8px] text-amber-800 font-black uppercase font-mono block">Prochaine action:</span>
-                              <p className="text-[9.5px] text-neutral-700 leading-snug font-bold">{opp.nextAction}</p>
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-between pt-2 border-t border-neutral-100 text-[9px] gap-1">
-                            <div className="flex gap-1.5">
-                              {statusKey === "À postuler" && (
-                                <button 
-                                  onClick={() => updateOppStatus(opp.id, "Postulé")}
-                                  className="text-indigo-600 hover:underline font-bold cursor-pointer"
-                                >
-                                  Postuler →
-                                </button>
-                              )}
-                              {statusKey === "Postulé" && (
-                                <button 
-                                  onClick={() => updateOppStatus(opp.id, "Entretien")}
-                                  className="text-amber-600 hover:underline font-bold cursor-pointer"
-                                >
-                                  Entretien →
-                                </button>
-                              )}
-                              {statusKey === "Entretien" && (
-                                <button 
-                                  onClick={() => updateOppStatus(opp.id, "Offre")}
-                                  className="text-emerald-600 hover:underline font-bold cursor-pointer"
-                                >
-                                  Obtenu 🎉
-                                </button>
-                              )}
-                            </div>
-
-                            <div className="flex gap-1.5">
-                              {statusKey !== "Refusé" && (
-                                <button 
-                                  onClick={() => updateOppStatus(opp.id, "Refusé")}
-                                  className="text-neutral-400 hover:text-red-500 font-bold cursor-pointer"
-                                  title="Marquer refusé"
-                                >
-                                  Refusé
-                                </button>
-                              )}
-                              <button 
-                                onClick={() => setJobOpportunities(prev => prev.filter(o => o.id !== opp.id))}
-                                className="text-neutral-400 hover:text-red-500 font-bold cursor-pointer"
-                                title="Supprimer"
-                              >
-                                Suppr.
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+            {/* Header & Action Controls Bar */}
+            <div className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-3xs space-y-3">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-amber-500 shrink-0" />
+                  <h3 className="text-xs font-black text-neutral-950 uppercase tracking-tight">
+                    Suivi des Candidatures & Opportunités
+                  </h3>
                 </div>
-              );
-            })}
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* View Mode Toggle */}
+                  <div className="bg-neutral-100 p-1 rounded-xl flex items-center gap-1 border border-neutral-200/80">
+                    <button
+                      onClick={() => setOppViewMode("table")}
+                      className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        oppViewMode === "table"
+                          ? "bg-white text-neutral-900 shadow-3xs font-extrabold"
+                          : "text-neutral-500 hover:text-neutral-900"
+                      }`}
+                      title="Vue Tableau Synthétique"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      <span className="text-[11px] hidden sm:inline">Tableau</span>
+                    </button>
+                    <button
+                      onClick={() => setOppViewMode("grid")}
+                      className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        oppViewMode === "grid"
+                          ? "bg-white text-neutral-900 shadow-3xs font-extrabold"
+                          : "text-neutral-500 hover:text-neutral-900"
+                      }`}
+                      title="Vue Grille / Cartes"
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      <span className="text-[11px] hidden sm:inline">Cartes</span>
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setShowOppForm(true)}
+                    className="bg-neutral-950 hover:bg-neutral-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Nouvelle opportunité</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Filters & Search Bar */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-neutral-100">
+                {/* Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
+                  {(["Tous", "À postuler", "Postulé", "Entretien", "Offre", "Refusé"] as const).map(statusTab => {
+                    const countVal = statusTab === "Tous" ? counts.total :
+                      statusTab === "À postuler" ? counts.aPostuler :
+                      statusTab === "Postulé" ? counts.postule :
+                      statusTab === "Entretien" ? counts.entretien :
+                      statusTab === "Offre" ? counts.offre : counts.refuse;
+
+                    const isActive = oppStatusFilter === statusTab;
+                    return (
+                      <button
+                        key={statusTab}
+                        onClick={() => setOppStatusFilter(statusTab)}
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                          isActive
+                            ? "bg-neutral-900 text-white font-extrabold shadow-3xs"
+                            : "bg-neutral-50 hover:bg-neutral-100 text-neutral-600 border border-neutral-200/60"
+                        }`}
+                      >
+                        <span>{statusTab}</span>
+                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full ${
+                          isActive ? "bg-neutral-700 text-white" : "bg-neutral-200 text-neutral-700"
+                        }`}>
+                          {countVal}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Search Box */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Rechercher poste, entreprise..."
+                    value={oppSearchQuery}
+                    onChange={(e) => setOppSearchQuery(e.target.value)}
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-8 pr-3 py-1 text-xs font-sans focus:outline-hidden focus:ring-1 focus:ring-neutral-900"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Opportunities Content Rendering */}
+            {filteredOpps.length === 0 ? (
+              <div className="bg-white border border-neutral-200/80 rounded-2xl p-10 text-center space-y-2">
+                <p className="text-xs font-bold text-neutral-500">Aucune candidature trouvée pour ces filtres.</p>
+                <p className="text-[11px] text-neutral-400">Cliquez sur "Nouvelle opportunité" pour ajouter une piste d'emploi.</p>
+              </div>
+            ) : oppViewMode === "table" ? (
+              /* TABLE VIEW */
+              <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-3xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-neutral-50 border-b border-neutral-200 text-[10px] font-black uppercase text-neutral-500 font-mono tracking-wider">
+                        <th className="p-3.5">Poste & Entreprise</th>
+                        <th className="p-3.5">Statut</th>
+                        <th className="p-3.5">Rémunération</th>
+                        <th className="p-3.5">Prochaine Action</th>
+                        <th className="p-3.5">Notes & Historique</th>
+                        <th className="p-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {filteredOpps.map(opp => (
+                        <tr key={opp.id} className="hover:bg-neutral-50/60 transition-colors">
+                          <td className="p-3.5 space-y-0.5">
+                            <h5 className="font-extrabold text-neutral-900">{opp.title}</h5>
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-600">
+                              <Building2 className="w-3 h-3 text-indigo-500 shrink-0" />
+                              <span>{opp.company}</span>
+                              {opp.siteUrl && (
+                                <a href={opp.siteUrl} target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-indigo-600">
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="p-3.5">
+                            <select
+                              value={opp.status}
+                              onChange={(e) => updateOppStatus(opp.id, e.target.value as JobOpportunity["status"])}
+                              className={`text-[10px] font-extrabold font-mono px-2.5 py-1 rounded-lg border focus:outline-hidden cursor-pointer ${getStatusBadge(opp.status)}`}
+                            >
+                              <option value="À postuler">À postuler</option>
+                              <option value="Postulé">Postulé</option>
+                              <option value="Entretien">Entretien</option>
+                              <option value="Offre">Offre Obtenue</option>
+                              <option value="Refusé">Refusé</option>
+                            </select>
+                          </td>
+
+                          <td className="p-3.5">
+                            {opp.salary ? (
+                              <span className="text-[10px] font-bold font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                                {opp.salary}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-neutral-400 italic">—</span>
+                            )}
+                          </td>
+
+                          <td className="p-3.5 max-w-[200px]">
+                            {opp.nextAction ? (
+                              <span className="text-[11px] font-medium text-amber-900 bg-amber-50/70 border border-amber-100 px-2 py-1 rounded-lg block leading-tight">
+                                {opp.nextAction}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-neutral-400 italic">—</span>
+                            )}
+                          </td>
+
+                          <td className="p-3.5 max-w-[220px]">
+                            <p className="text-[11px] text-neutral-600 font-medium line-clamp-2">{opp.notes || "—"}</p>
+                          </td>
+
+                          <td className="p-3.5 text-right">
+                            <button
+                              onClick={() => setJobOpportunities(prev => prev.filter(o => o.id !== opp.id))}
+                              className="text-neutral-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              /* GRID CARDS VIEW */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredOpps.map(opp => (
+                  <div key={opp.id} className="bg-white border border-neutral-200 rounded-2xl p-4 space-y-3 shadow-3xs hover:border-neutral-300 transition-all flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <h5 className="text-xs font-black text-neutral-900 leading-snug">{opp.title}</h5>
+                          <p className="text-[11px] font-bold text-indigo-600 flex items-center gap-1 mt-0.5">
+                            <Building2 className="w-3 h-3" />
+                            <span>{opp.company}</span>
+                          </p>
+                        </div>
+                        <select
+                          value={opp.status}
+                          onChange={(e) => updateOppStatus(opp.id, e.target.value as JobOpportunity["status"])}
+                          className={`text-[9.5px] font-black font-mono px-2 py-0.5 rounded-lg border focus:outline-hidden cursor-pointer ${getStatusBadge(opp.status)}`}
+                        >
+                          <option value="À postuler">À postuler</option>
+                          <option value="Postulé">Postulé</option>
+                          <option value="Entretien">Entretien</option>
+                          <option value="Offre">Offre</option>
+                          <option value="Refusé">Refusé</option>
+                        </select>
+                      </div>
+
+                      {opp.salary && (
+                        <span className="inline-block text-[10px] font-extrabold font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                          {opp.salary}
+                        </span>
+                      )}
+
+                      {opp.notes && (
+                        <p className="text-[11px] text-neutral-600 font-medium leading-relaxed bg-neutral-50/60 p-2.5 rounded-xl border border-neutral-100">
+                          {opp.notes}
+                        </p>
+                      )}
+
+                      {opp.nextAction && (
+                        <div className="bg-amber-50/80 border border-amber-200/60 p-2.5 rounded-xl space-y-0.5">
+                          <span className="text-[8px] text-amber-800 font-black uppercase font-mono block">Prochaine action:</span>
+                          <p className="text-[10.5px] text-neutral-800 leading-snug font-bold">{opp.nextAction}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 text-[10px]">
+                      <span className="text-neutral-400 font-mono">
+                        {opp.dateApplied ? `Postulé le ${opp.dateApplied}` : "Piste active"}
+                      </span>
+                      <button
+                        onClick={() => setJobOpportunities(prev => prev.filter(o => o.id !== opp.id))}
+                        className="text-neutral-400 hover:text-red-500 font-bold cursor-pointer transition-colors"
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ==================================================== */}
       {/* --- TAB: PORTAILS & SITES DE RECRUTEMENT --- */}
@@ -1657,7 +1856,7 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                 </div>
               </div>
 
-              {/* LIST LAYOUT (NO SQUARE CARDS, CLEAN HORIZONTAL DIVIDER ROWS) */}
+              {/* CLEAN LIST LAYOUT WITHOUT EXTRA INPUT BOXES */}
               <div className="divide-y divide-neutral-100 max-h-[600px] overflow-y-auto pr-1">
                 {filteredSites.length === 0 ? (
                   <div className="py-8 text-center text-xs text-neutral-400 font-medium">
@@ -1677,7 +1876,7 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                         className="py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6 transition-all"
                       >
                         {/* Info details (Left) */}
-                        <div className="space-y-2.5 flex-1 min-w-0">
+                        <div className="space-y-2 flex-1 min-w-0">
                           <div className="flex items-start gap-2.5">
                             <div className="space-y-1 flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -1716,77 +1915,37 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                             </div>
                           </div>
 
-                          {/* Keywords & Text Area side-by-side or stacked cleanly */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1.5 pl-0 border-t border-dotted border-neutral-150">
-                            <div className="space-y-1.5">
-                              <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block">Mots-clés & Compétences:</span>
-                              <div className="flex flex-wrap gap-1">
-                                {site.keywords && site.keywords.length > 0 ? (
-                                  site.keywords.map((kw, idx) => (
-                                    <span key={idx} className="group relative text-[9px] bg-indigo-50/60 hover:bg-red-50 text-indigo-700 hover:text-red-700 border border-indigo-100/40 hover:border-red-200 px-2 py-0.5 rounded-full font-bold font-mono transition-all flex items-center gap-1">
-                                      <span>#{kw}</span>
-                                      <button 
-                                        type="button"
-                                        onClick={() => {
-                                          setRecruitmentSites(prev => prev.map(s => {
-                                            if (s.id !== site.id) return s;
-                                            return { ...s, keywords: (s.keywords || []).filter(k => k !== kw) };
-                                          }));
-                                        }}
-                                        className="text-[8px] opacity-60 hover:opacity-100 cursor-pointer font-sans"
-                                        title="Supprimer"
-                                      >
-                                        ×
-                                      </button>
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="text-[10px] text-neutral-400 italic">Aucun mot-clé associé.</span>
-                                )}
-                              </div>
-                              <form 
-                                onSubmit={(e) => {
-                                  e.preventDefault();
-                                  const input = e.currentTarget.elements.namedItem("newKw") as HTMLInputElement;
-                                  const val = input?.value?.trim();
-                                  if (val) {
-                                    setRecruitmentSites(prev => prev.map(s => {
-                                      if (s.id !== site.id) return s;
-                                      const currentKws = s.keywords || [];
-                                      if (currentKws.includes(val)) return s;
-                                      return { ...s, keywords: [...currentKws, val] };
-                                    }));
-                                    input.value = "";
-                                  }
-                                }}
-                                className="flex items-center gap-1.5 pt-0.5 max-w-[160px]"
-                              >
-                                <input 
-                                  type="text"
-                                  name="newKw"
-                                  placeholder="+ Ajouter mot-clé"
-                                  className="bg-neutral-50 hover:bg-neutral-100/50 border border-neutral-200 rounded-lg px-2 py-0.5 text-[10px] font-mono w-full focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                                />
-                              </form>
+                          {/* Keywords as clean inline tags if present */}
+                          {site.keywords && site.keywords.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {site.keywords.map((kw, idx) => (
+                                <span key={idx} className="text-[9px] bg-indigo-50/60 text-indigo-700 border border-indigo-100/40 px-2 py-0.5 rounded-full font-bold font-mono flex items-center gap-1">
+                                  <span>#{kw}</span>
+                                  <button 
+                                    type="button"
+                                    onClick={() => {
+                                      setRecruitmentSites(prev => prev.map(s => {
+                                        if (s.id !== site.id) return s;
+                                        return { ...s, keywords: (s.keywords || []).filter(k => k !== kw) };
+                                      }));
+                                    }}
+                                    className="text-[8px] opacity-60 hover:opacity-100 cursor-pointer font-sans hover:text-red-600"
+                                    title="Supprimer"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
                             </div>
+                          )}
 
-                            <div className="space-y-1.5">
-                              <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block">Candidatures & opportunités découvertes :</span>
-                              <input
-                                type="text"
-                                value={site.discoveredOpportunities || ""}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setRecruitmentSites(prev => prev.map(s => {
-                                    if (s.id !== site.id) return s;
-                                    return { ...s, discoveredOpportunities: val };
-                                  }));
-                                }}
-                                placeholder="Notes de candidatures, contacts..."
-                                className="w-full bg-neutral-50 hover:bg-neutral-100/50 focus:bg-white border border-neutral-200/60 focus:border-indigo-500 rounded-lg px-2.5 py-1 text-[11px] text-neutral-600 placeholder:text-neutral-400 transition-all focus:outline-hidden font-sans"
-                              />
+                          {/* Discovered Opportunities note if present */}
+                          {site.discoveredOpportunities && (
+                            <div className="text-[10px] text-neutral-600 bg-neutral-50 border border-neutral-150 rounded-lg p-2 font-sans italic">
+                              <span className="font-bold font-mono text-neutral-400 not-italic uppercase text-[8px] block">Opportunités repérées:</span>
+                              {site.discoveredOpportunities}
                             </div>
-                          </div>
+                          )}
                         </div>
 
                         {/* Interactive Circle check-ins & actions (Right) */}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { BookItem, ScreenMediaItem } from "../types";
 import { 
   BookOpen, 
@@ -29,6 +29,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 
 interface MediaHubSectionProps {
+  key?: string;
   books: BookItem[];
   setBooks: React.Dispatch<React.SetStateAction<BookItem[]>>;
   screenMedia: ScreenMediaItem[];
@@ -67,6 +68,10 @@ export default function MediaHubSection({
   // Format filters
   const [formatFilter, setFormatFilter] = useState<"Tous" | "Livre" | "Série" | "Film" | "Anime">(initialFormatFilter);
   const [statusFilter, setStatusFilter] = useState<"Tous" | "En cours" | "À lire/voir" | "Terminé">("Tous");
+
+  useEffect(() => {
+    setFormatFilter(initialFormatFilter);
+  }, [initialFormatFilter]);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -181,6 +186,17 @@ export default function MediaHubSection({
       return matchesFormat && matchesStatus && matchesSearch && matchesGenreOrPlatform;
     });
   }, [unifiedList, formatFilter, statusFilter, searchQuery, selectedGenreOrPlatform]);
+
+  // Active items list filtered by formatFilter for Hero banner
+  const activeEnCoursList = useMemo(() => {
+    return unifiedList.filter(item => {
+      if (item.status !== "En cours") return false;
+      if (formatFilter !== "Tous") {
+        return item.type === formatFilter;
+      }
+      return true;
+    });
+  }, [unifiedList, formatFilter]);
 
   // Stats Counters
   const stats = useMemo(() => {
@@ -353,21 +369,23 @@ export default function MediaHubSection({
               <span className="text-[10px] font-black tracking-widest text-neutral-300 uppercase font-mono">Suivis Actifs En Cours</span>
             </div>
             <span className="text-xs text-neutral-400 font-mono">
-              {stats.enCours} média{stats.enCours > 1 ? "s" : ""} en cours d'apprentissage ou visionnage
+              {activeEnCoursList.length} {formatFilter === "Livre" ? "livre" : formatFilter === "Série" ? "série" : "élément"}{activeEnCoursList.length > 1 ? "s" : ""} en cours
             </span>
           </div>
 
-          {stats.enCours === 0 ? (
+          {activeEnCoursList.length === 0 ? (
             <div className="py-8 text-center text-neutral-400 max-w-md mx-auto">
               <BookOpenCheck className="w-10 h-10 mx-auto mb-2 opacity-50 text-neutral-300" />
-              <p className="text-xs font-bold text-white">Aucun livre ou série en cours de lecture/visionnage actif.</p>
+              <p className="text-xs font-bold text-white">
+                Aucun {formatFilter === "Livre" ? "livre" : formatFilter === "Série" ? "série TV" : formatFilter === "Film" ? "film" : formatFilter === "Anime" ? "anime" : "élément"} en cours de lecture/visionnage actif.
+              </p>
               <p className="text-[10px] text-neutral-500 mt-1.5">
                 Commencez à suivre vos lectures et vos épisodes en ajoutant ou en changeant le statut d'un élément ci-dessous !
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {unifiedList.filter(item => item.status === "En cours").slice(0, 4).map(item => {
+              {activeEnCoursList.slice(0, 4).map(item => {
                 return (
                   <div key={item.id} className="bg-neutral-800/40 border border-neutral-700/50 rounded-2xl p-4.5 space-y-3.5 transition-all hover:bg-neutral-800/75">
                     <div className="flex justify-between items-start gap-3">
