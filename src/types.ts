@@ -427,6 +427,7 @@ export interface RecruitmentSite {
   notes: string;
   keywords?: string[];
   visited?: boolean;
+  visitedDates?: string[];
   discoveredOpportunities?: string;
   country?: string;
   identifiant?: string;
@@ -486,6 +487,14 @@ export interface VisaDocGroup {
 export interface MobilitySkillGroup {
   category: string;
   items: { id: string; label: string; done: boolean }[];
+}
+
+export interface MobilityTargetMarket {
+  country: string;
+  demand: string;
+  entry: string;
+  salaryThreshold: string;
+  difficulty: number;
 }
 
 

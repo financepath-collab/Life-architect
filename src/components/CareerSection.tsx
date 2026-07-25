@@ -3,12 +3,12 @@ import {
   CareerSkill, 
   RecruitmentSite, 
   TargetCompany, 
-  JobOpportunity, 
   CareerCertificate,
   MobilityCountryStatus,
   RoadmapPhase,
   VisaDocGroup,
-  MobilitySkillGroup
+  MobilitySkillGroup,
+  MobilityTargetMarket
 } from "../types";
 import { DEFAULT_RECRUITMENT_SITES } from "../data/recruitmentSitesData";
 import { 
@@ -208,24 +208,24 @@ const DEFAULT_MOBILITY_VISA: VisaDocGroup[] = [
 ];
 
 interface CareerSectionProps {
-  activeTab?: "dash" | "mobility" | "pipeline" | "skills" | "recruitment" | "companies" | "certificates" | "sites";
+  activeTab?: "dash" | "mobility" | "skills" | "recruitment" | "companies" | "certificates" | "sites";
   onNavigate?: (moduleId: string) => void;
 }
 
 export default function CareerSection({ activeTab, onNavigate }: CareerSectionProps = {}) {
-  const [careerTab, setCareerTab] = useState<"dash" | "mobility" | "pipeline" | "skills" | "recruitment" | "companies" | "certificates">("dash");
+  const [careerTab, setCareerTab] = useState<"dash" | "mobility" | "skills" | "recruitment" | "companies" | "certificates">("dash");
 
   useEffect(() => {
     if (activeTab) {
       if (activeTab === "sites") {
         setCareerTab("recruitment");
-      } else if (["dash", "mobility", "pipeline", "skills", "recruitment", "companies", "certificates"].includes(activeTab)) {
+      } else if (["dash", "mobility", "skills", "recruitment", "companies", "certificates"].includes(activeTab)) {
         setCareerTab(activeTab as any);
       }
     }
   }, [activeTab]);
 
-  const handleTabChange = (tab: "dash" | "mobility" | "pipeline" | "skills" | "recruitment" | "companies" | "certificates") => {
+  const handleTabChange = (tab: "dash" | "mobility" | "skills" | "recruitment" | "companies" | "certificates") => {
     setCareerTab(tab);
     if (onNavigate) {
       const mappedId = tab === "recruitment" ? "career_sites" : `career_${tab}`;
@@ -234,6 +234,27 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
   };
 
   // --- MOBILITY & TOUR DE CONTRÔLE STATE ---
+  const [mobilityHeader, setMobilityHeader] = useState(() => {
+    const saved = localStorage.getItem("mp_mobility_header");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      name: "Serrou Mohammed",
+      plan: "Plan EPM Finance",
+      tagline: "Tour de contrôle · Mobilité internationale",
+      description: "Suivi vivant de votre recherche multi-pays : candidatures, compétences, échéances salariales et dossiers visa au même endroit."
+    };
+  });
+
+  const [mobilityTargetMarkets, setMobilityTargetMarkets] = useState<MobilityTargetMarket[]>(() => {
+    const saved = localStorage.getItem("mp_mobility_target_markets");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return TARGET_MARKETS_REF;
+  });
+
   const [mobilityCountries, setMobilityCountries] = useState<MobilityCountryStatus[]>(() => {
     const saved = localStorage.getItem("mp_mobility_countries");
     if (saved) {
@@ -268,10 +289,199 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
 
   const [mobilityInnerTab, setMobilityInnerTab] = useState<"overview" | "board" | "skills" | "roadmap" | "visa" | "market">("overview");
 
+  useEffect(() => { localStorage.setItem("mp_mobility_header", JSON.stringify(mobilityHeader)); }, [mobilityHeader]);
+  useEffect(() => { localStorage.setItem("mp_mobility_target_markets", JSON.stringify(mobilityTargetMarkets)); }, [mobilityTargetMarkets]);
   useEffect(() => { localStorage.setItem("mp_mobility_countries", JSON.stringify(mobilityCountries)); }, [mobilityCountries]);
   useEffect(() => { localStorage.setItem("mp_mobility_skills", JSON.stringify(mobilitySkills)); }, [mobilitySkills]);
   useEffect(() => { localStorage.setItem("mp_mobility_roadmap", JSON.stringify(mobilityRoadmap)); }, [mobilityRoadmap]);
   useEffect(() => { localStorage.setItem("mp_mobility_visa", JSON.stringify(mobilityVisa)); }, [mobilityVisa]);
+
+  // --- MOBILITY EDIT MODAL & FORM STATES ---
+  // Header
+  const [showEditHeaderModal, setShowEditHeaderModal] = useState(false);
+  const [editHeaderForm, setEditHeaderForm] = useState(mobilityHeader);
+
+  // Destination Country
+  const [showAddCountryModal, setShowAddCountryModal] = useState(false);
+  const [editingCountryIdx, setEditingCountryIdx] = useState<number | null>(null);
+  const [countryForm, setCountryForm] = useState<{ country: string; entryPath: string; status: MobilityCountryStatus["status"] }>({
+    country: "",
+    entryPath: "",
+    status: "En veille"
+  });
+
+  // Target Market
+  const [showMarketModal, setShowMarketModal] = useState(false);
+  const [editingMarketIdx, setEditingMarketIdx] = useState<number | null>(null);
+  const [marketForm, setMarketForm] = useState<MobilityTargetMarket>({
+    country: "",
+    demand: "Très forte",
+    entry: "",
+    salaryThreshold: "",
+    difficulty: 2
+  });
+
+  // Skills Checklist
+  const [showAddSkillCatModal, setShowAddSkillCatModal] = useState(false);
+  const [newSkillCatName, setNewSkillCatName] = useState("");
+  const [addingSkillItemCatIdx, setAddingSkillItemCatIdx] = useState<number | null>(null);
+  const [newSkillItemLabel, setNewSkillItemLabel] = useState("");
+
+  // Roadmap
+  const [showAddRoadmapPhaseModal, setShowAddRoadmapPhaseModal] = useState(false);
+  const [newPhaseLabel, setNewPhaseLabel] = useState("");
+  const [newPhaseTitle, setNewPhaseTitle] = useState("");
+  const [addingRoadmapItemPhaseIdx, setAddingRoadmapItemPhaseIdx] = useState<number | null>(null);
+  const [newRoadmapItemLabel, setNewRoadmapItemLabel] = useState("");
+
+  // Visa
+  const [showAddVisaGroupModal, setShowAddVisaGroupModal] = useState(false);
+  const [newVisaCountryName, setNewVisaCountryName] = useState("");
+  const [addingVisaDocGroupIdx, setAddingVisaDocGroupIdx] = useState<number | null>(null);
+  const [newVisaDocLabel, setNewVisaDocLabel] = useState("");
+
+  // --- MOBILITY ACTIONS & HANDLERS ---
+  const handleSaveHeader = () => {
+    setMobilityHeader(editHeaderForm);
+    setShowEditHeaderModal(false);
+  };
+
+  const handleSaveCountry = () => {
+    if (!countryForm.country.trim()) return;
+    if (editingCountryIdx !== null) {
+      const updated = [...mobilityCountries];
+      updated[editingCountryIdx] = { ...countryForm };
+      setMobilityCountries(updated);
+    } else {
+      setMobilityCountries([...mobilityCountries, { ...countryForm }]);
+    }
+    setShowAddCountryModal(false);
+    setEditingCountryIdx(null);
+    setCountryForm({ country: "", entryPath: "", status: "En veille" });
+  };
+
+  const handleDeleteCountry = (idx: number) => {
+    if (window.confirm("Supprimer cette destination ?")) {
+      setMobilityCountries(mobilityCountries.filter((_, i) => i !== idx));
+    }
+  };
+
+  const handleSaveMarket = () => {
+    if (!marketForm.country.trim()) return;
+    if (editingMarketIdx !== null) {
+      const updated = [...mobilityTargetMarkets];
+      updated[editingMarketIdx] = { ...marketForm };
+      setMobilityTargetMarkets(updated);
+    } else {
+      setMobilityTargetMarkets([...mobilityTargetMarkets, { ...marketForm }]);
+    }
+    setShowMarketModal(false);
+    setEditingMarketIdx(null);
+    setMarketForm({ country: "", demand: "Très forte", entry: "", salaryThreshold: "", difficulty: 2 });
+  };
+
+  const handleDeleteMarket = (idx: number) => {
+    if (window.confirm("Supprimer ce marché cible ?")) {
+      setMobilityTargetMarkets(mobilityTargetMarkets.filter((_, i) => i !== idx));
+    }
+  };
+
+  const handleAddSkillCategory = () => {
+    if (!newSkillCatName.trim()) return;
+    setMobilitySkills([...mobilitySkills, { category: newSkillCatName.trim(), items: [] }]);
+    setNewSkillCatName("");
+    setShowAddSkillCatModal(false);
+  };
+
+  const handleAddSkillItem = (catIdx: number) => {
+    if (!newSkillItemLabel.trim()) return;
+    const updated = [...mobilitySkills];
+    updated[catIdx].items.push({
+      id: `sk_custom_${Date.now()}`,
+      label: newSkillItemLabel.trim(),
+      done: false
+    });
+    setMobilitySkills(updated);
+    setNewSkillItemLabel("");
+    setAddingSkillItemCatIdx(null);
+  };
+
+  const handleDeleteSkillItem = (catIdx: number, itemId: string) => {
+    const updated = [...mobilitySkills];
+    updated[catIdx].items = updated[catIdx].items.filter(i => i.id !== itemId);
+    setMobilitySkills(updated);
+  };
+
+  const handleDeleteSkillCat = (catIdx: number) => {
+    if (window.confirm("Supprimer cette catégorie et ses compétences ?")) {
+      setMobilitySkills(mobilitySkills.filter((_, i) => i !== catIdx));
+    }
+  };
+
+  const handleAddRoadmapPhase = () => {
+    if (!newPhaseLabel.trim() || !newPhaseTitle.trim()) return;
+    setMobilityRoadmap([...mobilityRoadmap, { phase: newPhaseLabel.trim(), title: newPhaseTitle.trim(), items: [] }]);
+    setNewPhaseLabel("");
+    setNewPhaseTitle("");
+    setShowAddRoadmapPhaseModal(false);
+  };
+
+  const handleAddRoadmapItem = (phaseIdx: number) => {
+    if (!newRoadmapItemLabel.trim()) return;
+    const updated = [...mobilityRoadmap];
+    updated[phaseIdx].items.push({
+      id: `rd_custom_${Date.now()}`,
+      label: newRoadmapItemLabel.trim(),
+      done: false
+    });
+    setMobilityRoadmap(updated);
+    setNewRoadmapItemLabel("");
+    setAddingRoadmapItemPhaseIdx(null);
+  };
+
+  const handleDeleteRoadmapItem = (phaseIdx: number, itemId: string) => {
+    const updated = [...mobilityRoadmap];
+    updated[phaseIdx].items = updated[phaseIdx].items.filter(i => i.id !== itemId);
+    setMobilityRoadmap(updated);
+  };
+
+  const handleDeleteRoadmapPhase = (phaseIdx: number) => {
+    if (window.confirm("Supprimer cet horizon de feuille de route ?")) {
+      setMobilityRoadmap(mobilityRoadmap.filter((_, i) => i !== phaseIdx));
+    }
+  };
+
+  const handleAddVisaGroup = () => {
+    if (!newVisaCountryName.trim()) return;
+    setMobilityVisa([...mobilityVisa, { country: newVisaCountryName.trim(), docs: [] }]);
+    setNewVisaCountryName("");
+    setShowAddVisaGroupModal(false);
+  };
+
+  const handleAddVisaDoc = (groupIdx: number) => {
+    if (!newVisaDocLabel.trim()) return;
+    const updated = [...mobilityVisa];
+    updated[groupIdx].docs.push({
+      id: `v_custom_${Date.now()}`,
+      label: newVisaDocLabel.trim(),
+      done: false
+    });
+    setMobilityVisa(updated);
+    setNewVisaDocLabel("");
+    setAddingVisaDocGroupIdx(null);
+  };
+
+  const handleDeleteVisaDoc = (groupIdx: number, docId: string) => {
+    const updated = [...mobilityVisa];
+    updated[groupIdx].docs = updated[groupIdx].docs.filter(d => d.id !== docId);
+    setMobilityVisa(updated);
+  };
+
+  const handleDeleteVisaGroup = (groupIdx: number) => {
+    if (window.confirm("Supprimer ce dossier de visa ?")) {
+      setMobilityVisa(mobilityVisa.filter((_, i) => i !== groupIdx));
+    }
+  };
 
   // Calculations for global gauge & progress
   const totalSkillActions = mobilitySkills.reduce((acc, g) => acc + g.items.length, 0);
@@ -358,34 +568,16 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
     ];
   });
 
-  const [jobOpportunities, setJobOpportunities] = useState<JobOpportunity[]>(() => {
-    const saved = localStorage.getItem("mp_job_opportunities");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        // Fallback
-      }
-    }
-    return [
-      { id: "opp_1", title: "Analyste Financier Senior", company: "Attijariwafa Bank", siteUrl: "https://www.linkedin.com", salary: "18 000 MAD", status: "Entretien", dateApplied: "2026-07-02", nextAction: "Cas pratique de modélisation technique mardi", notes: "Premier entretien RH validé." },
-      { id: "opp_2", title: "Contrôleur de Gestion Projet", company: "Masen", siteUrl: "https://www.rekrute.com", salary: "16 500 MAD", status: "Postulé", dateApplied: "2026-07-08", nextAction: "Suivi courtois par LinkedIn le 18 juillet", notes: "Candidature envoyée en direct." },
-      { id: "opp_3", title: "Financial Modeler Junior", company: "EY Maroc", siteUrl: "https://www.linkedin.com", salary: "15 000 MAD", status: "À postuler", nextAction: "Adapter le CV avec les projets de modélisation", notes: "Cabinet d'audit de premier plan." }
-    ];
-  });
-
-  // --- LOCALSTORAGE SYNC ---
+  // --- PERSISTENT DATA FOR CARRIÈRE PROFESSIONNELLE ---
   useEffect(() => { localStorage.setItem("mp_career_skills", JSON.stringify(skills)); }, [skills]);
   useEffect(() => { localStorage.setItem("mp_recruitment_sites", JSON.stringify(recruitmentSites)); }, [recruitmentSites]);
   useEffect(() => { localStorage.setItem("mp_target_companies", JSON.stringify(targetCompanies)); }, [targetCompanies]);
-  useEffect(() => { localStorage.setItem("mp_job_opportunities", JSON.stringify(jobOpportunities)); }, [jobOpportunities]);
   useEffect(() => { localStorage.setItem("mp_career_certificates", JSON.stringify(certificates)); }, [certificates]);
 
   // --- MODAL / FORM STATES ---
   const [showSkillForm, setShowSkillForm] = useState(false);
   const [showSiteForm, setShowSiteForm] = useState(false);
   const [showCompanyForm, setShowCompanyForm] = useState(false);
-  const [showOppForm, setShowOppForm] = useState(false);
   const [showCertForm, setShowCertForm] = useState(false);
 
   // --- FORM VALUES ---
@@ -412,6 +604,7 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
   const [siteIdentifiant, setSiteIdentifiant] = useState("");
   const [siteSearch, setSiteSearch] = useState("");
   const [siteCountryFilter, setSiteCountryFilter] = useState("Tous");
+  const [siteViewMode, setSiteViewMode] = useState<"grid" | "table">("grid");
 
   const [compName, setCompName] = useState("");
   const [compWebsite, setCompWebsite] = useState("");
@@ -419,47 +612,9 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
   const [compNotes, setCompNotes] = useState("");
   const [compContact, setCompContact] = useState("");
 
-  const [oppTitle, setOppTitle] = useState("");
-  const [oppCompany, setOppCompany] = useState("");
-  const [oppSiteUrl, setOppSiteUrl] = useState("");
-  const [oppSalary, setOppSalary] = useState("");
-  const [oppStatus, setOppStatus] = useState<JobOpportunity["status"]>("À postuler");
-  const [oppDateApplied, setOppDateApplied] = useState("");
-  const [oppNextAction, setOppNextAction] = useState("");
-  const [oppNotes, setOppNotes] = useState("");
-
-  const [oppStatusFilter, setOppStatusFilter] = useState<"Tous" | JobOpportunity["status"]>("Tous");
-  const [oppSearchQuery, setOppSearchQuery] = useState("");
-  const [oppViewMode, setOppViewMode] = useState<"table" | "grid">("table");
-
   // --- METRIC CALCS ---
   const acquiredSkillsCount = skills.filter(s => s.status === "Acquise").length;
-  const activeOpportunities = jobOpportunities.filter(o => o.status !== "Refusé" && o.status !== "Offre").length;
-  const offeredOpportunities = jobOpportunities.filter(o => o.status === "Offre").length;
   const obtainedCertificatesCount = certificates.filter(c => c.status === "Obtenu").length;
-  
-  // --- INTERVIEW SUCCESS RATE (LAST 30 DAYS) ---
-  const interviewSuccessRate30Days = React.useMemo(() => {
-    const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-
-    const recentOpps = jobOpportunities.filter(opp => {
-      if (!opp.dateApplied) return false;
-      const appDate = new Date(opp.dateApplied);
-      return appDate >= thirtyDaysAgo && appDate <= today && opp.status !== "À postuler";
-    });
-
-    const totalApplied = recentOpps.length;
-    const totalInterviews = recentOpps.filter(opp => opp.status === "Entretien" || opp.status === "Offre").length;
-    const rate = totalApplied > 0 ? (totalInterviews / totalApplied) * 100 : 0;
-
-    return {
-      totalApplied,
-      totalInterviews,
-      rate: Math.round(rate)
-    };
-  }, [jobOpportunities]);
 
   // --- SUBMISSION HANDLERS ---
   const handleAddCertificate = (e: React.FormEvent) => {
@@ -536,18 +691,6 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
     setCompName(""); setCompWebsite(""); setCompContact(""); setCompNotes(""); setShowCompanyForm(false);
   };
 
-  const handleAddOpp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!oppTitle.trim()) return;
-    setJobOpportunities(prev => [{
-      id: "opp_" + Date.now(), title: oppTitle.trim(), company: oppCompany.trim(),
-      siteUrl: oppSiteUrl.trim(), salary: oppSalary.trim(), status: oppStatus,
-      dateApplied: oppDateApplied || new Date().toISOString().split("T")[0],
-      nextAction: oppNextAction.trim(), notes: oppNotes.trim()
-    }, ...prev]);
-    setOppTitle(""); setOppCompany(""); setOppSalary(""); setOppNotes(""); setShowOppForm(false);
-  };
-
   // --- ACTIONS ---
   const toggleSkillStatus = (id: string) => {
     setSkills(prev => prev.map(s => {
@@ -559,106 +702,28 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
     }));
   };
 
-  const updateOppStatus = (id: string, status: JobOpportunity["status"]) => {
-    setJobOpportunities(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-  };
+
 
   return (
     <div className="space-y-6">
       
-      {/* 0. SUMMARY WIDGET: INTERVIEW SUCCESS RATE */}
-      <div className="bg-white border border-neutral-200 rounded-3xl p-5 shadow-3xs flex flex-col md:flex-row md:items-center justify-between gap-5 animate-in fade-in duration-300">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
-            <Target className="w-6 h-6" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="text-sm font-black text-neutral-950 uppercase tracking-tight flex items-center gap-2">
-              <span>Conversion en Entretien (30j)</span>
-              <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-100">
-                Taux de succès
-              </span>
-            </h4>
-            <p className="text-xs text-neutral-500 font-medium leading-relaxed">
-              Pourcentage de candidatures envoyées au cours des 30 derniers jours qui ont abouti à un entretien d'embauche ou à une offre.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-6 shrink-0 border-t md:border-t-0 border-neutral-100 pt-4 md:pt-0">
-          <div className="space-y-1.5">
-            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block font-mono">Performance de Conversion</span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black font-mono text-neutral-950 leading-none">
-                {interviewSuccessRate30Days.rate}%
-              </span>
-              <span className="text-xs text-neutral-500 font-bold font-mono">
-                ({interviewSuccessRate30Days.totalInterviews} / {interviewSuccessRate30Days.totalApplied} candidatures)
-              </span>
-              {interviewSuccessRate30Days.rate >= 50 ? (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-0.5">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>Excellent</span>
-                </span>
-              ) : interviewSuccessRate30Days.rate > 0 ? (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-0.5">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>En cours</span>
-                </span>
-              ) : (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-50 text-neutral-600 border border-neutral-200 flex items-center gap-0.5">
-                  <span>Aucun entretien</span>
-                </span>
-              )}
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <div className="w-32 bg-neutral-100 h-2 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    interviewSuccessRate30Days.rate >= 50 
-                      ? "bg-emerald-500" 
-                      : interviewSuccessRate30Days.rate >= 25 
-                      ? "bg-indigo-500" 
-                      : "bg-amber-500"
-                  }`}
-                  style={{ width: `${Math.min(100, Math.max(0, interviewSuccessRate30Days.rate || 0))}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-neutral-400 font-bold font-mono">
-                {interviewSuccessRate30Days.totalApplied > 0 ? "Actif" : "En attente"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* 1. SECTOR METRICS PANEL */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 bg-gradient-to-br from-zinc-900 to-indigo-950 text-white rounded-3xl p-6 border border-zinc-800 shadow-md relative overflow-hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-gradient-to-br from-zinc-900 to-indigo-950 text-white rounded-3xl p-6 border border-zinc-800 shadow-md relative overflow-hidden">
         <div className="absolute top-[-30%] right-[-10%] w-[50%] h-[150%] rounded-full bg-indigo-500/10 blur-[100px] pointer-events-none" />
         
-        {/* Core Stat 1: Total Job Pipeline */}
+        {/* Core Stat 1: Target Companies */}
         <div className="col-span-1 border-r border-zinc-800/80 pr-4 flex flex-col justify-center space-y-1">
-          <span className="text-[10px] font-black tracking-widest text-indigo-300 block uppercase font-mono">Suivi de Carrière</span>
+          <span className="text-[10px] font-black tracking-widest text-emerald-400 block uppercase font-mono">Entreprises Cibles</span>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black font-mono leading-none">{jobOpportunities.length}</span>
-            <span className="text-xs text-zinc-400 font-medium">Opportunités</span>
+            <span className="text-3xl font-black font-mono leading-none">{targetCompanies.length}</span>
+            <span className="text-xs text-zinc-400 font-medium">Entreprises</span>
           </div>
           <span className="text-[10px] text-zinc-400 font-medium font-sans">
-            {activeOpportunities} candidatures en cours.
+            Cartographiées et suivies.
           </span>
         </div>
 
-        {/* Core Stat 2: Offered / Completed */}
-        <div className="col-span-1 border-r border-zinc-800/80 pr-4 pl-2 flex flex-col justify-center space-y-1">
-          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest font-mono">Offres Reçues</span>
-          <span className="text-2xl font-black font-mono text-emerald-400 leading-none">{offeredOpportunities} Offres</span>
-          <span className="text-[10px] text-zinc-300 font-medium mt-1">
-            Objectifs en cours de finalisation !
-          </span>
-        </div>
-
-        {/* Core Stat 3: Competency metrics */}
+        {/* Core Stat 2: Competency metrics */}
         <div className="col-span-1 border-r border-zinc-800/80 pr-4 pl-2 flex flex-col justify-center space-y-1">
           <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest font-mono">Compétences</span>
           <span className="text-2xl font-black font-mono text-amber-400 leading-none">{acquiredSkillsCount} Acquises</span>
@@ -667,7 +732,7 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
           </span>
         </div>
 
-        {/* Core Stat 4: Certifications */}
+        {/* Core Stat 3: Certifications */}
         <div className="col-span-1 border-r border-zinc-800/80 pr-4 pl-2 flex flex-col justify-center space-y-1">
           <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest font-mono">Certificats</span>
           <span className="text-2xl font-black font-mono text-purple-400 leading-none">{obtainedCertificatesCount} <span className="text-xs font-semibold text-zinc-400">/ {certificates.length}</span></span>
@@ -676,7 +741,7 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
           </span>
         </div>
 
-        {/* Core Stat 5: Recruitment Portals */}
+        {/* Core Stat 4: Recruitment Portals */}
         <div className="col-span-1 pl-2 flex flex-col justify-center space-y-1">
           <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest font-mono">Portails Recrutement</span>
           <span className="text-2xl font-black font-mono text-white leading-none">
@@ -707,15 +772,6 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
         >
           <Compass className="w-3.5 h-3.5" />
           <span>Mobilité & EPM ({globalProgressPct}%)</span>
-        </button>
-        <button
-          onClick={() => handleTabChange("pipeline")}
-          className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide transition-all cursor-pointer select-none ${
-            careerTab === "pipeline" ? "bg-white text-zinc-950 shadow-xs" : "text-neutral-500 hover:text-zinc-950"
-          }`}
-        >
-          <Briefcase className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5 text-amber-500" />
-          <span>Pipeline ({jobOpportunities.length})</span>
         </button>
         <button
           onClick={() => handleTabChange("recruitment")}
@@ -764,15 +820,27 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
           {/* Header Card & Progress Gauge */}
           <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-indigo-950 text-white rounded-3xl p-6 shadow-xl border border-zinc-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 z-10 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-[11px] font-black uppercase tracking-wider font-mono">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Tour de contrôle · Mobilité internationale
+              <div className="flex items-center gap-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-[11px] font-black uppercase tracking-wider font-mono">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  {mobilityHeader.tagline}
+                </div>
+                <button
+                  onClick={() => {
+                    setEditHeaderForm(mobilityHeader);
+                    setShowEditHeaderModal(true);
+                  }}
+                  className="p-1 text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer"
+                  title="Éditer l'en-tête de mobilité"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
               </div>
               <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">
-                Serrou Mohammed <span className="text-zinc-400 font-normal">· Plan EPM Finance</span>
+                {mobilityHeader.name} <span className="text-zinc-400 font-normal">· {mobilityHeader.plan}</span>
               </h2>
               <p className="text-xs md:text-sm text-zinc-300 font-medium leading-relaxed">
-                Suivi vivant de votre recherche multi-pays : candidatures, compétences, échéances salariales et dossiers visa au même endroit.
+                {mobilityHeader.description}
               </p>
             </div>
 
@@ -846,9 +914,17 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                       STATUT PAR DESTINATION — TOUR DE CONTRÔLE
                     </h3>
                   </div>
-                  <span className="text-[10px] text-zinc-400 uppercase tracking-widest bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-800">
-                    Sponsor & Visas 2026
-                  </span>
+                  <button
+                    onClick={() => {
+                      setEditingCountryIdx(null);
+                      setCountryForm({ country: "", entryPath: "", status: "En veille" });
+                      setShowAddCountryModal(true);
+                    }}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-sans font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Nouvelle Destination</span>
+                  </button>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -857,7 +933,8 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                       <tr className="text-zinc-500 border-b border-zinc-800 uppercase text-[10px] tracking-widest font-sans">
                         <th className="py-2.5 px-3">Pays / Région</th>
                         <th className="py-2.5 px-3">Voie d'entrée privilégiée</th>
-                        <th className="py-2.5 px-3 text-right">Statut Actuel</th>
+                        <th className="py-2.5 px-3 text-center">Statut Actuel</th>
+                        <th className="py-2.5 px-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/60">
@@ -875,7 +952,7 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                           <tr key={idx} className="hover:bg-zinc-900/50 transition-colors">
                             <td className="py-3 px-3 font-bold text-white font-sans">{c.country}</td>
                             <td className="py-3 px-3 text-zinc-400 text-[11px] font-sans">{c.entryPath}</td>
-                            <td className="py-3 px-3 text-right">
+                            <td className="py-3 px-3 text-center">
                               <select
                                 value={c.status}
                                 onChange={(e) => {
@@ -891,6 +968,28 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                                 <option value="Offre reçue" className="bg-zinc-900 text-emerald-300">Offre reçue</option>
                                 <option value="Mis en pause" className="bg-zinc-900 text-zinc-400">Mis en pause</option>
                               </select>
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => {
+                                    setEditingCountryIdx(idx);
+                                    setCountryForm({ ...c });
+                                    setShowAddCountryModal(true);
+                                  }}
+                                  className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                                  title="Modifier"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteCountry(idx)}
+                                  className="p-1.5 text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+                                  title="Supprimer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -914,7 +1013,17 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                     Comparatif des Marchés Cibles (Grille de Référence 2026)
                   </h3>
                 </div>
-                <span className="text-[10px] font-bold text-neutral-400 font-mono">Conditions de Visa & Seuils</span>
+                <button
+                  onClick={() => {
+                    setEditingMarketIdx(null);
+                    setMarketForm({ country: "", demand: "Très forte", entry: "", salaryThreshold: "", difficulty: 2 });
+                    setShowMarketModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Ajouter un marché</span>
+                </button>
               </div>
 
               <div className="overflow-x-auto">
@@ -925,11 +1034,12 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                       <th className="py-3 px-3">Demande EPM / FP&A</th>
                       <th className="py-3 px-3">Voie d'entrée</th>
                       <th className="py-3 px-3">Seuil Salaire Visa 2026</th>
-                      <th className="py-3 px-3 text-right">Difficulté Visa</th>
+                      <th className="py-3 px-3 text-center">Difficulté Visa</th>
+                      <th className="py-3 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 font-medium">
-                    {TARGET_MARKETS_REF.map((m, idx) => (
+                    {mobilityTargetMarkets.map((m, idx) => (
                       <tr key={idx} className="hover:bg-neutral-50/70 transition-colors">
                         <td className="py-3 px-3 font-bold text-neutral-900">{m.country}</td>
                         <td className="py-3 px-3 text-neutral-700">
@@ -941,8 +1051,30 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                         </td>
                         <td className="py-3 px-3 text-neutral-600">{m.entry}</td>
                         <td className="py-3 px-3 font-mono text-neutral-800 font-bold">{m.salaryThreshold}</td>
-                        <td className="py-3 px-3 text-right font-mono text-amber-600 font-bold">
+                        <td className="py-3 px-3 text-center font-mono text-amber-600 font-bold">
                           {"●".repeat(m.difficulty)}{"○".repeat(5 - m.difficulty)}
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => {
+                                setEditingMarketIdx(idx);
+                                setMarketForm({ ...m });
+                                setShowMarketModal(true);
+                              }}
+                              className="p-1.5 text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
+                              title="Modifier"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMarket(idx)}
+                              className="p-1.5 text-neutral-400 hover:text-red-600 transition-colors cursor-pointer"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -969,46 +1101,111 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                     </span>
                   </div>
                 </div>
-                <div className="w-32 bg-neutral-100 h-2 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-purple-600 rounded-full transition-all duration-500" 
-                    style={{ width: `${totalSkillActions > 0 ? (doneSkillActions / totalSkillActions) * 100 : 0}%` }}
-                  />
-                </div>
+                <button
+                  onClick={() => {
+                    setNewSkillCatName("");
+                    setShowAddSkillCatModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Nouvelle catégorie</span>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {mobilitySkills.map((grp, gIdx) => {
                   const grpDone = grp.items.filter(i => i.done).length;
                   return (
-                    <div key={gIdx} className="p-4 bg-neutral-50/80 border border-neutral-200/80 rounded-2xl space-y-3">
-                      <div className="flex justify-between items-center border-b border-neutral-200/60 pb-2">
-                        <h4 className="text-xs font-black text-neutral-900 uppercase tracking-tight">{grp.category}</h4>
-                        <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
-                          {grpDone}/{grp.items.length}
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {grp.items.map((item) => (
-                          <label key={item.id} className="flex items-start gap-2.5 cursor-pointer text-xs group">
-                            <input
-                              type="checkbox"
-                              checked={item.done}
-                              onChange={() => {
-                                const updated = [...mobilitySkills];
-                                const targetItem = updated[gIdx].items.find(i => i.id === item.id);
-                                if (targetItem) targetItem.done = !targetItem.done;
-                                setMobilitySkills(updated);
-                              }}
-                              className="mt-0.5 rounded text-purple-600 focus:ring-purple-500 border-neutral-300 cursor-pointer"
-                            />
-                            <span className={`leading-snug transition-colors ${
-                              item.done ? "line-through text-neutral-400" : "text-neutral-800 font-medium group-hover:text-neutral-950"
-                            }`}>
-                              {item.label}
+                    <div key={gIdx} className="p-4 bg-neutral-50/80 border border-neutral-200/80 rounded-2xl space-y-3 flex flex-col justify-between">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center border-b border-neutral-200/60 pb-2">
+                          <h4 className="text-xs font-black text-neutral-900 uppercase tracking-tight">{grp.category}</h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                              {grpDone}/{grp.items.length}
                             </span>
-                          </label>
-                        ))}
+                            <button
+                              onClick={() => handleDeleteSkillCat(gIdx)}
+                              className="text-neutral-400 hover:text-red-600 transition-colors cursor-pointer"
+                              title="Supprimer la catégorie"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          {grp.items.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between group/item">
+                              <label className="flex items-start gap-2.5 cursor-pointer text-xs flex-1 pr-2">
+                                <input
+                                  type="checkbox"
+                                  checked={item.done}
+                                  onChange={() => {
+                                    const updated = [...mobilitySkills];
+                                    const targetItem = updated[gIdx].items.find(i => i.id === item.id);
+                                    if (targetItem) targetItem.done = !targetItem.done;
+                                    setMobilitySkills(updated);
+                                  }}
+                                  className="mt-0.5 rounded text-purple-600 focus:ring-purple-500 border-neutral-300 cursor-pointer"
+                                />
+                                <span className={`leading-snug transition-colors ${
+                                  item.done ? "line-through text-neutral-400" : "text-neutral-800 font-medium group-hover/item:text-neutral-950"
+                                }`}>
+                                  {item.label}
+                                </span>
+                              </label>
+                              <button
+                                onClick={() => handleDeleteSkillItem(gIdx, item.id)}
+                                className="opacity-0 group-hover/item:opacity-100 text-neutral-400 hover:text-red-500 transition-all cursor-pointer p-0.5"
+                                title="Supprimer la compétence"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Add Item Trigger */}
+                      <div className="pt-2 border-t border-neutral-200/60">
+                        {addingSkillItemCatIdx === gIdx ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={newSkillItemLabel}
+                              onChange={(e) => setNewSkillItemLabel(e.target.value)}
+                              placeholder="Action / compétence..."
+                              className="flex-1 text-xs px-2.5 py-1 bg-white border border-neutral-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500"
+                              onKeyDown={(e) => e.key === "Enter" && handleAddSkillItem(gIdx)}
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleAddSkillItem(gIdx)}
+                              className="p-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setAddingSkillItemCatIdx(null)}
+                              className="p-1 bg-neutral-200 text-neutral-600 rounded-lg hover:bg-neutral-300 cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setAddingSkillItemCatIdx(gIdx);
+                              setNewSkillItemLabel("");
+                            }}
+                            className="w-full py-1 text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100/80 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Ajouter une action</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1034,12 +1231,17 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                     </span>
                   </div>
                 </div>
-                <div className="w-32 bg-neutral-100 h-2 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
-                    style={{ width: `${totalRoadmapActions > 0 ? (doneRoadmapActions / totalRoadmapActions) * 100 : 0}%` }}
-                  />
-                </div>
+                <button
+                  onClick={() => {
+                    setNewPhaseLabel("");
+                    setNewPhaseTitle("");
+                    setShowAddRoadmapPhaseModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Nouvel horizon</span>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1052,31 +1254,89 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                           <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
                             {phase.phase}
                           </span>
-                          <span className="text-[10px] font-mono text-neutral-500">{pDone}/{phase.items.length}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono text-neutral-500">{pDone}/{phase.items.length}</span>
+                            <button
+                              onClick={() => handleDeleteRoadmapPhase(pIdx)}
+                              className="text-neutral-400 hover:text-red-600 transition-colors cursor-pointer p-0.5"
+                              title="Supprimer l'horizon"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                         <h4 className="text-xs font-black text-neutral-900 leading-snug">{phase.title}</h4>
                         <div className="space-y-2 pt-1 border-t border-neutral-200/60">
                           {phase.items.map((item) => (
-                            <label key={item.id} className="flex items-start gap-2 cursor-pointer text-[11px] group">
-                              <input
-                                type="checkbox"
-                                checked={item.done}
-                                onChange={() => {
-                                  const updated = [...mobilityRoadmap];
-                                  const targetItem = updated[pIdx].items.find(i => i.id === item.id);
-                                  if (targetItem) targetItem.done = !targetItem.done;
-                                  setMobilityRoadmap(updated);
-                                }}
-                                className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 border-neutral-300 cursor-pointer"
-                              />
-                              <span className={`leading-snug transition-colors ${
-                                item.done ? "line-through text-neutral-400" : "text-neutral-700 group-hover:text-neutral-950 font-medium"
-                              }`}>
-                                {item.label}
-                              </span>
-                            </label>
+                            <div key={item.id} className="flex items-center justify-between group/item">
+                              <label className="flex items-start gap-2 cursor-pointer text-[11px] flex-1 pr-1">
+                                <input
+                                  type="checkbox"
+                                  checked={item.done}
+                                  onChange={() => {
+                                    const updated = [...mobilityRoadmap];
+                                    const targetItem = updated[pIdx].items.find(i => i.id === item.id);
+                                    if (targetItem) targetItem.done = !targetItem.done;
+                                    setMobilityRoadmap(updated);
+                                  }}
+                                  className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 border-neutral-300 cursor-pointer"
+                                />
+                                <span className={`leading-snug transition-colors ${
+                                  item.done ? "line-through text-neutral-400" : "text-neutral-700 group-hover/item:text-neutral-950 font-medium"
+                                }`}>
+                                  {item.label}
+                                </span>
+                              </label>
+                              <button
+                                onClick={() => handleDeleteRoadmapItem(pIdx, item.id)}
+                                className="opacity-0 group-hover/item:opacity-100 text-neutral-400 hover:text-red-500 transition-all cursor-pointer p-0.5"
+                                title="Supprimer le jalon"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
                           ))}
                         </div>
+                      </div>
+
+                      {/* Add Item Trigger */}
+                      <div className="pt-2 border-t border-neutral-200/60">
+                        {addingRoadmapItemPhaseIdx === pIdx ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={newRoadmapItemLabel}
+                              onChange={(e) => setNewRoadmapItemLabel(e.target.value)}
+                              placeholder="Intitulé du jalon..."
+                              className="flex-1 text-xs px-2.5 py-1 bg-white border border-neutral-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                              onKeyDown={(e) => e.key === "Enter" && handleAddRoadmapItem(pIdx)}
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleAddRoadmapItem(pIdx)}
+                              className="p-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setAddingRoadmapItemPhaseIdx(null)}
+                              className="p-1 bg-neutral-200 text-neutral-600 rounded-lg hover:bg-neutral-300 cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setAddingRoadmapItemPhaseIdx(pIdx);
+                              setNewRoadmapItemLabel("");
+                            }}
+                            className="w-full py-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100/80 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Ajouter un jalon</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -1102,50 +1362,464 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                     </span>
                   </div>
                 </div>
-                <div className="w-32 bg-neutral-100 h-2 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-amber-500 rounded-full transition-all duration-500" 
-                    style={{ width: `${totalVisaActions > 0 ? (doneVisaActions / totalVisaActions) * 100 : 0}%` }}
-                  />
-                </div>
+                <button
+                  onClick={() => {
+                    setNewVisaCountryName("");
+                    setShowAddVisaGroupModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Nouveau dossier visa</span>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {mobilityVisa.map((vGroup, vIdx) => {
                   const vDone = vGroup.docs.filter(d => d.done).length;
                   return (
-                    <div key={vIdx} className="p-4 bg-neutral-50/70 border border-neutral-200/80 rounded-2xl space-y-3">
-                      <div className="flex items-center justify-between border-b border-neutral-200/60 pb-2">
-                        <h4 className="text-xs font-black text-neutral-900">{vGroup.country}</h4>
-                        <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                          {vDone}/{vGroup.docs.length}
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {vGroup.docs.map((docItem) => (
-                          <label key={docItem.id} className="flex items-start gap-2 cursor-pointer text-[11px] group">
-                            <input
-                              type="checkbox"
-                              checked={docItem.done}
-                              onChange={() => {
-                                const updated = [...mobilityVisa];
-                                const targetDoc = updated[vIdx].docs.find(d => d.id === docItem.id);
-                                if (targetDoc) targetDoc.done = !targetDoc.done;
-                                setMobilityVisa(updated);
-                              }}
-                              className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 border-neutral-300 cursor-pointer"
-                            />
-                            <span className={`leading-snug transition-colors ${
-                              docItem.done ? "line-through text-neutral-400" : "text-neutral-700 group-hover:text-neutral-950 font-medium"
-                            }`}>
-                              {docItem.label}
+                    <div key={vIdx} className="p-4 bg-neutral-50/70 border border-neutral-200/80 rounded-2xl space-y-3 flex flex-col justify-between">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between border-b border-neutral-200/60 pb-2">
+                          <h4 className="text-xs font-black text-neutral-900">{vGroup.country}</h4>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                              {vDone}/{vGroup.docs.length}
                             </span>
-                          </label>
-                        ))}
+                            <button
+                              onClick={() => handleDeleteVisaGroup(vIdx)}
+                              className="text-neutral-400 hover:text-red-600 transition-colors cursor-pointer p-0.5"
+                              title="Supprimer le dossier"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          {vGroup.docs.map((docItem) => (
+                            <div key={docItem.id} className="flex items-center justify-between group/item">
+                              <label className="flex items-start gap-2 cursor-pointer text-[11px] flex-1 pr-1">
+                                <input
+                                  type="checkbox"
+                                  checked={docItem.done}
+                                  onChange={() => {
+                                    const updated = [...mobilityVisa];
+                                    const targetDoc = updated[vIdx].docs.find(d => d.id === docItem.id);
+                                    if (targetDoc) targetDoc.done = !targetDoc.done;
+                                    setMobilityVisa(updated);
+                                  }}
+                                  className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 border-neutral-300 cursor-pointer"
+                                />
+                                <span className={`leading-snug transition-colors ${
+                                  docItem.done ? "line-through text-neutral-400" : "text-neutral-700 group-hover/item:text-neutral-950 font-medium"
+                                }`}>
+                                  {docItem.label}
+                                </span>
+                              </label>
+                              <button
+                                onClick={() => handleDeleteVisaDoc(vIdx, docItem.id)}
+                                className="opacity-0 group-hover/item:opacity-100 text-neutral-400 hover:text-red-500 transition-all cursor-pointer p-0.5"
+                                title="Supprimer le document"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Add Visa Doc Trigger */}
+                      <div className="pt-2 border-t border-neutral-200/60">
+                        {addingVisaDocGroupIdx === vIdx ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={newVisaDocLabel}
+                              onChange={(e) => setNewVisaDocLabel(e.target.value)}
+                              placeholder="Libellé pièce..."
+                              className="flex-1 text-xs px-2.5 py-1 bg-white border border-neutral-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                              onKeyDown={(e) => e.key === "Enter" && handleAddVisaDoc(vIdx)}
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleAddVisaDoc(vIdx)}
+                              className="p-1 bg-amber-600 text-white rounded-lg hover:bg-amber-700 cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setAddingVisaDocGroupIdx(null)}
+                              className="p-1 bg-neutral-200 text-neutral-600 rounded-lg hover:bg-neutral-300 cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setAddingVisaDocGroupIdx(vIdx);
+                              setNewVisaDocLabel("");
+                            }}
+                            className="w-full py-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100/80 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Ajouter une pièce</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* ==================================================== */}
+          {/* --- MODALS FOR MOBILITY & EPM EDITING --- */}
+          {/* ==================================================== */}
+
+          {/* 1. Header Edit Modal */}
+          {showEditHeaderModal && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                  <h3 className="text-base font-black text-neutral-900">Éditer l'En-tête Mobilité & EPM</h3>
+                  <button onClick={() => setShowEditHeaderModal(false)} className="text-neutral-400 hover:text-neutral-700">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Surtitre / Tagline</label>
+                    <input
+                      type="text"
+                      value={editHeaderForm.tagline}
+                      onChange={(e) => setEditHeaderForm({ ...editHeaderForm, tagline: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Nom / Profil</label>
+                    <input
+                      type="text"
+                      value={editHeaderForm.name}
+                      onChange={(e) => setEditHeaderForm({ ...editHeaderForm, name: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Intitulé du Plan</label>
+                    <input
+                      type="text"
+                      value={editHeaderForm.plan}
+                      onChange={(e) => setEditHeaderForm({ ...editHeaderForm, plan: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Description / Objectifs</label>
+                    <textarea
+                      rows={3}
+                      value={editHeaderForm.description}
+                      onChange={(e) => setEditHeaderForm({ ...editHeaderForm, description: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+                  <button
+                    onClick={() => setShowEditHeaderModal(false)}
+                    className="px-4 py-2 bg-neutral-100 text-neutral-700 text-xs font-bold rounded-xl hover:bg-neutral-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveHeader}
+                    className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700"
+                  >
+                    Enregistrer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 2. Destination Country Modal */}
+          {showAddCountryModal && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                  <h3 className="text-base font-black text-neutral-900">
+                    {editingCountryIdx !== null ? "Modifier la Destination" : "Nouvelle Destination Mobilité"}
+                  </h3>
+                  <button onClick={() => setShowAddCountryModal(false)} className="text-neutral-400 hover:text-neutral-700">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Pays / Région *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Suisse, Japon..."
+                      value={countryForm.country}
+                      onChange={(e) => setCountryForm({ ...countryForm, country: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Voie d'entrée privilégiée</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Permis travail sponsorisé, Visa nomade..."
+                      value={countryForm.entryPath}
+                      onChange={(e) => setCountryForm({ ...countryForm, entryPath: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Statut Actuel</label>
+                    <select
+                      value={countryForm.status}
+                      onChange={(e) => setCountryForm({ ...countryForm, status: e.target.value as any })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="En veille">En veille</option>
+                      <option value="Candidatures envoyées">Candidatures envoyées</option>
+                      <option value="En entretien">En entretien</option>
+                      <option value="Offre reçue">Offre reçue</option>
+                      <option value="Mis en pause">Mis en pause</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+                  <button
+                    onClick={() => setShowAddCountryModal(false)}
+                    className="px-4 py-2 bg-neutral-100 text-neutral-700 text-xs font-bold rounded-xl hover:bg-neutral-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveCountry}
+                    className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700"
+                  >
+                    {editingCountryIdx !== null ? "Enregistrer" : "Ajouter"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 3. Target Market Modal */}
+          {showMarketModal && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                  <h3 className="text-base font-black text-neutral-900">
+                    {editingMarketIdx !== null ? "Modifier le Marché Cible" : "Ajouter un Marché Cible"}
+                  </h3>
+                  <button onClick={() => setShowMarketModal(false)} className="text-neutral-400 hover:text-neutral-700">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Marché / Zone *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Australie, UAE..."
+                      value={marketForm.country}
+                      onChange={(e) => setMarketForm({ ...marketForm, country: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Demande EPM / FP&A</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Très forte, Forte..."
+                      value={marketForm.demand}
+                      onChange={(e) => setMarketForm({ ...marketForm, demand: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Voie d'entrée</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Visa points, Sponsor direct..."
+                      value={marketForm.entry}
+                      onChange={(e) => setMarketForm({ ...marketForm, entry: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Seuil Salaire Visa 2026</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 50 000 €/an..."
+                      value={marketForm.salaryThreshold}
+                      onChange={(e) => setMarketForm({ ...marketForm, salaryThreshold: e.target.value })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Difficulté Visa (1 à 5)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={marketForm.difficulty}
+                      onChange={(e) => setMarketForm({ ...marketForm, difficulty: parseInt(e.target.value) || 1 })}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+                  <button
+                    onClick={() => setShowMarketModal(false)}
+                    className="px-4 py-2 bg-neutral-100 text-neutral-700 text-xs font-bold rounded-xl hover:bg-neutral-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveMarket}
+                    className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700"
+                  >
+                    {editingMarketIdx !== null ? "Enregistrer" : "Ajouter"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 4. Add Skill Category Modal */}
+          {showAddSkillCatModal && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                  <h3 className="text-base font-black text-neutral-900">Nouvelle Catégorie de Compétence</h3>
+                  <button onClick={() => setShowAddSkillCatModal(false)} className="text-neutral-400 hover:text-neutral-700">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Intitulé de la Catégorie *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Certification BI, IA & Machine Learning..."
+                    value={newSkillCatName}
+                    onChange={(e) => setNewSkillCatName(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    onKeyDown={(e) => e.key === "Enter" && handleAddSkillCategory()}
+                    autoFocus
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+                  <button
+                    onClick={() => setShowAddSkillCatModal(false)}
+                    className="px-4 py-2 bg-neutral-100 text-neutral-700 text-xs font-bold rounded-xl hover:bg-neutral-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleAddSkillCategory}
+                    className="px-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-xl hover:bg-purple-700"
+                  >
+                    Créer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 5. Add Roadmap Phase Modal */}
+          {showAddRoadmapPhaseModal && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                  <h3 className="text-base font-black text-neutral-900">Nouvel Horizon Roadmap</h3>
+                  <button onClick={() => setShowAddRoadmapPhaseModal(false)} className="text-neutral-400 hover:text-neutral-700">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Période / Horizon *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 5–10 ans..."
+                      value={newPhaseLabel}
+                      onChange={(e) => setNewPhaseLabel(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-neutral-700 block mb-1">Titre de l'étape *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: CFO / VP Finance..."
+                      value={newPhaseTitle}
+                      onChange={(e) => setNewPhaseTitle(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+                  <button
+                    onClick={() => setShowAddRoadmapPhaseModal(false)}
+                    className="px-4 py-2 bg-neutral-100 text-neutral-700 text-xs font-bold rounded-xl hover:bg-neutral-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleAddRoadmapPhase}
+                    className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700"
+                  >
+                    Créer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 6. Add Visa Country Group Modal */}
+          {showAddVisaGroupModal && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                  <h3 className="text-base font-black text-neutral-900">Nouveau Dossier Visa Pays</h3>
+                  <button onClick={() => setShowAddVisaGroupModal(false)} className="text-neutral-400 hover:text-neutral-700">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Nom du Pays / Zone *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Royaume-Uni, USA, Japon..."
+                    value={newVisaCountryName}
+                    onChange={(e) => setNewVisaCountryName(e.target.value)}
+                    className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    onKeyDown={(e) => e.key === "Enter" && handleAddVisaGroup()}
+                    autoFocus
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-neutral-100">
+                  <button
+                    onClick={() => setShowAddVisaGroupModal(false)}
+                    className="px-4 py-2 bg-neutral-100 text-neutral-700 text-xs font-bold rounded-xl hover:bg-neutral-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleAddVisaGroup}
+                    className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700"
+                  >
+                    Créer
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1196,69 +1870,56 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
           {/* Welcome & Overview Bento Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* Left Card: Pipeline Status & Quick Stats */}
+            {/* Left Card: Recruitment Portals Quick Access */}
             <div className="bg-white border border-neutral-200/80 rounded-3xl p-6 shadow-xs space-y-4 flex flex-col justify-between">
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
                   <div className="flex items-center gap-2">
                     <span className="p-1.5 bg-neutral-950 text-white rounded-lg">
-                      <Briefcase className="w-4 h-4 text-amber-400" />
+                      <Globe className="w-4 h-4 text-indigo-400" />
                     </span>
                     <h3 className="text-sm font-black text-neutral-950 uppercase tracking-tight">
-                      Pipeline Recrutement
+                      Portails de Recrutement
                     </h3>
                   </div>
                   <button
-                    onClick={() => handleTabChange("pipeline")}
+                    onClick={() => handleTabChange("recruitment")}
                     className="text-[10px] font-black text-indigo-600 uppercase tracking-wider hover:underline flex items-center gap-0.5 cursor-pointer"
                   >
                     Gérer <ExternalLink className="w-3 h-3" />
                   </button>
                 </div>
 
-                {/* Recruitment status bars */}
-                <div className="space-y-3">
-                  {["À postuler", "Postulé", "Entretien", "Offre"].map((status) => {
-                    const count = jobOpportunities.filter(o => o.status === status).length;
-                    const total = jobOpportunities.length || 1;
-                    const percentage = Math.round((count / total) * 100);
-                    const colorClass = 
-                      status === "Offre" ? "bg-emerald-500" :
-                      status === "Entretien" ? "bg-indigo-500" :
-                      status === "Postulé" ? "bg-amber-500" : "bg-neutral-400";
-                    return (
-                      <div key={status} className="space-y-1">
-                        <div className="flex justify-between text-xs font-bold text-neutral-700">
-                          <span>{status}</span>
-                          <span className="font-mono">{count} ({percentage}%)</span>
-                        </div>
-                        <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
-                          <div className={`h-full ${colorClass} rounded-full`} style={{ width: `${percentage}%` }} />
-                        </div>
+                <div className="space-y-2.5">
+                  {recruitmentSites.slice(0, 4).map((site) => (
+                    <a
+                      key={site.id}
+                      href={site.url}
+                      target="_blank"
+                      referrerPolicy="no-referrer"
+                      className="flex items-center justify-between p-2.5 bg-neutral-50 border border-neutral-200/50 hover:bg-neutral-100 rounded-xl transition-all group cursor-pointer"
+                    >
+                      <div className="space-y-0.5">
+                        <span className="text-[11.5px] font-bold text-neutral-900 group-hover:text-indigo-600 transition-colors block">{site.name}</span>
+                        <span className="text-[9px] text-neutral-400 font-bold font-mono uppercase">{site.country}</span>
                       </div>
-                    );
-                  })}
+                      <ExternalLink className="w-3.5 h-3.5 text-neutral-400 group-hover:text-indigo-600 transition-colors" />
+                    </a>
+                  ))}
                 </div>
               </div>
 
-              {/* Next Action Highlight */}
-              {(() => {
-                const pendingAction = jobOpportunities.find(o => o.nextAction && o.status !== "Offre" && o.status !== "Refusé");
-                if (pendingAction) {
-                  return (
-                    <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl space-y-1 mt-4">
-                      <span className="text-[9px] text-amber-800 font-black uppercase font-mono block">Action Prioritaire :</span>
-                      <h5 className="text-[11px] font-black text-neutral-900 leading-tight">{pendingAction.title} ({pendingAction.company})</h5>
-                      <p className="text-[10.5px] font-medium text-neutral-600 leading-snug">{pendingAction.nextAction}</p>
-                    </div>
-                  );
-                }
-                return (
-                  <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-xl text-center text-[10.5px] text-neutral-400 italic mt-4">
-                    Aucune action d'entretien planifiée
-                  </div>
-                );
-              })()}
+              <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-2xl flex items-center justify-between mt-2">
+                <span className="text-[10px] text-indigo-900 font-bold font-mono">
+                  {recruitmentSites.length} plateformes enregistrées
+                </span>
+                <button
+                  onClick={() => handleTabChange("recruitment")}
+                  className="text-[10px] font-black text-indigo-700 uppercase tracking-wider hover:underline cursor-pointer"
+                >
+                  Voir tout
+                </button>
+              </div>
             </div>
 
             {/* Middle Card: Skills Mastery & Development */}
@@ -1447,318 +2108,7 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
       {/* ==================================================== */}
       {/* --- TAB: PIPELINE DES CANDIDATURES & OPPORTUNITÉS --- */}
       {/* ==================================================== */}
-      {careerTab === "pipeline" && (() => {
-        const filteredOpps = jobOpportunities.filter(opp => {
-          const matchesStatus = oppStatusFilter === "Tous" || opp.status === oppStatusFilter;
-          const matchesQuery = opp.title.toLowerCase().includes(oppSearchQuery.toLowerCase()) ||
-                               opp.company.toLowerCase().includes(oppSearchQuery.toLowerCase()) ||
-                               (opp.notes || "").toLowerCase().includes(oppSearchQuery.toLowerCase());
-          return matchesStatus && matchesQuery;
-        });
 
-        const counts = {
-          total: jobOpportunities.length,
-          aPostuler: jobOpportunities.filter(o => o.status === "À postuler").length,
-          postule: jobOpportunities.filter(o => o.status === "Postulé").length,
-          entretien: jobOpportunities.filter(o => o.status === "Entretien").length,
-          offre: jobOpportunities.filter(o => o.status === "Offre").length,
-          refuse: jobOpportunities.filter(o => o.status === "Refusé").length
-        };
-
-        const getStatusBadge = (status: JobOpportunity["status"]) => {
-          switch (status) {
-            case "À postuler":
-              return "bg-neutral-100 text-neutral-700 border-neutral-200";
-            case "Postulé":
-              return "bg-indigo-50 text-indigo-700 border-indigo-200";
-            case "Entretien":
-              return "bg-amber-50 text-amber-700 border-amber-200";
-            case "Offre":
-              return "bg-emerald-50 text-emerald-700 border-emerald-200";
-            case "Refusé":
-              return "bg-red-50 text-red-700 border-red-200";
-            default:
-              return "bg-neutral-100 text-neutral-600 border-neutral-200";
-          }
-        };
-
-        return (
-          <div className="space-y-5 animate-in fade-in duration-300">
-            {/* KPI Metrics Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <div className="bg-white border border-neutral-200 rounded-2xl p-3.5 shadow-3xs space-y-1">
-                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Total Offres</span>
-                <p className="text-xl font-black text-neutral-900 font-mono">{counts.total}</p>
-              </div>
-              <div className="bg-white border border-neutral-200 rounded-2xl p-3.5 shadow-3xs space-y-1">
-                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">À Postuler</span>
-                <p className="text-xl font-black text-neutral-700 font-mono">{counts.aPostuler}</p>
-              </div>
-              <div className="bg-white border border-indigo-100 rounded-2xl p-3.5 shadow-3xs space-y-1 bg-indigo-50/20">
-                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">Postulées</span>
-                <p className="text-xl font-black text-indigo-700 font-mono">{counts.postule}</p>
-              </div>
-              <div className="bg-white border border-amber-100 rounded-2xl p-3.5 shadow-3xs space-y-1 bg-amber-50/20">
-                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">Entretiens</span>
-                <p className="text-xl font-black text-amber-700 font-mono">{counts.entretien}</p>
-              </div>
-              <div className="bg-white border border-emerald-100 rounded-2xl p-3.5 shadow-3xs space-y-1 bg-emerald-50/20 col-span-2 sm:col-span-1">
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Offres Obtenues</span>
-                <p className="text-xl font-black text-emerald-700 font-mono">{counts.offre}</p>
-              </div>
-            </div>
-
-            {/* Header & Action Controls Bar */}
-            <div className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-3xs space-y-3">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-amber-500 shrink-0" />
-                  <h3 className="text-xs font-black text-neutral-950 uppercase tracking-tight">
-                    Suivi des Candidatures & Opportunités
-                  </h3>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* View Mode Toggle */}
-                  <div className="bg-neutral-100 p-1 rounded-xl flex items-center gap-1 border border-neutral-200/80">
-                    <button
-                      onClick={() => setOppViewMode("table")}
-                      className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        oppViewMode === "table"
-                          ? "bg-white text-neutral-900 shadow-3xs font-extrabold"
-                          : "text-neutral-500 hover:text-neutral-900"
-                      }`}
-                      title="Vue Tableau Synthétique"
-                    >
-                      <List className="w-3.5 h-3.5" />
-                      <span className="text-[11px] hidden sm:inline">Tableau</span>
-                    </button>
-                    <button
-                      onClick={() => setOppViewMode("grid")}
-                      className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        oppViewMode === "grid"
-                          ? "bg-white text-neutral-900 shadow-3xs font-extrabold"
-                          : "text-neutral-500 hover:text-neutral-900"
-                      }`}
-                      title="Vue Grille / Cartes"
-                    >
-                      <LayoutGrid className="w-3.5 h-3.5" />
-                      <span className="text-[11px] hidden sm:inline">Cartes</span>
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => setShowOppForm(true)}
-                    className="bg-neutral-950 hover:bg-neutral-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Nouvelle opportunité</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Filters & Search Bar */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-neutral-100">
-                {/* Filter Pills */}
-                <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
-                  {(["Tous", "À postuler", "Postulé", "Entretien", "Offre", "Refusé"] as const).map(statusTab => {
-                    const countVal = statusTab === "Tous" ? counts.total :
-                      statusTab === "À postuler" ? counts.aPostuler :
-                      statusTab === "Postulé" ? counts.postule :
-                      statusTab === "Entretien" ? counts.entretien :
-                      statusTab === "Offre" ? counts.offre : counts.refuse;
-
-                    const isActive = oppStatusFilter === statusTab;
-                    return (
-                      <button
-                        key={statusTab}
-                        onClick={() => setOppStatusFilter(statusTab)}
-                        className={`text-[11px] font-bold px-2.5 py-1 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                          isActive
-                            ? "bg-neutral-900 text-white font-extrabold shadow-3xs"
-                            : "bg-neutral-50 hover:bg-neutral-100 text-neutral-600 border border-neutral-200/60"
-                        }`}
-                      >
-                        <span>{statusTab}</span>
-                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full ${
-                          isActive ? "bg-neutral-700 text-white" : "bg-neutral-200 text-neutral-700"
-                        }`}>
-                          {countVal}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Search Box */}
-                <div className="relative w-full sm:w-64">
-                  <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Rechercher poste, entreprise..."
-                    value={oppSearchQuery}
-                    onChange={(e) => setOppSearchQuery(e.target.value)}
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-8 pr-3 py-1 text-xs font-sans focus:outline-hidden focus:ring-1 focus:ring-neutral-900"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Opportunities Content Rendering */}
-            {filteredOpps.length === 0 ? (
-              <div className="bg-white border border-neutral-200/80 rounded-2xl p-10 text-center space-y-2">
-                <p className="text-xs font-bold text-neutral-500">Aucune candidature trouvée pour ces filtres.</p>
-                <p className="text-[11px] text-neutral-400">Cliquez sur "Nouvelle opportunité" pour ajouter une piste d'emploi.</p>
-              </div>
-            ) : oppViewMode === "table" ? (
-              /* TABLE VIEW */
-              <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-3xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-neutral-50 border-b border-neutral-200 text-[10px] font-black uppercase text-neutral-500 font-mono tracking-wider">
-                        <th className="p-3.5">Poste & Entreprise</th>
-                        <th className="p-3.5">Statut</th>
-                        <th className="p-3.5">Rémunération</th>
-                        <th className="p-3.5">Prochaine Action</th>
-                        <th className="p-3.5">Notes & Historique</th>
-                        <th className="p-3.5 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100">
-                      {filteredOpps.map(opp => (
-                        <tr key={opp.id} className="hover:bg-neutral-50/60 transition-colors">
-                          <td className="p-3.5 space-y-0.5">
-                            <h5 className="font-extrabold text-neutral-900">{opp.title}</h5>
-                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-600">
-                              <Building2 className="w-3 h-3 text-indigo-500 shrink-0" />
-                              <span>{opp.company}</span>
-                              {opp.siteUrl && (
-                                <a href={opp.siteUrl} target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-indigo-600">
-                                  <ExternalLink className="w-3 h-3" />
-                                </a>
-                              )}
-                            </div>
-                          </td>
-
-                          <td className="p-3.5">
-                            <select
-                              value={opp.status}
-                              onChange={(e) => updateOppStatus(opp.id, e.target.value as JobOpportunity["status"])}
-                              className={`text-[10px] font-extrabold font-mono px-2.5 py-1 rounded-lg border focus:outline-hidden cursor-pointer ${getStatusBadge(opp.status)}`}
-                            >
-                              <option value="À postuler">À postuler</option>
-                              <option value="Postulé">Postulé</option>
-                              <option value="Entretien">Entretien</option>
-                              <option value="Offre">Offre Obtenue</option>
-                              <option value="Refusé">Refusé</option>
-                            </select>
-                          </td>
-
-                          <td className="p-3.5">
-                            {opp.salary ? (
-                              <span className="text-[10px] font-bold font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                                {opp.salary}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-neutral-400 italic">—</span>
-                            )}
-                          </td>
-
-                          <td className="p-3.5 max-w-[200px]">
-                            {opp.nextAction ? (
-                              <span className="text-[11px] font-medium text-amber-900 bg-amber-50/70 border border-amber-100 px-2 py-1 rounded-lg block leading-tight">
-                                {opp.nextAction}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-neutral-400 italic">—</span>
-                            )}
-                          </td>
-
-                          <td className="p-3.5 max-w-[220px]">
-                            <p className="text-[11px] text-neutral-600 font-medium line-clamp-2">{opp.notes || "—"}</p>
-                          </td>
-
-                          <td className="p-3.5 text-right">
-                            <button
-                              onClick={() => setJobOpportunities(prev => prev.filter(o => o.id !== opp.id))}
-                              className="text-neutral-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
-                              title="Supprimer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              /* GRID CARDS VIEW */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredOpps.map(opp => (
-                  <div key={opp.id} className="bg-white border border-neutral-200 rounded-2xl p-4 space-y-3 shadow-3xs hover:border-neutral-300 transition-all flex flex-col justify-between">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <h5 className="text-xs font-black text-neutral-900 leading-snug">{opp.title}</h5>
-                          <p className="text-[11px] font-bold text-indigo-600 flex items-center gap-1 mt-0.5">
-                            <Building2 className="w-3 h-3" />
-                            <span>{opp.company}</span>
-                          </p>
-                        </div>
-                        <select
-                          value={opp.status}
-                          onChange={(e) => updateOppStatus(opp.id, e.target.value as JobOpportunity["status"])}
-                          className={`text-[9.5px] font-black font-mono px-2 py-0.5 rounded-lg border focus:outline-hidden cursor-pointer ${getStatusBadge(opp.status)}`}
-                        >
-                          <option value="À postuler">À postuler</option>
-                          <option value="Postulé">Postulé</option>
-                          <option value="Entretien">Entretien</option>
-                          <option value="Offre">Offre</option>
-                          <option value="Refusé">Refusé</option>
-                        </select>
-                      </div>
-
-                      {opp.salary && (
-                        <span className="inline-block text-[10px] font-extrabold font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                          {opp.salary}
-                        </span>
-                      )}
-
-                      {opp.notes && (
-                        <p className="text-[11px] text-neutral-600 font-medium leading-relaxed bg-neutral-50/60 p-2.5 rounded-xl border border-neutral-100">
-                          {opp.notes}
-                        </p>
-                      )}
-
-                      {opp.nextAction && (
-                        <div className="bg-amber-50/80 border border-amber-200/60 p-2.5 rounded-xl space-y-0.5">
-                          <span className="text-[8px] text-amber-800 font-black uppercase font-mono block">Prochaine action:</span>
-                          <p className="text-[10.5px] text-neutral-800 leading-snug font-bold">{opp.nextAction}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 text-[10px]">
-                      <span className="text-neutral-400 font-mono">
-                        {opp.dateApplied ? `Postulé le ${opp.dateApplied}` : "Piste active"}
-                      </span>
-                      <button
-                        onClick={() => setJobOpportunities(prev => prev.filter(o => o.id !== opp.id))}
-                        className="text-neutral-400 hover:text-red-500 font-bold cursor-pointer transition-colors"
-                      >
-                        Supprimer
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
 
       {/* ==================================================== */}
       {/* --- TAB: PORTAILS & SITES DE RECRUTEMENT --- */}
@@ -1788,232 +2138,376 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
         });
 
         const todayVisitedCount = recruitmentSites.filter(s => s.visitedDates?.includes(todayStr) || s.visited).length;
+        const totalSites = recruitmentSites.length;
+        const visitRate = totalSites > 0 ? Math.round((todayVisitedCount / totalSites) * 100) : 0;
+        const uniqueCountries = Array.from(new Set(recruitmentSites.map(s => s.country).filter(Boolean)));
+
+        const isVisitedOnDate = (site: RecruitmentSite, dateStr: string) => {
+          if (site.visitedDates?.includes(dateStr)) return true;
+          if (dateStr === todayStr && site.visited) return true;
+          return false;
+        };
+
+        const toggleVisitDate = (siteId: string, dateStr: string) => {
+          setRecruitmentSites(prev => prev.map(s => {
+            if (s.id !== siteId) return s;
+            const currentDates = s.visitedDates || [];
+            const exists = currentDates.includes(dateStr);
+            let newDates: string[];
+            if (exists) {
+              newDates = currentDates.filter(d => d !== dateStr);
+            } else {
+              newDates = [...currentDates, dateStr];
+            }
+            const isVisitedToday = newDates.includes(todayStr);
+            return { 
+              ...s, 
+              visitedDates: newDates,
+              visited: isVisitedToday
+            };
+          }));
+        };
 
         return (
-          <div className="space-y-4 animate-in fade-in duration-300">
-            <div className="bg-white border border-neutral-200 rounded-3xl p-5 space-y-4 shadow-3xs">
-              <div className="flex justify-between items-center border-b border-neutral-100 pb-2.5">
-                <div>
-                  <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wide flex items-center gap-1.5">
-                    <Link2 className="w-4 h-4 text-indigo-500" />
-                    <span>Portails & Sites de Recrutement Internationaux</span>
-                  </h4>
-                  <p className="text-[10px] text-neutral-400 font-bold mt-0.5 font-mono">
-                    Visites aujourd'hui : <span className="text-indigo-600 font-extrabold">{todayVisitedCount}</span> / {recruitmentSites.length} visités
-                    {siteCountryFilter !== "Tous" || siteSearch ? ` (${filteredSites.length} filtrés)` : ""}
-                  </p>
-                </div>
+          <div className="space-y-5 animate-in fade-in duration-300">
+            
+            {/* 1. TOP METRICS HEADER */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-white border border-neutral-200/90 rounded-2xl p-4 shadow-3xs space-y-1">
+                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-wider block font-mono">Portails Référencés</span>
+                <p className="text-xl font-black text-neutral-900 font-mono">{totalSites} sites</p>
+              </div>
+
+              <div className="bg-white border border-indigo-100 rounded-2xl p-4 shadow-3xs space-y-1 bg-indigo-50/20">
+                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wider block font-mono">Visités Aujourd'hui</span>
+                <p className="text-xl font-black text-indigo-700 font-mono">{todayVisitedCount} / {totalSites}</p>
+              </div>
+
+              <div className="bg-white border border-emerald-100 rounded-2xl p-4 shadow-3xs space-y-1 bg-emerald-50/20">
+                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block font-mono">Discipline Quotidienne</span>
                 <div className="flex items-center gap-2">
-                  {recruitmentSites.some(s => (s.visitedDates && s.visitedDates.length > 0) || s.visited) && (
+                  <p className="text-xl font-black text-emerald-700 font-mono">{visitRate}%</p>
+                  <div className="flex-1 bg-emerald-100 rounded-full h-2 overflow-hidden">
+                    <div className="bg-emerald-500 h-2 rounded-full transition-all duration-300" style={{ width: `${visitRate}%` }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white border border-neutral-200/90 rounded-2xl p-4 shadow-3xs space-y-1">
+                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-wider block font-mono">Pays Ciblés</span>
+                <p className="text-xl font-black text-neutral-900 font-mono">{uniqueCountries.length} zones</p>
+              </div>
+            </div>
+
+            {/* 2. CONTROLS BAR */}
+            <div className="bg-white border border-neutral-200 rounded-2xl p-4 shadow-3xs space-y-3">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-indigo-600" />
+                  <h3 className="text-xs font-black text-neutral-950 uppercase tracking-tight">
+                    Portails & Plateformes de Recrutement Cibles
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* View Mode Toggle */}
+                  <div className="bg-neutral-100 p-1 rounded-xl flex items-center gap-1 border border-neutral-200/80">
                     <button
-                      onClick={() => setRecruitmentSites(prev => prev.map(s => ({ ...s, visited: false, visitedDates: [] })))}
-                      className="text-neutral-400 hover:text-indigo-600 text-[10px] font-bold font-sans transition-colors cursor-pointer"
+                      onClick={() => setSiteViewMode("grid")}
+                      className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        siteViewMode === "grid"
+                          ? "bg-white text-neutral-900 shadow-3xs font-extrabold"
+                          : "text-neutral-500 hover:text-neutral-900"
+                      }`}
+                      title="Vue Grille / Cartes"
                     >
-                      Tout effacer
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      <span className="text-[11px] hidden sm:inline">Cartes</span>
                     </button>
-                  )}
+                    <button
+                      onClick={() => setSiteViewMode("table")}
+                      className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        siteViewMode === "table"
+                          ? "bg-white text-neutral-900 shadow-3xs font-extrabold"
+                          : "text-neutral-500 hover:text-neutral-900"
+                      }`}
+                      title="Vue Tableau Synthétique"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      <span className="text-[11px] hidden sm:inline">Tableau</span>
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => setShowSiteForm(true)}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1 cursor-pointer select-none"
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer select-none shadow-3xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Ajouter un portail</span>
+                    <span>Nouveau portail</span>
                   </button>
                 </div>
               </div>
 
-              {/* Barre de recherche & Filtre par pays */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-1">
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-neutral-400">
-                    <Search className="w-3.5 h-3.5" />
-                  </span>
-                  <input 
-                    type="text"
-                    placeholder="Rechercher un site par nom, mot-clé, notes..."
-                    value={siteSearch}
-                    onChange={(e) => setSiteSearch(e.target.value)}
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-8 pr-2.5 py-1.5 text-xs font-sans focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <select
-                    value={siteCountryFilter}
-                    onChange={(e) => setSiteCountryFilter(e.target.value)}
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-neutral-700 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                  >
-                    <option value="Tous">Tous les Pays ({recruitmentSites.length})</option>
-                    <option value="Maroc">Maroc</option>
-                    <option value="France">France</option>
-                    <option value="Canada">Canada</option>
-                    <option value="Suisse">Suisse</option>
-                    <option value="Germany">Allemagne</option>
-                    <option value="Luxembourg">Luxembourg</option>
-                    <option value="Netherlands">Pays-Bas</option>
-                    <option value="USA">USA</option>
-                    <option value="Worldwide">International</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* CLEAN LIST LAYOUT WITHOUT EXTRA INPUT BOXES */}
-              <div className="divide-y divide-neutral-100 max-h-[600px] overflow-y-auto pr-1">
-                {filteredSites.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-neutral-400 font-medium">
-                    Aucun site trouvé correspondant à vos critères.
-                  </div>
-                ) : (
-                  filteredSites.map(site => {
-                    const isVisitedOnDate = (dateStr: string) => {
-                      if (site.visitedDates?.includes(dateStr)) return true;
-                      if (dateStr === todayStr && site.visited) return true;
-                      return false;
-                    };
+              {/* Filters & Search */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-neutral-100">
+                {/* Country Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
+                  {["Tous", "Maroc", "France", "Canada", "Suisse", "Germany", "Worldwide"].map(countryKey => {
+                    const label = countryKey === "Worldwide" ? "International" : countryKey === "Germany" ? "Allemagne" : countryKey;
+                    const count = countryKey === "Tous" 
+                      ? recruitmentSites.length 
+                      : recruitmentSites.filter(s => s.country === countryKey).length;
+                    const isActive = siteCountryFilter === countryKey;
 
                     return (
-                      <div 
-                        key={site.id} 
-                        className="py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6 transition-all"
+                      <button
+                        key={countryKey}
+                        onClick={() => setSiteCountryFilter(countryKey)}
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                          isActive
+                            ? "bg-neutral-900 text-white font-extrabold shadow-3xs"
+                            : "bg-neutral-50 hover:bg-neutral-100 text-neutral-600 border border-neutral-200/60"
+                        }`}
                       >
-                        {/* Info details (Left) */}
-                        <div className="space-y-2 flex-1 min-w-0">
-                          <div className="flex items-start gap-2.5">
-                            <div className="space-y-1 flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <a 
-                                  href={site.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="text-xs font-bold text-neutral-900 hover:text-indigo-600 transition-colors flex items-center gap-1 min-w-0 truncate font-sans"
-                                  title={`Visiter ${site.name}`}
-                                >
-                                  <span className="truncate">{site.name}</span>
-                                  <ExternalLink className="w-3.5 h-3.5 shrink-0 inline text-neutral-400" />
-                                </a>
-                                {site.country && (
-                                  <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600 font-sans tracking-wide">
-                                    {site.country === "Germany" ? "Allemagne" : site.country === "Netherlands" ? "Pays-Bas" : site.country}
-                                  </span>
-                                )}
-                                {site.identifiant && site.identifiant !== "N/A" && (
-                                  <div className="flex items-center gap-1 text-[9.5px] text-neutral-500 font-mono bg-neutral-50 border border-neutral-150 rounded-md px-1.5 py-0.5">
-                                    <span className="font-bold text-neutral-400">ID:</span>
-                                    <span className="font-extrabold text-neutral-700">{site.identifiant}</span>
-                                    <button 
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(site.identifiant || "");
-                                      }}
-                                      className="text-[9px] text-indigo-600 hover:text-indigo-800 ml-1 cursor-pointer font-bold font-sans"
-                                      title="Copier l'identifiant"
-                                    >
-                                      Copier
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                              <p className="text-[11px] text-neutral-500 font-medium leading-relaxed max-w-2xl">{site.notes}</p>
-                            </div>
-                          </div>
-
-                          {/* Keywords as clean inline tags if present */}
-                          {site.keywords && site.keywords.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {site.keywords.map((kw, idx) => (
-                                <span key={idx} className="text-[9px] bg-indigo-50/60 text-indigo-700 border border-indigo-100/40 px-2 py-0.5 rounded-full font-bold font-mono flex items-center gap-1">
-                                  <span>#{kw}</span>
-                                  <button 
-                                    type="button"
-                                    onClick={() => {
-                                      setRecruitmentSites(prev => prev.map(s => {
-                                        if (s.id !== site.id) return s;
-                                        return { ...s, keywords: (s.keywords || []).filter(k => k !== kw) };
-                                      }));
-                                    }}
-                                    className="text-[8px] opacity-60 hover:opacity-100 cursor-pointer font-sans hover:text-red-600"
-                                    title="Supprimer"
-                                  >
-                                    ×
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Discovered Opportunities note if present */}
-                          {site.discoveredOpportunities && (
-                            <div className="text-[10px] text-neutral-600 bg-neutral-50 border border-neutral-150 rounded-lg p-2 font-sans italic">
-                              <span className="font-bold font-mono text-neutral-400 not-italic uppercase text-[8px] block">Opportunités repérées:</span>
-                              {site.discoveredOpportunities}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Interactive Circle check-ins & actions (Right) */}
-                        <div className="flex sm:items-center justify-between lg:justify-end gap-4 shrink-0 border-t lg:border-t-0 border-neutral-100 pt-3 lg:pt-0">
-                          <div className="space-y-1">
-                            <span className="text-[9px] font-black uppercase tracking-wider text-neutral-400 font-mono block text-left lg:text-right">
-                              Visite quotidienne :
-                            </span>
-                            <div className="flex items-center gap-1.5">
-                              {last7Days.map((day) => {
-                                const checked = isVisitedOnDate(day.dateStr);
-                                return (
-                                  <button
-                                    key={day.dateStr}
-                                    type="button"
-                                    onClick={() => {
-                                      setRecruitmentSites(prev => prev.map(s => {
-                                        if (s.id !== site.id) return s;
-                                        const currentDates = s.visitedDates || [];
-                                        const exists = currentDates.includes(day.dateStr);
-                                        let newDates: string[];
-                                        if (exists) {
-                                          newDates = currentDates.filter(d => d !== day.dateStr);
-                                        } else {
-                                          newDates = [...currentDates, day.dateStr];
-                                        }
-                                        const isVisitedToday = newDates.includes(todayStr);
-                                        return { 
-                                          ...s, 
-                                          visitedDates: newDates,
-                                          visited: isVisitedToday
-                                        };
-                                      }));
-                                    }}
-                                    className={`w-9 h-9 rounded-full flex flex-col items-center justify-center transition-all select-none cursor-pointer ${
-                                      checked
-                                        ? "bg-indigo-600 text-white border border-indigo-600 shadow-xs hover:bg-indigo-500"
-                                        : "bg-white text-neutral-500 hover:text-neutral-900 border border-neutral-200 hover:bg-neutral-50"
-                                    } ${day.isToday ? "ring-2 ring-indigo-500 ring-offset-1" : ""}`}
-                                    title={day.isToday ? "Aujourd'hui" : `${day.label} ${day.num}`}
-                                  >
-                                    <span className="text-[7px] font-black tracking-wider leading-none uppercase">
-                                      {day.label}
-                                    </span>
-                                    <span className="text-[11px] font-black leading-none mt-0.5 font-mono">
-                                      {day.num}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          <button 
-                            type="button"
-                            onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
-                            className="text-neutral-400 hover:text-red-500 p-2.5 rounded-xl hover:bg-neutral-50 border border-transparent hover:border-neutral-200 shrink-0 cursor-pointer transition-colors mt-auto self-end"
-                            title="Supprimer ce site"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
+                        <span>{label}</span>
+                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full ${
+                          isActive ? "bg-neutral-700 text-white" : "bg-neutral-200 text-neutral-700"
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
                     );
-                  })
-                )}
+                  })}
+                </div>
+
+                {/* Search Box */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Rechercher portail, mot-clé..."
+                    value={siteSearch}
+                    onChange={(e) => setSiteSearch(e.target.value)}
+                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl pl-8 pr-3 py-1 text-xs font-sans focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
               </div>
             </div>
+
+            {/* 3. PORTALS CONTENT DISPLAY */}
+            {filteredSites.length === 0 ? (
+              <div className="bg-white border border-neutral-200 rounded-2xl p-10 text-center space-y-2">
+                <p className="text-xs font-bold text-neutral-500">Aucun portail trouvé pour ces filtres.</p>
+                <p className="text-[11px] text-neutral-400">Cliquez sur "Nouveau portail" pour ajouter un site de recherche.</p>
+              </div>
+            ) : siteViewMode === "grid" ? (
+              /* GRID CARDS VIEW (ELEGANT EXECUTIVE STYLE) */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredSites.map(site => {
+                  const visitedToday = isVisitedOnDate(site, todayStr);
+
+                  return (
+                    <div 
+                      key={site.id} 
+                      className={`bg-white border rounded-2xl p-4.5 space-y-3.5 shadow-3xs transition-all flex flex-col justify-between ${
+                        visitedToday 
+                          ? "border-emerald-200 bg-emerald-50/10" 
+                          : "border-neutral-200 hover:border-neutral-300"
+                      }`}
+                    >
+                      <div className="space-y-2.5">
+                        {/* Header: Title, Country Tag, External Link */}
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="space-y-0.5 min-w-0">
+                            <h5 className="text-sm font-extrabold text-neutral-900 truncate">{site.name}</h5>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {site.country && (
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700 font-mono">
+                                  {site.country === "Germany" ? "Allemagne" : site.country}
+                                </span>
+                              )}
+                              {site.identifiant && site.identifiant !== "N/A" && (
+                                <span className="text-[9.5px] font-mono text-neutral-500 bg-neutral-50 border border-neutral-200 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                  <span>ID: <strong>{site.identifiant}</strong></span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <a
+                            href={site.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 bg-neutral-100 hover:bg-indigo-50 text-neutral-600 hover:text-indigo-600 rounded-xl transition-colors shrink-0"
+                            title={`Ouvrir ${site.name}`}
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+
+                        {/* Notes / Description */}
+                        {site.notes && (
+                          <p className="text-[11px] text-neutral-600 font-medium leading-relaxed bg-neutral-50/60 p-2.5 rounded-xl border border-neutral-100 line-clamp-2">
+                            {site.notes}
+                          </p>
+                        )}
+
+                        {/* Keywords Tags */}
+                        {site.keywords && site.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {site.keywords.map((kw, idx) => (
+                              <span key={idx} className="text-[9px] bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-full font-bold font-mono">
+                                #{kw}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Bottom Section: 1-Click Check-in + 7-Day Streak Dots */}
+                      <div className="pt-3 border-t border-neutral-100 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          {/* Visit Today Main Button */}
+                          <button
+                            type="button"
+                            onClick={() => toggleVisitDate(site.id, todayStr)}
+                            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              visitedToday
+                                ? "bg-emerald-600 text-white shadow-3xs"
+                                : "bg-neutral-100 hover:bg-indigo-50 text-neutral-700 hover:text-indigo-700 border border-neutral-200"
+                            }`}
+                          >
+                            {visitedToday ? (
+                              <>
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                <span>Visité Aujourd'hui</span>
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 text-neutral-400" />
+                                <span>Marquer comme visité</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
+                            className="p-2 text-neutral-400 hover:text-red-500 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* 7-Day Streak Pills */}
+                        <div className="flex items-center justify-between gap-1 pt-1">
+                          <span className="text-[8.5px] font-bold text-neutral-400 uppercase font-mono">Série 7J :</span>
+                          <div className="flex items-center gap-1">
+                            {last7Days.map(day => {
+                              const checked = isVisitedOnDate(site, day.dateStr);
+                              return (
+                                <button
+                                  key={day.dateStr}
+                                  type="button"
+                                  onClick={() => toggleVisitDate(site.id, day.dateStr)}
+                                  className={`w-5 h-5 rounded-md flex items-center justify-center text-[8px] font-black font-mono transition-all cursor-pointer ${
+                                    checked
+                                      ? "bg-indigo-600 text-white font-extrabold"
+                                      : "bg-neutral-100 text-neutral-400 hover:bg-neutral-200"
+                                  } ${day.isToday ? "ring-1 ring-indigo-500" : ""}`}
+                                  title={`${day.label} ${day.num}`}
+                                >
+                                  {day.num}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* TABLE VIEW */
+              <div className="bg-white border border-neutral-200 rounded-2xl overflow-hidden shadow-3xs">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-neutral-50 border-b border-neutral-200 text-[10px] font-black uppercase text-neutral-500 font-mono tracking-wider">
+                        <th className="p-3.5">Portail / Plateforme</th>
+                        <th className="p-3.5">Pays & Identifiant</th>
+                        <th className="p-3.5">Notes</th>
+                        <th className="p-3.5 text-center">Visite Aujourd'hui</th>
+                        <th className="p-3.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100">
+                      {filteredSites.map(site => {
+                        const visitedToday = isVisitedOnDate(site, todayStr);
+
+                        return (
+                          <tr key={site.id} className="hover:bg-neutral-50/60 transition-colors">
+                            <td className="p-3.5 space-y-0.5">
+                              <a
+                                href={site.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-extrabold text-neutral-900 hover:text-indigo-600 transition-colors flex items-center gap-1.5"
+                              >
+                                <span>{site.name}</span>
+                                <ExternalLink className="w-3 h-3 text-neutral-400" />
+                              </a>
+                            </td>
+
+                            <td className="p-3.5 space-y-1">
+                              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded bg-neutral-100 text-neutral-700 font-mono">
+                                {site.country === "Germany" ? "Allemagne" : site.country}
+                              </span>
+                              {site.identifiant && site.identifiant !== "N/A" && (
+                                <p className="text-[10px] font-mono text-neutral-500">
+                                  ID: <strong className="text-neutral-700">{site.identifiant}</strong>
+                                </p>
+                              )}
+                            </td>
+
+                            <td className="p-3.5 max-w-[280px]">
+                              <p className="text-[11px] text-neutral-600 font-medium line-clamp-2">{site.notes || "—"}</p>
+                            </td>
+
+                            <td className="p-3.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => toggleVisitDate(site.id, todayStr)}
+                                className={`px-3 py-1 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer ${
+                                  visitedToday
+                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                                }`}
+                              >
+                                {visitedToday ? "✓ Visité" : "+ Effectuer"}
+                              </button>
+                            </td>
+
+                            <td className="p-3.5 text-right">
+                              <button
+                                type="button"
+                                onClick={() => setRecruitmentSites(prev => prev.filter(s => s.id !== site.id))}
+                                className="text-neutral-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                                title="Supprimer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
@@ -2517,103 +3011,7 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
         </div>
       )}
 
-      {/* 4. OPPORTUNITY FORM MODAL */}
-      {showOppForm && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-neutral-950/45 backdrop-blur-xs" onClick={() => setShowOppForm(false)} />
-          <div className="bg-white rounded-3xl p-6 border border-neutral-200 max-w-md w-full relative z-10 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex justify-between items-center pb-2.5 border-b border-neutral-100">
-              <h4 className="text-xs font-black text-neutral-950 uppercase tracking-wider">Créer une Opportunité</h4>
-              <button onClick={() => setShowOppForm(false)} className="text-neutral-400 hover:text-neutral-600 cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <form onSubmit={handleAddOpp} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 block">Titre du poste</label>
-                  <input 
-                    type="text" required value={oppTitle} onChange={(e) => setOppTitle(e.target.value)}
-                    placeholder="Ex: Analyste M&A Junior"
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 block">Entreprise</label>
-                  <input 
-                    type="text" required value={oppCompany} onChange={(e) => setOppCompany(e.target.value)}
-                    placeholder="Ex: Capital Trust Maroc"
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 block">Rémunération / Salaire estimé</label>
-                  <input 
-                    type="text" value={oppSalary} onChange={(e) => setOppSalary(e.target.value)}
-                    placeholder="Ex: 14 000 MAD"
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 block">Statut du pipeline</label>
-                  <select 
-                    value={oppStatus} onChange={(e) => setOppStatus(e.target.value as any)}
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-2 py-2 text-xs font-bold text-neutral-700 cursor-pointer"
-                  >
-                    <option value="À postuler">À postuler</option>
-                    <option value="Postulé">Postulé</option>
-                    <option value="Entretien">Entretien</option>
-                    <option value="Offre">Offre</option>
-                    <option value="Refusé">Refusé</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 block">Date de candidature</label>
-                  <input 
-                    type="date" value={oppDateApplied} onChange={(e) => setOppDateApplied(e.target.value)}
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-neutral-400 block">Prochaine action</label>
-                  <input 
-                    type="text" value={oppNextAction} onChange={(e) => setOppNextAction(e.target.value)}
-                    placeholder="Ex: Préparer cas d'évaluation technique"
-                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-neutral-400 block">Lien de l'offre d'emploi</label>
-                <input 
-                  type="url" value={oppSiteUrl} onChange={(e) => setOppSiteUrl(e.target.value)}
-                  placeholder="https://www.linkedin.com/jobs/..."
-                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-neutral-400 block">Notes & Suivi technique</label>
-                <textarea 
-                  value={oppNotes} onChange={(e) => setOppNotes(e.target.value)}
-                  placeholder="Ex: Entretien RH passé, retour positif attendu d'ici vendredi."
-                  className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
-                  rows={2}
-                />
-              </div>
-              <button 
-                type="submit" 
-                className="w-full bg-neutral-950 hover:bg-neutral-800 text-white py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                Créer l'opportunité
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+
 
       {/* 5. CERTIFICATE FORM MODAL */}
       {showCertForm && (

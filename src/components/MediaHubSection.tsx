@@ -62,16 +62,28 @@ export default function MediaHubSection({
   setScreenMedia,
   initialFormatFilter = "Tous"
 }: MediaHubSectionProps) {
+  // Mode checks
+  const isBooksOnly = initialFormatFilter === "Livre";
+  const isScreenMediaOnly = initialFormatFilter === "Série" || initialFormatFilter === "Film" || initialFormatFilter === "Anime";
+
   // View mode state
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
 
   // Format filters
-  const [formatFilter, setFormatFilter] = useState<"Tous" | "Livre" | "Série" | "Film" | "Anime">(initialFormatFilter);
+  const [formatFilter, setFormatFilter] = useState<"Tous" | "Livre" | "Série" | "Film" | "Anime">(
+    isBooksOnly ? "Livre" : isScreenMediaOnly ? "Tous" : initialFormatFilter
+  );
   const [statusFilter, setStatusFilter] = useState<"Tous" | "En cours" | "À lire/voir" | "Terminé">("Tous");
 
   useEffect(() => {
-    setFormatFilter(initialFormatFilter);
-  }, [initialFormatFilter]);
+    if (isBooksOnly) {
+      setFormatFilter("Livre");
+    } else if (isScreenMediaOnly) {
+      setFormatFilter("Tous");
+    } else {
+      setFormatFilter(initialFormatFilter);
+    }
+  }, [initialFormatFilter, isBooksOnly, isScreenMediaOnly]);
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,7 +91,9 @@ export default function MediaHubSection({
 
   // Add form states
   const [showAddForm, setShowAddForm] = useState(false);
-  const [mediaType, setMediaType] = useState<"Livre" | "Série" | "Film" | "Anime">("Livre");
+  const [mediaType, setMediaType] = useState<"Livre" | "Série" | "Film" | "Anime">(
+    isBooksOnly ? "Livre" : "Série"
+  );
   const [title, setTitle] = useState("");
   const [creator, setCreator] = useState(""); // author for book, platform/director for others
   const [genre, setGenre] = useState(""); // genre or platform
@@ -96,70 +110,74 @@ export default function MediaHubSection({
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [tempNotes, setTempNotes] = useState("");
 
-  // Map individual states to a unified interface
+  // Map individual states to a unified interface filtered by mode
   const unifiedList = useMemo(() => {
     const list: UnifiedMedia[] = [];
 
-    // Map Books
-    books.forEach(b => {
-      const pct = b.totalPages > 0 ? Math.round((b.currentPage / b.totalPages) * 100) : 0;
-      list.push({
-        id: b.id,
-        title: b.title,
-        creator: b.author,
-        type: "Livre",
-        status: b.status === "À lire" ? "À lire/voir" : b.status === "En cours" ? "En cours" : "Terminé",
-        progressPercent: pct,
-        currentProgressText: `${b.currentPage} p.`,
-        totalProgressText: `${b.totalPages} p.`,
-        currentValue: b.currentPage,
-        totalValue: b.totalPages,
-        genreOrPlatform: b.genre || "Développement Personnel",
-        rating: b.rating,
-        notes: b.notes || ""
+    // Include Books if not strictly screen media mode
+    if (!isScreenMediaOnly) {
+      books.forEach(b => {
+        const pct = b.totalPages > 0 ? Math.round((b.currentPage / b.totalPages) * 100) : 0;
+        list.push({
+          id: b.id,
+          title: b.title,
+          creator: b.author,
+          type: "Livre",
+          status: b.status === "À lire" ? "À lire/voir" : b.status === "En cours" ? "En cours" : "Terminé",
+          progressPercent: pct,
+          currentProgressText: `${b.currentPage} p.`,
+          totalProgressText: `${b.totalPages} p.`,
+          currentValue: b.currentPage,
+          totalValue: b.totalPages,
+          genreOrPlatform: b.genre || "Développement Personnel",
+          rating: b.rating,
+          notes: b.notes || ""
+        });
       });
-    });
+    }
 
-    // Map Screen Media
-    screenMedia.forEach(m => {
-      let pct = 0;
-      let currentText = "";
-      let totalText = "";
-      let curVal = 0;
-      let totVal = 0;
+    // Include Screen Media if not strictly books mode
+    if (!isBooksOnly) {
+      screenMedia.forEach(m => {
+        let pct = 0;
+        let currentText = "";
+        let totalText = "";
+        let curVal = 0;
+        let totVal = 0;
 
-      if (m.type === "Film") {
-        pct = m.status === "Terminé" ? 100 : m.status === "En cours" ? 50 : 0;
-        currentText = m.status;
-        totalText = "1 h 30+";
-      } else {
-        totVal = m.totalEpisodes || 12;
-        curVal = m.currentEpisode || 0;
-        pct = totVal > 0 ? Math.round((curVal / totVal) * 100) : 0;
-        currentText = `Ep ${curVal}`;
-        totalText = `Ep ${totVal}`;
-      }
+        if (m.type === "Film") {
+          pct = m.status === "Terminé" ? 100 : m.status === "En cours" ? 50 : 0;
+          currentText = m.status;
+          totalText = "1 h 30+";
+        } else {
+          totVal = m.totalEpisodes || 12;
+          curVal = m.currentEpisode || 0;
+          pct = totVal > 0 ? Math.round((curVal / totVal) * 100) : 0;
+          currentText = `Ep ${curVal}`;
+          totalText = `Ep ${totVal}`;
+        }
 
-      list.push({
-        id: m.id,
-        title: m.title,
-        creator: m.platform || "Netflix",
-        type: m.type as any,
-        status: m.status === "À regarder" ? "À lire/voir" : m.status === "En cours" ? "En cours" : "Terminé",
-        progressPercent: pct,
-        currentProgressText: currentText,
-        totalProgressText: totalText,
-        currentValue: curVal,
-        totalValue: totVal,
-        genreOrPlatform: m.platform || "Netflix",
-        rating: m.rating,
-        notes: m.notes || "",
-        season: m.season
+        list.push({
+          id: m.id,
+          title: m.title,
+          creator: m.platform || "Netflix",
+          type: m.type as any,
+          status: m.status === "À regarder" ? "À lire/voir" : m.status === "En cours" ? "En cours" : "Terminé",
+          progressPercent: pct,
+          currentProgressText: currentText,
+          totalProgressText: totalText,
+          currentValue: curVal,
+          totalValue: totVal,
+          genreOrPlatform: m.platform || "Netflix",
+          rating: m.rating,
+          notes: m.notes || "",
+          season: m.season
+        });
       });
-    });
+    }
 
     return list;
-  }, [books, screenMedia]);
+  }, [books, screenMedia, isBooksOnly, isScreenMediaOnly]);
 
   // Extract unique genres/platforms for filter dropdown
   const uniqueGenresAndPlatforms = useMemo(() => {
@@ -516,45 +534,91 @@ export default function MediaHubSection({
 
       {/* 2. STATS BAR CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-          <div className="space-y-0.5">
-            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Bibliothèque</span>
-            <span className="text-base font-extrabold font-mono text-neutral-950 block">
-              {stats.booksCount} livre{stats.booksCount > 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="p-2.5 bg-neutral-50 rounded-xl text-neutral-950 border border-neutral-100 shrink-0"><BookOpen className="w-4 h-4" /></div>
-        </div>
+        {isBooksOnly ? (
+          <>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Total Livres</span>
+                <span className="text-base font-extrabold font-mono text-neutral-950 block">
+                  {stats.booksCount} livre{stats.booksCount > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="p-2.5 bg-neutral-50 rounded-xl text-neutral-950 border border-neutral-100 shrink-0"><BookOpen className="w-4 h-4" /></div>
+            </div>
 
-        <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-          <div className="space-y-0.5">
-            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Programmes Écrans</span>
-            <span className="text-base font-extrabold font-mono text-neutral-950 block">
-              {stats.seriesCount + stats.filmsCount + stats.animeCount} contenus
-            </span>
-          </div>
-          <div className="p-2.5 bg-red-50 text-red-600 rounded-xl border border-red-100 shrink-0"><Film className="w-4 h-4" /></div>
-        </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Lectures En Cours</span>
+                <span className="text-base font-extrabold font-mono text-indigo-600 block">
+                  {stats.enCours} livre{stats.enCours > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100 shrink-0"><BookOpen className="w-4 h-4" /></div>
+            </div>
 
-        <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-          <div className="space-y-0.5">
-            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">En attente (Wishlist)</span>
-            <span className="text-base font-extrabold font-mono text-neutral-950 block">
-              {stats.wishlist} élément{stats.wishlist > 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 shrink-0"><Bookmark className="w-4 h-4" /></div>
-        </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">À Lire (Wishlist)</span>
+                <span className="text-base font-extrabold font-mono text-amber-600 block">
+                  {stats.wishlist} livre{stats.wishlist > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 shrink-0"><Bookmark className="w-4 h-4" /></div>
+            </div>
 
-        <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-          <div className="space-y-0.5">
-            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Taux d'achèvement</span>
-            <span className="text-base font-extrabold font-mono text-neutral-950 block">
-              {stats.completionRate}% terminés
-            </span>
-          </div>
-          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 shrink-0"><CheckCircle className="w-4 h-4" /></div>
-        </div>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Livres Lus</span>
+                <span className="text-base font-extrabold font-mono text-emerald-600 block">
+                  {stats.termines} terminés
+                </span>
+              </div>
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 shrink-0"><CheckCircle className="w-4 h-4" /></div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Bibliothèque</span>
+                <span className="text-base font-extrabold font-mono text-neutral-950 block">
+                  {stats.booksCount} livre{stats.booksCount > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="p-2.5 bg-neutral-50 rounded-xl text-neutral-950 border border-neutral-100 shrink-0"><BookOpen className="w-4 h-4" /></div>
+            </div>
+
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Programmes Écrans</span>
+                <span className="text-base font-extrabold font-mono text-neutral-950 block">
+                  {stats.seriesCount + stats.filmsCount + stats.animeCount} contenus
+                </span>
+              </div>
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-xl border border-red-100 shrink-0"><Film className="w-4 h-4" /></div>
+            </div>
+
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">En attente (Wishlist)</span>
+                <span className="text-base font-extrabold font-mono text-neutral-950 block">
+                  {stats.wishlist} élément{stats.wishlist > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100 shrink-0"><Bookmark className="w-4 h-4" /></div>
+            </div>
+
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Taux d'achèvement</span>
+                <span className="text-base font-extrabold font-mono text-neutral-950 block">
+                  {stats.completionRate}% terminés
+                </span>
+              </div>
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 shrink-0"><CheckCircle className="w-4 h-4" /></div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* 3. CONTROLS BAR: FILTERS + SEARCH + VIEW TOGGLE + ADD BUTTON */}
@@ -565,32 +629,37 @@ export default function MediaHubSection({
           
           <div className="flex flex-wrap items-center gap-3">
             {/* Format Filter */}
-            <div className="flex items-center gap-1 bg-neutral-100/80 p-1 rounded-2xl border border-neutral-200/50">
-              {(["Tous", "Livre", "Série", "Film", "Anime"] as const).map(f => {
-                const count = f === "Tous" ? unifiedList.length :
-                              f === "Livre" ? stats.booksCount :
-                              f === "Série" ? stats.seriesCount :
-                              f === "Film" ? stats.filmsCount : stats.animeCount;
-                return (
-                  <button
-                    key={f}
-                    onClick={() => setFormatFilter(f)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                      formatFilter === f
-                        ? "bg-neutral-950 text-white shadow-xs"
-                        : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
-                    }`}
-                  >
-                    <span>{f === "Tous" ? "Tous Formats" : f}</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                      formatFilter === f ? "bg-white/20 text-white font-extrabold" : "bg-neutral-200/80 text-neutral-600"
-                    }`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {!isBooksOnly && (
+              <div className="flex items-center gap-1 bg-neutral-100/80 p-1 rounded-2xl border border-neutral-200/50">
+                {(isScreenMediaOnly 
+                  ? (["Tous", "Série", "Film", "Anime"] as const)
+                  : (["Tous", "Livre", "Série", "Film", "Anime"] as const)
+                ).map(f => {
+                  const count = f === "Tous" ? unifiedList.length :
+                                f === "Livre" ? stats.booksCount :
+                                f === "Série" ? stats.seriesCount :
+                                f === "Film" ? stats.filmsCount : stats.animeCount;
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setFormatFilter(f as any)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                        formatFilter === f
+                          ? "bg-neutral-950 text-white shadow-xs"
+                          : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
+                      }`}
+                    >
+                      <span>{f === "Tous" ? (isScreenMediaOnly ? "Tous les Écrans" : "Tous Formats") : f}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                        formatFilter === f ? "bg-white/20 text-white font-extrabold" : "bg-neutral-200/80 text-neutral-600"
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Status Filter */}
             <div className="flex items-center gap-1.5">
@@ -697,7 +766,12 @@ export default function MediaHubSection({
                 
                 {/* Selector for media type */}
                 <div className="flex items-center gap-1 bg-neutral-200/80 p-0.5 rounded-lg">
-                  {(["Livre", "Série", "Film", "Anime"] as const).map(type => (
+                  {(isBooksOnly 
+                    ? (["Livre"] as const)
+                    : isScreenMediaOnly 
+                      ? (["Série", "Film", "Anime"] as const)
+                      : (["Livre", "Série", "Film", "Anime"] as const)
+                  ).map(type => (
                     <button
                       type="button"
                       key={type}
