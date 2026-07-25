@@ -20,7 +20,11 @@ import {
   Filter,
   Layers,
   Sparkles,
-  BookOpenCheck
+  BookOpenCheck,
+  LayoutGrid,
+  List,
+  Edit3,
+  ExternalLink
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -57,6 +61,9 @@ export default function MediaHubSection({
   setScreenMedia,
   initialFormatFilter = "Tous"
 }: MediaHubSectionProps) {
+  // View mode state
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+
   // Format filters
   const [formatFilter, setFormatFilter] = useState<"Tous" | "Livre" | "Série" | "Film" | "Anime">(initialFormatFilter);
   const [statusFilter, setStatusFilter] = useState<"Tous" | "En cours" | "À lire/voir" | "Terminé">("Tous");
@@ -532,7 +539,7 @@ export default function MediaHubSection({
         </div>
       </div>
 
-      {/* 3. CONTROLS BAR: FILTERS + SEARCH + ADD BUTTON */}
+      {/* 3. CONTROLS BAR: FILTERS + SEARCH + VIEW TOGGLE + ADD BUTTON */}
       <div className="bg-white border border-neutral-200/80 rounded-3xl p-5 shadow-xs space-y-4">
         
         {/* Dynamic Filters Area */}
@@ -540,20 +547,31 @@ export default function MediaHubSection({
           
           <div className="flex flex-wrap items-center gap-3">
             {/* Format Filter */}
-            <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl">
-              {(["Tous", "Livre", "Série", "Film", "Anime"] as const).map(f => (
-                <button
-                  key={f}
-                  onClick={() => setFormatFilter(f)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1 ${
-                    formatFilter === f
-                      ? "bg-white text-neutral-950 shadow-3xs"
-                      : "text-neutral-500 hover:text-neutral-900"
-                  }`}
-                >
-                  {f === "Tous" ? "Tous Formats" : f}
-                </button>
-              ))}
+            <div className="flex items-center gap-1 bg-neutral-100/80 p-1 rounded-2xl border border-neutral-200/50">
+              {(["Tous", "Livre", "Série", "Film", "Anime"] as const).map(f => {
+                const count = f === "Tous" ? unifiedList.length :
+                              f === "Livre" ? stats.booksCount :
+                              f === "Série" ? stats.seriesCount :
+                              f === "Film" ? stats.filmsCount : stats.animeCount;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setFormatFilter(f)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      formatFilter === f
+                        ? "bg-neutral-950 text-white shadow-xs"
+                        : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
+                    }`}
+                  >
+                    <span>{f === "Tous" ? "Tous Formats" : f}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                      formatFilter === f ? "bg-white/20 text-white font-extrabold" : "bg-neutral-200/80 text-neutral-600"
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Status Filter */}
@@ -564,8 +582,8 @@ export default function MediaHubSection({
                   onClick={() => setStatusFilter(s)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     statusFilter === s
-                      ? "bg-neutral-900 text-white border-neutral-900 shadow-3xs"
-                      : "bg-white text-neutral-500 border-neutral-200 hover:border-neutral-300"
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                      : "bg-white text-neutral-600 border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
                   }`}
                 >
                   {s === "Tous" ? "Tous Statuts" : s === "À lire/voir" ? "Wishlist" : s}
@@ -574,14 +592,14 @@ export default function MediaHubSection({
             </div>
 
             {/* Genre / Platform Select Dropdown */}
-            <div className="flex items-center gap-1.5 border border-neutral-200 rounded-xl px-2.5 py-1.5 bg-white text-xs font-semibold">
+            <div className="flex items-center gap-1.5 border border-neutral-200/90 rounded-xl px-3 py-1.5 bg-white text-xs font-semibold shadow-3xs">
               <Filter className="w-3.5 h-3.5 text-neutral-400" />
               <select 
                 value={selectedGenreOrPlatform} 
                 onChange={(e) => setSelectedGenreOrPlatform(e.target.value)}
-                className="bg-transparent text-neutral-700 font-bold focus:outline-none focus:ring-0 cursor-pointer"
+                className="bg-transparent text-neutral-800 font-bold focus:outline-none focus:ring-0 cursor-pointer text-xs"
               >
-                <option value="Tous">Tous Genres/Plateformes</option>
+                <option value="Tous">Tous Genres & Plateformes</option>
                 {uniqueGenresAndPlatforms.map(gp => (
                   <option key={gp} value={gp}>{gp}</option>
                 ))}
@@ -590,15 +608,37 @@ export default function MediaHubSection({
           </div>
 
           <div className="flex items-center gap-2.5 w-full xl:w-auto ml-auto">
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl border border-neutral-200/60 shrink-0">
+              <button
+                onClick={() => setViewMode("table")}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === "table" ? "bg-white text-neutral-950 shadow-3xs" : "text-neutral-400 hover:text-neutral-700"
+                }`}
+                title="Vue Tableau moderne"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  viewMode === "grid" ? "bg-white text-neutral-950 shadow-3xs" : "text-neutral-400 hover:text-neutral-700"
+                }`}
+                title="Vue Cartes (Grille)"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
+
             {/* Search Input */}
             <div className="relative w-full xl:w-60">
               <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Rechercher titre, auteur, genre..."
+                placeholder="Rechercher titre, auteur..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl pl-9 pr-3.5 py-2 text-xs font-bold text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white transition-all"
+                className="w-full bg-neutral-50 hover:bg-neutral-100/80 border border-neutral-200 rounded-xl pl-9 pr-8 py-2 text-xs font-bold text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 focus:bg-white transition-all"
               />
               {searchQuery && (
                 <button 
@@ -613,7 +653,7 @@ export default function MediaHubSection({
             {/* Add New Button */}
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="flex items-center gap-1.5 bg-neutral-950 hover:bg-neutral-800 text-white px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-3xs cursor-pointer shrink-0"
+              className="flex items-center gap-1.5 bg-neutral-950 hover:bg-neutral-800 text-white px-4 py-2.5 rounded-xl text-xs font-black transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
             >
               {showAddForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
               <span>{showAddForm ? "Annuler" : "Ajouter un Média"}</span>
@@ -835,65 +875,91 @@ export default function MediaHubSection({
           )}
         </AnimatePresence>
 
-        {/* 5. MEDIA SPREADSHEET TABLE (EXCEL FORMAT) */}
+        {/* 5. MEDIA DISPLAY (TABLE OR GRID) */}
         {filteredList.length === 0 ? (
           <div className="text-center py-20 text-neutral-400 italic bg-neutral-50/50 rounded-2xl border border-dashed border-neutral-200 font-medium text-xs">
             Aucun élément multimédia ne correspond à vos critères de recherche.
           </div>
-        ) : (
+        ) : viewMode === "table" ? (
           <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 shadow-3xs bg-white">
-            <table className="w-full text-left border-collapse font-sans text-xs min-w-[1050px]">
+            <table className="w-full text-left border-collapse font-sans text-xs min-w-[1000px]">
               <thead>
-                <tr className="bg-neutral-50/70 border-b border-neutral-200 text-neutral-500 font-extrabold uppercase tracking-wider text-[10px]">
-                  <th className="py-3 px-4 border-r border-neutral-150">Nom / Titre</th>
-                  <th className="py-3 px-4 border-r border-neutral-150">Auteur / Diffuseur</th>
-                  <th className="py-3 px-4 border-r border-neutral-150 w-32">Format / Type</th>
-                  <th className="py-3 px-4 border-r border-neutral-150">Genre / Plateforme</th>
-                  <th className="py-3 px-4 border-r border-neutral-150 text-center w-36">Position / Volume</th>
-                  <th className="py-3 px-4 border-r border-neutral-150 w-48">Progression</th>
-                  <th className="py-3 px-4 border-r border-neutral-150 w-32">Statut</th>
-                  <th className="py-3 px-4 border-r border-neutral-150 w-44">Note & Avis</th>
-                  <th className="py-3 px-4 text-center w-20">Actions</th>
+                <tr className="bg-neutral-50/80 border-b border-neutral-200/80 text-neutral-500 font-extrabold uppercase tracking-wider text-[10px]">
+                  <th className="py-3 px-4">Titre & Média</th>
+                  <th className="py-3 px-4">Auteur / Diffuseur</th>
+                  <th className="py-3 px-4 w-32">Format</th>
+                  <th className="py-3 px-4">Genre / Plateforme</th>
+                  <th className="py-3 px-4 text-center w-32">Volume</th>
+                  <th className="py-3 px-4 w-44">Progression</th>
+                  <th className="py-3 px-4 w-32">Statut</th>
+                  <th className="py-3 px-4 w-40">Note & Avis</th>
+                  <th className="py-3 px-4 text-center w-16">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-150">
+              <tbody className="divide-y divide-neutral-100">
                 {filteredList.map((item) => {
                   const isExpanded = editingNotesId === item.id;
+                  
+                  // Clean up duplicate author names if present (e.g. "Garth WilliamsGarth...")
+                  let creatorDisplay = item.creator || "Inconnu";
+                  if (creatorDisplay.length > 8) {
+                    const half = Math.floor(creatorDisplay.length / 2);
+                    if (creatorDisplay.slice(0, half) === creatorDisplay.slice(half)) {
+                      creatorDisplay = creatorDisplay.slice(0, half);
+                    }
+                  }
+
+                  const getFormatBadgeStyle = (type: string) => {
+                    switch (type) {
+                      case "Livre": return "bg-emerald-50 text-emerald-700 border-emerald-200/80";
+                      case "Série": return "bg-indigo-50 text-indigo-700 border-indigo-200/80";
+                      case "Film": return "bg-rose-50 text-rose-700 border-rose-200/80";
+                      case "Anime": return "bg-purple-50 text-purple-700 border-purple-200/80";
+                      default: return "bg-neutral-100 text-neutral-700 border-neutral-200";
+                    }
+                  };
+
                   return (
                     <React.Fragment key={item.id}>
-                      <tr className="hover:bg-neutral-50/50 transition-colors group">
-                        {/* Title & icon */}
-                        <td className="py-3 px-4 font-black text-neutral-900 border-r border-neutral-150 max-w-[240px] truncate">
-                          <div className="flex items-center gap-2">
-                            {item.type === "Livre" ? (
-                              <BookMarked className="w-4 h-4 text-neutral-400 shrink-0" />
-                            ) : (
-                              <Clapperboard className="w-4 h-4 text-neutral-400 shrink-0" />
-                            )}
-                            <span title={item.title}>{item.title}</span>
+                      <tr className="hover:bg-neutral-50/70 transition-colors group">
+                        {/* Title & Icon Avatar */}
+                        <td className="py-3.5 px-4 font-black text-neutral-900 max-w-[260px]">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                              item.type === "Livre" ? "bg-emerald-100/70 text-emerald-700" :
+                              item.type === "Série" ? "bg-indigo-100/70 text-indigo-700" :
+                              item.type === "Film" ? "bg-rose-100/70 text-rose-700" : "bg-purple-100/70 text-purple-700"
+                            }`}>
+                              {getFormatIcon(item.type, "w-3.5 h-3.5")}
+                            </div>
+                            <span className="truncate text-xs font-bold leading-snug" title={item.title}>
+                              {item.title}
+                            </span>
                           </div>
                         </td>
 
                         {/* Creator */}
-                        <td className="py-3 px-4 font-bold text-neutral-600 border-r border-neutral-150 max-w-[150px] truncate">
-                          {item.creator}
+                        <td className="py-3.5 px-4 font-medium text-neutral-600 max-w-[160px] truncate">
+                          {creatorDisplay}
                         </td>
 
-                        {/* Format */}
-                        <td className="py-3 px-4 border-r border-neutral-150">
-                          <span className="inline-flex items-center gap-1 text-[9px] bg-neutral-100 text-neutral-800 px-2 py-0.5 rounded-md font-bold font-mono border border-neutral-200/80 shadow-3xs uppercase tracking-wider">
+                        {/* Format Badge */}
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg border shadow-3xs uppercase tracking-wider font-mono ${getFormatBadgeStyle(item.type)}`}>
                             {getFormatIcon(item.type, "w-2.5 h-2.5")}
                             <span>{item.type}</span>
                           </span>
                         </td>
 
-                        {/* Genre/Platform */}
-                        <td className="py-3 px-4 border-r border-neutral-150 font-semibold text-neutral-500 max-w-[130px] truncate">
-                          {item.genreOrPlatform}
+                        {/* Genre/Platform Tag */}
+                        <td className="py-3.5 px-4">
+                          <span className="inline-block text-[10px] font-bold text-neutral-600 bg-neutral-100 px-2 py-0.5 rounded-md truncate max-w-[140px]">
+                            {item.genreOrPlatform}
+                          </span>
                         </td>
 
-                        {/* Position text */}
-                        <td className="py-3 px-4 border-r border-neutral-150 text-center font-mono font-bold text-neutral-700">
+                        {/* Volume / Position */}
+                        <td className="py-3.5 px-4 text-center font-mono font-bold text-neutral-700 text-xs">
                           {item.type === "Film" ? (
                             <span className="text-neutral-400 font-sans font-medium text-[10px]">Unitaire (Film)</span>
                           ) : (
@@ -904,56 +970,58 @@ export default function MediaHubSection({
                           )}
                         </td>
 
-                        {/* Progress meter & fast adjustment buttons */}
-                        <td className="py-3 px-4 border-r border-neutral-150">
+                        {/* Progress Meter with Hover Controls */}
+                        <td className="py-3.5 px-4">
                           {item.type === "Film" ? (
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold text-neutral-400">Film unique</span>
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-black font-mono ${
-                                item.status === "Terminé" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"
-                              }`}>
-                                {item.status === "Terminé" ? "100%" : "À voir"}
-                              </span>
-                            </div>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold font-mono inline-block ${
+                              item.status === "Terminé" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-neutral-100 text-neutral-500"
+                            }`}>
+                              {item.status === "Terminé" ? "100% (Vu)" : "À regarder"}
+                            </span>
                           ) : (
                             <div className="space-y-1">
-                              <div className="flex items-center justify-between text-[10px] font-bold text-neutral-500">
-                                <span className="font-mono text-neutral-800">{item.progressPercent}%</span>
+                              <div className="flex items-center justify-between text-[10px] font-bold">
+                                <span className="font-mono text-neutral-900 font-black">{item.progressPercent}%</span>
                                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button
                                     onClick={() => handleUpdateProgress(item, item.currentValue - 1)}
-                                    className="w-4 h-4 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded text-neutral-700 flex items-center justify-center font-mono font-bold text-[9px] cursor-pointer"
+                                    className="w-4 h-4 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded flex items-center justify-center font-mono font-bold text-[10px] cursor-pointer"
                                     title="-1"
                                   >
                                     -
                                   </button>
                                   <button
                                     onClick={() => handleUpdateProgress(item, item.currentValue + 1)}
-                                    className="w-4 h-4 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded text-neutral-700 flex items-center justify-center font-mono font-bold text-[9px] cursor-pointer"
+                                    className="w-4 h-4 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded flex items-center justify-center font-mono font-bold text-[10px] cursor-pointer"
                                     title="+1"
                                   >
                                     +
                                   </button>
                                 </div>
                               </div>
-                              <div className="w-full bg-neutral-100 rounded-full h-1.5 overflow-hidden p-[1px] shadow-inner relative">
-                                <div className="bg-neutral-900 h-full rounded-full transition-all" style={{ width: `${item.progressPercent}%` }} />
+                              <div className="w-full bg-neutral-150 rounded-full h-1.5 overflow-hidden relative">
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-300 ${
+                                    item.progressPercent === 100 ? "bg-emerald-500" : "bg-indigo-600"
+                                  }`} 
+                                  style={{ width: `${item.progressPercent}%` }} 
+                                />
                               </div>
                             </div>
                           )}
                         </td>
 
-                        {/* Status with quick click-to-cycle or clear dropdown */}
-                        <td className="py-3 px-4 border-r border-neutral-150">
+                        {/* Status Dropdown */}
+                        <td className="py-3.5 px-4">
                           <select
                             value={item.status}
                             onChange={(e) => handleUpdateStatus(item, e.target.value as any)}
-                            className={`text-[10px] font-bold py-1 px-1.5 rounded-lg border focus:outline-none cursor-pointer shadow-3xs w-full ${
+                            className={`text-[10px] font-bold py-1 px-2 rounded-xl border focus:outline-none cursor-pointer shadow-3xs w-full transition-all ${
                               item.status === "Terminé"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200 font-black"
                                 : item.status === "En cours"
-                                  ? "bg-red-50 text-red-700 border-red-200"
-                                  : "bg-neutral-50 text-neutral-600 border-neutral-200"
+                                  ? "bg-indigo-50 text-indigo-800 border-indigo-200 font-black"
+                                  : "bg-amber-50 text-amber-800 border-amber-200 font-bold"
                             }`}
                           >
                             <option value="À lire/voir">Wishlist</option>
@@ -962,8 +1030,8 @@ export default function MediaHubSection({
                           </select>
                         </td>
 
-                        {/* Note stars & quick comment button */}
-                        <td className="py-3 px-4 border-r border-neutral-150">
+                        {/* Rating Stars & Notes */}
+                        <td className="py-3.5 px-4">
                           <div className="flex items-center justify-between gap-1">
                             <div className="flex items-center">
                               {[1, 2, 3, 4, 5].map(s => (
@@ -971,9 +1039,9 @@ export default function MediaHubSection({
                                   type="button"
                                   key={s}
                                   onClick={() => handleUpdateRating(item, s)}
-                                  className="text-neutral-200 hover:text-amber-400 transition-colors cursor-pointer"
+                                  className="text-neutral-200 hover:text-amber-400 transition-colors cursor-pointer p-0.5"
                                 >
-                                  <Star className={`w-3 h-3 ${item.rating >= s ? "text-amber-400 fill-amber-400" : "text-neutral-200"}`} />
+                                  <Star className={`w-3.5 h-3.5 ${item.rating >= s ? "text-amber-400 fill-amber-400" : "text-neutral-200"}`} />
                                 </button>
                               ))}
                             </div>
@@ -986,8 +1054,10 @@ export default function MediaHubSection({
                                   setTempNotes(item.notes);
                                 }
                               }}
-                              className={`p-1.5 rounded hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors shrink-0 flex items-center gap-1 cursor-pointer font-bold text-[10px] ${
-                                item.notes ? "text-amber-500 font-black" : ""
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
+                                item.notes 
+                                  ? "bg-amber-50 text-amber-700 border border-amber-200 font-extrabold" 
+                                  : "text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100"
                               }`}
                               title="Notes & Commentaires"
                             >
@@ -997,49 +1067,50 @@ export default function MediaHubSection({
                           </div>
                         </td>
 
-                        {/* Row Actions */}
-                        <td className="py-3 px-4 text-center">
+                        {/* Actions */}
+                        <td className="py-3.5 px-4 text-center">
                           <button
                             onClick={() => handleDeleteItem(item)}
-                            className="text-neutral-400 hover:text-red-600 p-1 rounded hover:bg-neutral-100 transition-colors cursor-pointer inline-block"
-                            title="Supprimer cette ligne"
+                            className="text-neutral-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer inline-block"
+                            title="Supprimer ce média"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </td>
                       </tr>
 
-                      {/* Expandable note Row */}
+                      {/* Expandable Notes Row */}
                       {isExpanded && (
-                        <tr className="bg-neutral-50/50 font-sans">
-                          <td colSpan={9} className="py-3.5 px-6 border-b border-neutral-200">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between text-[11px] font-black text-neutral-500 uppercase tracking-wider">
+                        <tr className="bg-neutral-50/70 font-sans">
+                          <td colSpan={9} className="py-4 px-6 border-y border-neutral-200/80">
+                            <div className="space-y-2.5 bg-white p-4 rounded-2xl border border-neutral-200/80 shadow-3xs">
+                              <div className="flex items-center justify-between text-[11px] font-black text-neutral-600 uppercase tracking-wider">
                                 <span className="flex items-center gap-1.5">
-                                  <Layers className="w-3.5 h-3.5 text-neutral-400" />
-                                  Notes, avis & Concepts mémorisés de : <strong className="text-neutral-800 font-black">"{item.title}"</strong>
+                                  <Layers className="w-4 h-4 text-indigo-600" />
+                                  <span>Notes, leçons & résumés de : </span>
+                                  <strong className="text-neutral-900 font-extrabold">"{item.title}"</strong>
                                 </span>
                                 <div className="flex items-center gap-2">
                                   <button
                                     onClick={() => handleSaveNotes(item.id, item.type === "Livre")}
-                                    className="bg-neutral-900 text-white hover:bg-neutral-800 font-extrabold px-2.5 py-1 rounded-md text-[10px] flex items-center gap-1 transition-colors cursor-pointer shadow-3xs"
+                                    className="bg-neutral-950 text-white hover:bg-neutral-800 font-black px-3 py-1.5 rounded-xl text-[10px] flex items-center gap-1 transition-all cursor-pointer shadow-3xs"
                                   >
-                                    <Check className="w-3 h-3" /> Enregistrer les Notes
+                                    <Check className="w-3 h-3 text-emerald-400" /> Enregistrer les Notes
                                   </button>
                                   <button
                                     onClick={() => setEditingNotesId(null)}
-                                    className="text-neutral-400 hover:text-neutral-600 text-[10px] font-bold"
+                                    className="text-neutral-400 hover:text-neutral-700 text-[10px] font-bold px-2 py-1"
                                   >
-                                    Annuler
+                                    Fermer
                                   </button>
                                 </div>
                               </div>
                               <textarea
                                 value={tempNotes}
                                 onChange={(e) => setTempNotes(e.target.value)}
-                                className="w-full bg-white border border-neutral-200 rounded-xl p-3 text-xs text-neutral-800 font-medium focus:outline-none focus:border-neutral-900 shadow-inner"
+                                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-xs text-neutral-800 font-medium focus:outline-none focus:border-neutral-900 focus:bg-white transition-all"
                                 rows={3}
-                                placeholder="Résumez les idées majeures, les leçons à retenir, vos citations ou scènes favorites de ce contenu..."
+                                placeholder="Inscrivez les citations inspirantes, leçons de leadership, concepts clés ou votre critique personnelle..."
                               />
                             </div>
                           </td>
@@ -1050,6 +1121,108 @@ export default function MediaHubSection({
                 })}
               </tbody>
             </table>
+          </div>
+        ) : (
+          /* GRID VIEW */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredList.map((item) => {
+              let creatorDisplay = item.creator || "Inconnu";
+              if (creatorDisplay.length > 8) {
+                const half = Math.floor(creatorDisplay.length / 2);
+                if (creatorDisplay.slice(0, half) === creatorDisplay.slice(half)) {
+                  creatorDisplay = creatorDisplay.slice(0, half);
+                }
+              }
+
+              return (
+                <div 
+                  key={item.id} 
+                  className="bg-white border border-neutral-200/80 hover:border-neutral-300 rounded-2xl p-4 space-y-3.5 shadow-3xs hover:shadow-xs transition-all flex flex-col justify-between group"
+                >
+                  <div className="space-y-2.5">
+                    {/* Top Row Header */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-[9px] font-black font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                        item.type === "Livre" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                        item.type === "Série" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                        item.type === "Film" ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-purple-50 text-purple-700 border-purple-200"
+                      }`}>
+                        {item.type}
+                      </span>
+
+                      <select
+                        value={item.status}
+                        onChange={(e) => handleUpdateStatus(item, e.target.value as any)}
+                        className={`text-[9px] font-bold py-0.5 px-2 rounded-lg border focus:outline-none cursor-pointer ${
+                          item.status === "Terminé" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                          item.status === "En cours" ? "bg-indigo-50 text-indigo-700 border-indigo-200" : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}
+                      >
+                        <option value="À lire/voir">Wishlist</option>
+                        <option value="En cours">En cours</option>
+                        <option value="Terminé">Terminé</option>
+                      </select>
+                    </div>
+
+                    {/* Title & Creator */}
+                    <div>
+                      <h4 className="text-sm font-black text-neutral-900 leading-snug line-clamp-2" title={item.title}>
+                        {item.title}
+                      </h4>
+                      <p className="text-xs text-neutral-500 font-medium mt-0.5 truncate">
+                        {item.type === "Livre" ? "Auteur :" : "Plateforme :"} {creatorDisplay}
+                      </p>
+                    </div>
+
+                    {/* Genre tag */}
+                    <span className="inline-block text-[10px] font-bold text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-md">
+                      {item.genreOrPlatform}
+                    </span>
+                  </div>
+
+                  {/* Progress & Rating Footer */}
+                  <div className="space-y-3 pt-2 border-t border-neutral-100">
+                    {item.type !== "Film" && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-neutral-600">
+                          <span>Progression ({item.currentValue}/{item.totalValue})</span>
+                          <span className="font-mono text-neutral-900 font-extrabold">{item.progressPercent}%</span>
+                        </div>
+                        <div className="w-full bg-neutral-150 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-300 ${item.progressPercent === 100 ? "bg-emerald-500" : "bg-indigo-600"}`}
+                            style={{ width: `${item.progressPercent}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-1 pt-1">
+                      <div className="flex items-center">
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <button
+                            type="button"
+                            key={s}
+                            onClick={() => handleUpdateRating(item, s)}
+                            className="text-neutral-200 hover:text-amber-400 transition-colors cursor-pointer p-0.5"
+                          >
+                            <Star className={`w-3.5 h-3.5 ${item.rating >= s ? "text-amber-400 fill-amber-400" : "text-neutral-200"}`} />
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteItem(item)}
+                        className="text-neutral-300 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors cursor-pointer"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
