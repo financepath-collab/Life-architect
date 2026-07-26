@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Plus, 
   Search, 
@@ -22,13 +22,24 @@ import {
   ShoppingCart,
   CheckSquare,
   Square,
-  Sparkles
+  Sparkles,
+  DollarSign,
+  Wallet,
+  Tag,
+  PlusCircle,
+  RotateCcw,
+  Check,
+  AlertCircle,
+  Info
 } from "lucide-react";
-import { MealPlanner } from "../types";
+import { MealPlanner, FinanceTransaction } from "../types";
 
 interface MealPlannerSectionProps {
   mealPlanners: MealPlanner[];
   setMealPlanners: React.Dispatch<React.SetStateAction<MealPlanner[]>>;
+  transactions?: FinanceTransaction[];
+  setTransactions?: React.Dispatch<React.SetStateAction<FinanceTransaction[]>>;
+  triggerToast?: (message: string, type?: "success" | "error" | "info") => void;
 }
 
 const DAYS_OF_WEEK = [
@@ -50,9 +61,20 @@ const MEAL_TYPES = [
 
 type ViewMode = "matrix" | "cards" | "shopping";
 
+interface CustomShoppingItem {
+  id: string;
+  ingredient: string;
+  mealName: string;
+  day: string;
+  defaultAmount?: number;
+}
+
 export default function MealPlannerSection({
   mealPlanners,
-  setMealPlanners
+  setMealPlanners,
+  transactions = [],
+  setTransactions,
+  triggerToast
 }: MealPlannerSectionProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("matrix");
   const [selectedDay, setSelectedDay] = useState<string>("Tous");
@@ -60,7 +82,64 @@ export default function MealPlannerSection({
   const [searchQuery, setSearchQuery] = useState("");
 
   // Shopping list checked state
-  const [checkedIngredients, setCheckedIngredients] = useState<Record<string, boolean>>({});
+  const [checkedIngredients, setCheckedIngredients] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem("mp_shopping_checked_v2");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Shopping list item amounts (in MAD)
+  const [itemAmounts, setItemAmounts] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem("mp_shopping_amounts_v2");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Linked transaction IDs mapping (itemId -> transactionId)
+  const [linkedTransactions, setLinkedTransactions] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem("mp_linked_tx_v2");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Custom user-added shopping items (e.g. Légumes, Fruits, Lait, etc.)
+  const [customShoppingItems, setCustomShoppingItems] = useState<CustomShoppingItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("mp_custom_items_v2");
+      return saved ? JSON.parse(saved) : [
+        { id: "custom_legumes_1", ingredient: "Légumes frais (Carottes, Tomates, Oignons)", mealName: "Course Hebdomadaire", day: "Semaine", defaultAmount: 80 },
+        { id: "custom_fruits_1", ingredient: "Fruits de saison (Pommes, Bananes)", mealName: "Course Hebdomadaire", day: "Semaine", defaultAmount: 50 }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  // Form state for adding new custom shopping item
+  const [newCustomName, setNewCustomName] = useState("");
+  const [newCustomAmount, setNewCustomAmount] = useState<number | "">(40);
+  const [shoppingFilter, setShoppingFilter] = useState<"Tous" | "A_ACHETER" | "ACHETES">("Tous");
+
+  // Persist state to LocalStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("mp_shopping_checked_v2", JSON.stringify(checkedIngredients));
+      localStorage.setItem("mp_shopping_amounts_v2", JSON.stringify(itemAmounts));
+      localStorage.setItem("mp_linked_tx_v2", JSON.stringify(linkedTransactions));
+      localStorage.setItem("mp_custom_items_v2", JSON.stringify(customShoppingItems));
+    } catch (e) {
+      console.error("Error saving shopping list state", e);
+    }
+  }, [checkedIngredients, itemAmounts, linkedTransactions, customShoppingItems]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -172,9 +251,11 @@ export default function MealPlannerSection({
     return filteredMeals.filter(m => m.prepared).length;
   }, [filteredMeals]);
 
-  // Shopping list items extracted from meal ingredients
+  // Combined Shopping List (Recipe ingredients + Custom user items)
   const shoppingList = useMemo(() => {
-    const items: { id: string; ingredient: string; mealName: string; day: string }[] = [];
+    const items: CustomShoppingItem[] = [];
+    
+    // 1. Ingredients extracted from meal plans
     mealPlanners.forEach(meal => {
       if (meal.ingredients && meal.ingredients.trim()) {
         const lines = meal.ingredients.split(/,|\n|•/);
@@ -185,17 +266,164 @@ export default function MealPlannerSection({
               id: `${meal.id}_ing_${idx}`,
               ingredient: clean,
               mealName: meal.description,
-              day: meal.dayOfWeek
+              day: meal.dayOfWeek,
+              defaultAmount: 35
             });
           }
         });
       }
     });
-    return items;
-  }, [mealPlanners]);
 
-  const toggleShoppingItem = (id: string) => {
-    setCheckedIngredients(prev => ({ ...prev, [id]: !prev[id] }));
+    // 2. Custom shopping items
+    customShoppingItems.forEach(c => {
+      items.push(c);
+    });
+
+    return items;
+  }, [mealPlanners, customShoppingItems]);
+
+  // Filtered shopping items by search / purchase status
+  const filteredShoppingList = useMemo(() => {
+    return shoppingList.filter(item => {
+      const isChecked = !!checkedIngredients[item.id];
+      if (shoppingFilter === "A_ACHETER" && isChecked) return false;
+      if (shoppingFilter === "ACHETES" && !isChecked) return false;
+      return true;
+    });
+  }, [shoppingList, checkedIngredients, shoppingFilter]);
+
+  // Shopping Total Expense Calculation
+  const shoppingTotalBoughtExpenses = useMemo(() => {
+    return shoppingList.reduce((sum, item) => {
+      if (checkedIngredients[item.id]) {
+        const amt = itemAmounts[item.id] !== undefined ? itemAmounts[item.id] : (item.defaultAmount || 0);
+        return sum + amt;
+      }
+      return sum;
+    }, 0);
+  }, [shoppingList, checkedIngredients, itemAmounts]);
+
+  // Toggle Shopping Item & Directly Impact Finance Module!
+  const toggleShoppingItem = (item: CustomShoppingItem) => {
+    const isCurrentlyChecked = !!checkedIngredients[item.id];
+    const newCheckedState = !isCurrentlyChecked;
+
+    setCheckedIngredients(prev => ({ ...prev, [item.id]: newCheckedState }));
+
+    if (newCheckedState) {
+      // User is checking item as "J'ai acheté"
+      let currentAmount = itemAmounts[item.id];
+      if (currentAmount === undefined || currentAmount <= 0) {
+        currentAmount = item.defaultAmount || 40;
+        setItemAmounts(prev => ({ ...prev, [item.id]: currentAmount }));
+      }
+
+      // Create Finance Transaction
+      if (setTransactions) {
+        const txId = "tx_meal_shop_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
+        const newTx: FinanceTransaction = {
+          id: txId,
+          date: new Date().toISOString().split("T")[0],
+          description: `Achat Course: ${item.ingredient}`,
+          category: "Alimentation",
+          subCategory: "Courses & Épicerie",
+          type: "Dépense",
+          amount: currentAmount,
+          account: "Compte Courant Principal",
+          status: "Effectué",
+          note: `Achat Meal Planner (${item.mealName})`
+        };
+
+        setTransactions(prev => [newTx, ...prev]);
+        setLinkedTransactions(prev => ({ ...prev, [item.id]: txId }));
+
+        if (triggerToast) {
+          triggerToast(`🛒 Dépense "${item.ingredient}" (${currentAmount} MAD) enregistrée dans la partie Finance !`, "success");
+        }
+      }
+    } else {
+      // User is unchecking item -> Remove corresponding transaction from Finance
+      const existingTxId = linkedTransactions[item.id];
+      if (existingTxId && setTransactions) {
+        setTransactions(prev => prev.filter(t => t.id !== existingTxId));
+        setLinkedTransactions(prev => {
+          const copy = { ...prev };
+          delete copy[item.id];
+          return copy;
+        });
+
+        if (triggerToast) {
+          triggerToast(`ℹ️ Achat "${item.ingredient}" retiré de la partie Finance.`, "info");
+        }
+      }
+    }
+  };
+
+  // Update amount live and sync with linked Finance Transaction if item is checked
+  const handleAmountChange = (item: CustomShoppingItem, newAmt: number) => {
+    const sanitizedAmt = Math.max(0, newAmt);
+    setItemAmounts(prev => ({ ...prev, [item.id]: sanitizedAmt }));
+
+    const isChecked = !!checkedIngredients[item.id];
+    const txId = linkedTransactions[item.id];
+
+    if (isChecked && txId && setTransactions) {
+      setTransactions(prev => prev.map(t => t.id === txId ? { ...t, amount: sanitizedAmt } : t));
+      if (triggerToast) {
+        triggerToast(`💰 Dépense "${item.ingredient}" mise à jour dans Finance : ${sanitizedAmt} MAD`, "info");
+      }
+    }
+  };
+
+  // Add custom grocery item
+  const handleAddCustomItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustomName.trim()) return;
+
+    const amt = Number(newCustomAmount) || 0;
+    const newItem: CustomShoppingItem = {
+      id: "custom_shop_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+      ingredient: newCustomName.trim(),
+      mealName: "Course Libre / Ingrédient Extra",
+      day: "Saisie Libre",
+      defaultAmount: amt
+    };
+
+    setCustomShoppingItems(prev => [newItem, ...prev]);
+    if (amt > 0) {
+      setItemAmounts(prev => ({ ...prev, [newItem.id]: amt }));
+    }
+
+    setNewCustomName("");
+    setNewCustomAmount(40);
+
+    if (triggerToast) {
+      triggerToast(`🛒 Article "${newItem.ingredient}" ajouté à votre liste de courses !`, "success");
+    }
+  };
+
+  // Delete custom item
+  const handleDeleteCustomItem = (id: string, ingredientName: string) => {
+    const txId = linkedTransactions[id];
+    if (txId && setTransactions) {
+      setTransactions(prev => prev.filter(t => t.id !== txId));
+      setLinkedTransactions(prev => {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      });
+    }
+
+    setCustomShoppingItems(prev => prev.filter(c => c.id !== id));
+    setCheckedIngredients(prev => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+
+    if (triggerToast) {
+      triggerToast(`Article "${ingredientName}" supprimé de la liste.`, "info");
+    }
   };
 
   // Style helper for meal types
@@ -562,74 +790,288 @@ export default function MealPlannerSection({
         </div>
       )}
 
-      {/* VIEW 3: AUTOMATED SHOPPING LIST */}
+      {/* VIEW 3: AUTOMATED SHOPPING LIST WITH DIRECT FINANCE IMPACT */}
       {viewMode === "shopping" && (
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 dark:border-zinc-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                  <ShoppingCart className="w-5 h-5" />
+        <div className="space-y-6">
+          {/* BANNER NOTIFICATION: FINANCE INTEGRATION */}
+          <div className="bg-gradient-to-r from-emerald-900 via-slate-900 to-indigo-950 text-white rounded-3xl p-5 sm:p-6 shadow-lg border border-emerald-500/30 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Wallet className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-extrabold text-neutral-900 dark:text-neutral-100">
-                    Liste de Courses Générée Automatiquement
-                  </h2>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Ingrédients extraits de tous vos menus et recettes de la semaine.
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-white tracking-tight">
+                      Liste de Courses & Synchronisation Finance
+                    </h3>
+                    <span className="text-[10px] bg-emerald-400 text-emerald-950 font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      Auto-Impact
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-100/80 mt-1 max-w-2xl">
+                    Chaque article coché <strong className="text-emerald-300">"J'ai acheté"</strong> avec un montant est automatiquement enregistré comme <strong className="text-emerald-300">Dépense (Catégorie Alimentation)</strong> dans votre tableau de bord Finance.
                   </p>
                 </div>
               </div>
 
-              {shoppingList.length > 0 && (
-                <button
-                  onClick={() => setCheckedIngredients({})}
-                  className="text-xs font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 underline cursor-pointer"
-                >
-                  Réinitialiser les cochages
-                </button>
-              )}
+              {/* Total Spent Badge */}
+              <div className="bg-emerald-950/80 border border-emerald-500/40 px-4 py-3 rounded-2xl shrink-0 flex items-center gap-3">
+                <DollarSign className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <span className="text-[10px] text-emerald-300 font-extrabold uppercase tracking-wider block">Impact Total Finance</span>
+                  <span className="text-lg font-black font-mono text-emerald-400 block">
+                    {shoppingTotalBoughtExpenses.toLocaleString("fr-FR")} MAD
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {shoppingList.length === 0 ? (
-              <div className="text-center py-12 space-y-3">
+            {/* Quick Stats Summary */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-emerald-800/60 text-xs">
+              <div className="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl">
+                <span className="text-slate-400 block text-[10px]">Total Articles</span>
+                <span className="font-extrabold text-slate-100">{shoppingList.length} articles</span>
+              </div>
+              <div className="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl">
+                <span className="text-slate-400 block text-[10px]">À acheter</span>
+                <span className="font-extrabold text-amber-400">
+                  {shoppingList.filter(i => !checkedIngredients[i.id]).length} restants
+                </span>
+              </div>
+              <div className="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl">
+                <span className="text-slate-400 block text-[10px]">Achetés (dans Finance)</span>
+                <span className="font-extrabold text-emerald-400">
+                  {shoppingList.filter(i => checkedIngredients[i.id]).length} réglés
+                </span>
+              </div>
+              <div className="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl">
+                <span className="text-slate-400 block text-[10px]">Catégorie Finance</span>
+                <span className="font-bold text-indigo-300">Alimentation & Courses</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ADD CUSTOM GROCERY ITEM FORM */}
+          <div className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-3xl p-5 shadow-xs space-y-4">
+            <h4 className="text-xs font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-wider flex items-center gap-2">
+              <PlusCircle className="w-4 h-4 text-emerald-600" />
+              <span>Ajouter un Article à la Liste de Courses (ex: Légumes, Eau, Fruits...)</span>
+            </h4>
+
+            <form onSubmit={handleAddCustomItem} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <div className="flex-1 min-w-[200px]">
+                <input
+                  type="text"
+                  required
+                  value={newCustomName}
+                  onChange={e => setNewCustomName(e.target.value)}
+                  placeholder="Ex: Légumes de la semaine, Fruits, Lait, Huile..."
+                  className="w-full bg-neutral-50 dark:bg-zinc-800 border border-neutral-200 dark:border-zinc-700 rounded-2xl px-4 py-2.5 text-xs text-neutral-900 dark:text-neutral-100 font-bold placeholder-neutral-400 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="w-full sm:w-44 flex items-center gap-2 bg-neutral-50 dark:bg-zinc-800 border border-neutral-200 dark:border-zinc-700 rounded-2xl px-3 py-1">
+                <span className="text-[11px] font-bold text-neutral-400">MAD :</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={newCustomAmount}
+                  onChange={e => setNewCustomAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder="Montant"
+                  className="w-full bg-transparent text-xs font-black font-mono text-neutral-900 dark:text-neutral-100 focus:outline-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Ajouter à la liste</span>
+              </button>
+            </form>
+          </div>
+
+          {/* MAIN SHOPPING ITEMS CONTAINER */}
+          <div className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-6">
+            {/* Header & Filter Controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 dark:border-zinc-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                  <ShoppingCart className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-neutral-900 dark:text-neutral-100">
+                    Articles & Ingrédients de la Semaine ({shoppingList.length})
+                  </h2>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Cochez "J'ai acheté" pour impacter instantanément le module Finance.
+                  </p>
+                </div>
+              </div>
+
+              {/* Filters & Reset */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="bg-neutral-100 dark:bg-zinc-800 p-1 rounded-xl flex items-center gap-1 border border-neutral-200/60 dark:border-zinc-700">
+                  <button
+                    type="button"
+                    onClick={() => setShoppingFilter("Tous")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      shoppingFilter === "Tous"
+                        ? "bg-white dark:bg-zinc-900 text-neutral-900 dark:text-neutral-100 shadow-2xs font-extrabold"
+                        : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900"
+                    }`}
+                  >
+                    Tous ({shoppingList.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShoppingFilter("A_ACHETER")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      shoppingFilter === "A_ACHETER"
+                        ? "bg-white dark:bg-zinc-900 text-amber-600 dark:text-amber-400 shadow-2xs font-extrabold"
+                        : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900"
+                    }`}
+                  >
+                    À acheter ({shoppingList.filter(i => !checkedIngredients[i.id]).length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShoppingFilter("ACHETES")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      shoppingFilter === "ACHETES"
+                        ? "bg-white dark:bg-zinc-900 text-emerald-600 dark:text-emerald-400 shadow-2xs font-extrabold"
+                        : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900"
+                    }`}
+                  >
+                    Achetés ({shoppingList.filter(i => checkedIngredients[i.id]).length})
+                  </button>
+                </div>
+
+                {shoppingList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm("Réinitialiser tous les cochages de courses ?")) {
+                        setCheckedIngredients({});
+                        setLinkedTransactions({});
+                      }
+                    }}
+                    className="p-2 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-xl hover:bg-neutral-100 dark:hover:bg-zinc-800 transition-all cursor-pointer"
+                    title="Réinitialiser"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* LIST OF SHOPPING ITEMS */}
+            {filteredShoppingList.length === 0 ? (
+              <div className="text-center py-12 space-y-3 bg-neutral-50/50 dark:bg-zinc-800/30 rounded-2xl border border-dashed border-neutral-200 dark:border-zinc-800">
                 <ShoppingCart className="w-10 h-10 text-neutral-300 dark:text-zinc-700 mx-auto" />
                 <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">
-                  Aucun ingrédient renseigné dans vos repas.
+                  Aucun article dans cette catégorie.
                 </p>
                 <p className="text-xs text-neutral-400 max-w-md mx-auto">
-                  Ajoutez ou modifiez vos plats en complétant le champ "Ingrédients" pour générer votre liste de courses interactive.
+                  Ajoutez un plat avec ses ingrédients ou utilisez le formulaire ci-dessus pour ajouter des articles libres (ex: Légumes).
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {shoppingList.map((item) => {
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {filteredShoppingList.map((item) => {
                   const isChecked = !!checkedIngredients[item.id];
+                  const currentAmount = itemAmounts[item.id] !== undefined ? itemAmounts[item.id] : (item.defaultAmount || 0);
+                  const isCustom = item.id.startsWith("custom_");
 
                   return (
                     <div
                       key={item.id}
-                      onClick={() => toggleShoppingItem(item.id)}
-                      className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                      className={`p-4 rounded-2xl border transition-all space-y-3 ${
                         isChecked
-                          ? "bg-neutral-50 dark:bg-zinc-800/30 border-neutral-200/50 dark:border-zinc-800 line-through text-neutral-400"
-                          : "bg-white dark:bg-zinc-800/80 border-neutral-200/80 dark:border-zinc-700 hover:border-emerald-400 text-neutral-900 dark:text-neutral-100 shadow-3xs"
+                          ? "bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/60 shadow-3xs"
+                          : "bg-white dark:bg-zinc-800/80 border-neutral-200/80 dark:border-zinc-700 hover:border-emerald-300 text-neutral-900 dark:text-neutral-100 shadow-3xs"
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        {isChecked ? (
-                          <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        ) : (
-                          <Square className="w-5 h-5 text-neutral-300 dark:text-zinc-600 shrink-0" />
-                        )}
-                        <div>
-                          <span className="text-xs font-extrabold block">
-                            {item.ingredient}
-                          </span>
-                          <span className="text-[10px] text-neutral-400 font-mono block">
-                            {item.day} • {item.mealName}
-                          </span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1">
+                          {/* Checkbox Button */}
+                          <button
+                            type="button"
+                            onClick={() => toggleShoppingItem(item)}
+                            className={`mt-0.5 p-1 rounded-xl transition-all cursor-pointer shrink-0 ${
+                              isChecked
+                                ? "bg-emerald-600 text-white shadow-2xs"
+                                : "text-neutral-300 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-zinc-700"
+                            }`}
+                          >
+                            {isChecked ? (
+                              <CheckSquare className="w-6 h-6" />
+                            ) : (
+                              <Square className="w-6 h-6" />
+                            )}
+                          </button>
+
+                          <div className="space-y-1">
+                            <span className={`text-xs font-black block leading-snug ${isChecked ? "line-through text-neutral-500 dark:text-neutral-400" : "text-neutral-900 dark:text-neutral-100"}`}>
+                              {item.ingredient}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 font-mono flex items-center gap-1.5 flex-wrap">
+                              <span className="bg-neutral-100 dark:bg-zinc-700 px-2 py-0.5 rounded-md font-bold text-neutral-600 dark:text-neutral-300">
+                                {item.day}
+                              </span>
+                              <span>• {item.mealName}</span>
+                            </span>
+                          </div>
                         </div>
+
+                        {/* Custom Item Delete */}
+                        {isCustom && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomItem(item.id, item.ingredient)}
+                            className="text-neutral-300 hover:text-rose-500 p-1 rounded-lg transition-colors cursor-pointer shrink-0"
+                            title="Supprimer l'article"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* AMOUNT FIELD & FINANCE IMPACT CONTROLS */}
+                      <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-neutral-100 dark:border-zinc-700/60">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] font-extrabold text-neutral-400 uppercase tracking-wider">
+                            Montant :
+                          </label>
+                          <div className="flex items-center gap-1 bg-neutral-50 dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-700 px-2.5 py-1 rounded-xl">
+                            <input
+                              type="number"
+                              min="0"
+                              value={currentAmount}
+                              onChange={(e) => handleAmountChange(item, Number(e.target.value) || 0)}
+                              className="w-16 text-xs font-black font-mono text-neutral-900 dark:text-neutral-100 bg-transparent focus:outline-none"
+                            />
+                            <span className="text-[10px] font-bold text-neutral-400 font-mono">MAD</span>
+                          </div>
+                        </div>
+
+                        {/* Status Tag */}
+                        {isChecked ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700 px-2.5 py-1 rounded-xl">
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            <span>Déversé dans Finance</span>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => toggleShoppingItem(item)}
+                            className="text-[10px] font-extrabold text-neutral-600 hover:text-emerald-700 dark:text-neutral-400 bg-neutral-100 hover:bg-emerald-100 border border-neutral-200 dark:border-zinc-700 px-2.5 py-1 rounded-xl transition-all cursor-pointer"
+                          >
+                            J'ai acheté ({currentAmount} MAD)
+                          </button>
+                        )}
                       </div>
                     </div>
                   );

@@ -115,6 +115,7 @@ export interface FinanceSalaire {
   grossAmount: number; // MAD
   netAmount: number; // MAD
   status: "Reçu" | "En attente";
+  jour_paiement?: number; // Jour habituel du mois (ex: 28, 27)
 }
 
 export interface FinanceEpargne {
@@ -379,6 +380,30 @@ export interface TopicToCover {
   notes?: string;
 }
 
+export interface ProjectBusinessKPIs {
+  // Quantitative Targets & Progress
+  targetPayingSubscribers?: number;
+  currentPayingSubscribers?: number;
+  
+  targetProductsSold?: number;
+  currentProductsSold?: number;
+  
+  targetFormationsSold?: number;
+  currentFormationsSold?: number;
+  
+  targetCoachingSold?: number;
+  currentCoachingSold?: number;
+  
+  targetAdsenseRevenue?: number; // in MAD/€
+  currentAdsenseRevenue?: number;
+  
+  targetCustomRevenue?: number; // Total Revenue Target
+  currentCustomRevenue?: number;
+  
+  // Custom user-defined KPIs
+  customKPIs?: { id: string; label: string; target: string; current: string; unit?: string }[];
+}
+
 export interface ProjectFolder {
   id: string;
   name: string;
@@ -388,10 +413,24 @@ export interface ProjectFolder {
   email?: string;
   password?: string;
   credentials?: MediaCredential[];
+  
+  // Expanded Project Sheet Fields
+  statusPhase?: "Idéation" | "Conception" | "MVP / Prototypage" | "Lancement" | "Croissance & Ventes" | "Scalabilité / Maturité";
+  launchDate?: string;
+  projectBudget?: number;
+  techStack?: string[];
+  keyRisks?: string;
+  valueProposition?: string;
+  teamStakeholders?: string;
+
   // Specific project goals & strategic attributes
   targetAudience?: string;
   coreGoal?: string;
   keyMetricTarget?: string;
+
+  // Detailed Business Goals & Metrics Targets
+  businessKPIs?: ProjectBusinessKPIs;
+
   associatedFormationIds: string[];
   associatedLinkIds: string[];
   associatedGoalIds: string[];

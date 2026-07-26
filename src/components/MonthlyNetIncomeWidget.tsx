@@ -17,7 +17,8 @@ import {
   RefreshCw,
   Percent,
   CheckCircle2,
-  PiggyBank
+  PiggyBank,
+  Calendar
 } from "lucide-react";
 import { Account, FinanceBudget, Abonnement, FinanceTransaction, FinanceSalaire } from "../types";
 
@@ -26,13 +27,15 @@ interface MonthlyNetIncomeWidgetProps {
   abonnements: Abonnement[];
   transactions: FinanceTransaction[];
   salaires?: FinanceSalaire[];
+  accounts?: Account[];
 }
 
 export default function MonthlyNetIncomeWidget({
   budgets = [],
   abonnements = [],
   transactions = [],
-  salaires = []
+  salaires = [],
+  accounts = []
 }: MonthlyNetIncomeWidgetProps) {
   // Current Month/Year for calculations (defaults to July 2026 as per other parts)
   const [selectedMonth, setSelectedMonth] = useState<string>("2026-07");
@@ -224,6 +227,69 @@ export default function MonthlyNetIncomeWidget({
     }
   }, [stats.savingsRate]);
 
+  // ------------------------------------------------------------------
+  // CASH FLOW PREDICTION BY SALARY PAYDAY (jour_paiement)
+  // ------------------------------------------------------------------
+  const paydayPredictions = useMemo(() => {
+    // Determine active salary records
+    const activeSalaries = (salaires && salaires.length > 0) ? salaires : [
+      { id: "sal_1", date: "2026-07-28", source: "Salaire Mensuel Principal", grossAmount: 22000, netAmount: 18500, status: "Reçu", jour_paiement: 28 },
+      { id: "sal_2", date: "2026-07-27", source: "Revenu Complémentaire", grossAmount: 12000, netAmount: 12000, status: "Reçu", jour_paiement: 27 }
+    ];
+
+    // Map each salary to its payday (jour_paiement)
+    const items = activeSalaries.map(s => {
+      let day = s.jour_paiement;
+      if (!day && s.date) {
+        const parts = s.date.split("-");
+        if (parts.length === 3) day = parseInt(parts[2], 10);
+      }
+      if (!day || isNaN(day)) day = 28;
+      return {
+        ...s,
+        payDay: day
+      };
+    });
+
+    const primaryPayDay = items.length > 0 ? (items[0].payDay || 28) : 28;
+    const totalSalaryIncome = items.reduce((sum, s) => sum + (s.netAmount || s.grossAmount || 0), 0);
+    const totalExpensesAndCharges = stats.totalSubscriptionsCost + stats.totalExpenses;
+
+    const prePaydayCharges = Math.round(totalExpensesAndCharges * 0.60);
+    const postPaydayCharges = totalExpensesAndCharges - prePaydayCharges;
+
+    const startingAccountBalance = (accounts && accounts.length > 0)
+      ? accounts.reduce((acc, a) => acc + (a.balance || 0), 0)
+      : 15000;
+
+    const prePaydayLiquidity = Math.max(0, startingAccountBalance - prePaydayCharges);
+    const postPaydayLiquidity = prePaydayLiquidity + totalSalaryIncome - postPaydayCharges;
+
+    const now = new Date();
+    const currentDay = now.getDate();
+    const daysUntilPayday = primaryPayDay - currentDay;
+    let paydayStatus = "Aujourd'hui !";
+    if (daysUntilPayday > 0) {
+      paydayStatus = `Dans ${daysUntilPayday} jour${daysUntilPayday > 1 ? "s" : ""}`;
+    } else if (daysUntilPayday < 0) {
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const nextDays = daysInMonth - currentDay + primaryPayDay;
+      paydayStatus = `Prochain versement dans ~${nextDays} jours (le ${primaryPayDay})`;
+    }
+
+    return {
+      items,
+      primaryPayDay,
+      totalSalaryIncome,
+      prePaydayCharges,
+      postPaydayCharges,
+      prePaydayLiquidity,
+      postPaydayLiquidity,
+      daysUntilPayday,
+      paydayStatus
+    };
+  }, [salaires, stats, accounts]);
+
   return (
     <div 
       id="monthly-net-income-widget" 
@@ -236,11 +302,16 @@ export default function MonthlyNetIncomeWidget({
             <Scale className="w-4 h-4 text-emerald-400" />
           </span>
           <div>
-            <h3 className="text-sm font-black text-neutral-950 dark:text-white uppercase tracking-tight">
-              Calculateur de Revenu Net Mensuel
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-black text-neutral-950 dark:text-white uppercase tracking-tight">
+                Calculateur de Revenu Net Mensuel
+              </h3>
+              <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-extrabold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                Paie le 27-28
+              </span>
+            </div>
             <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">
-              Analyse automatique de vos flux financiers réels et simulés
+              Analyse automatique de vos flux financiers (salaires reçus les 27/28 du mois)
             </p>
           </div>
         </div>
@@ -761,6 +832,130 @@ export default function MonthlyNetIncomeWidget({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 🔮 PRÉDICTION DE TRÉSORERIE PAR JOUR DE PAIE (jour_paiement) */}
+      <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-slate-800 space-y-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-base font-black text-white tracking-tight">
+                  Prédiction de Trésorerie par Jour de Paie
+                </h4>
+                <span className="text-[10px] bg-emerald-400/20 text-emerald-300 font-extrabold px-2 py-0.5 rounded-full border border-emerald-400/30 font-mono">
+                  jour_paiement: {paydayPredictions.primaryPayDay}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Prévision des flux de trésorerie calibrée sur le jour de virement de vos salaires ({paydayPredictions.primaryPayDay} du mois).
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-2xl border border-slate-700/60 shrink-0">
+            <Calendar className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-bold text-slate-300">Échéance Paie :</span>
+            <span className="text-xs font-black text-emerald-300 bg-emerald-950 px-2.5 py-0.5 rounded-xl border border-emerald-800">
+              {paydayPredictions.paydayStatus}
+            </span>
+          </div>
+        </div>
+
+        {/* Breakdown of Salaires with jour_paiement */}
+        <div className="space-y-3">
+          <div className="text-xs font-extrabold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+            <span>Rentrées de Salaire Prévues ({paydayPredictions.items.length})</span>
+            <span className="text-emerald-400 font-mono font-black">
+              Total: +{paydayPredictions.totalSalaryIncome.toLocaleString("fr-FR")} MAD
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {paydayPredictions.items.map((sal, idx) => (
+              <div 
+                key={sal.id || idx}
+                className="bg-slate-800/60 border border-slate-700/70 rounded-2xl p-3.5 flex flex-col justify-between hover:border-emerald-500/50 transition-all"
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-xs font-extrabold text-slate-100 truncate">
+                    {sal.source || "Salaire Principal"}
+                  </span>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-300 font-extrabold px-2 py-0.5 rounded-lg border border-emerald-800 font-mono shrink-0">
+                    Jour {sal.payDay}
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between mt-1">
+                  <span className="text-[11px] text-slate-400">Montant Net :</span>
+                  <span className="text-sm font-black font-mono text-emerald-400">
+                    +{(sal.netAmount || sal.grossAmount || 0).toLocaleString("fr-FR")} MAD
+                  </span>
+                </div>
+
+                <div className="text-[10px] text-slate-400 mt-2 flex items-center justify-between pt-2 border-t border-slate-700/50">
+                  <span>Statut: <strong className={sal.status === "Reçu" ? "text-emerald-300" : "text-amber-300"}>{sal.status || "Reçu"}</strong></span>
+                  <span className="font-mono">jour_paiement: {sal.payDay}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Cash Flow Timeline Curve */}
+        <div className="bg-slate-950/80 rounded-2xl p-4 border border-slate-800 space-y-4">
+          <h5 className="text-xs font-black text-slate-200 uppercase tracking-wider flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <span>Courbe de Trésorerie Prévisionnelle (Mois en Cours)</span>
+          </h5>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            {/* Phase 1: Avant la paie */}
+            <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl space-y-1">
+              <div className="flex items-center justify-between text-slate-400 font-bold">
+                <span>Phase 1 : Avant Paie</span>
+                <span className="text-[10px] text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded">Du 1 au {paydayPredictions.primaryPayDay - 1}</span>
+              </div>
+              <div className="text-lg font-black font-mono text-slate-100">
+                ~{paydayPredictions.prePaydayLiquidity.toLocaleString("fr-FR")} <span className="text-xs text-slate-400">MAD</span>
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Réserves résiduelles après prélèvement des charges fixes pré-paie (-{paydayPredictions.prePaydayCharges.toLocaleString("fr-FR")} MAD).
+              </p>
+            </div>
+
+            {/* Phase 2: Jour de Paie */}
+            <div className="bg-emerald-950/40 border border-emerald-800/60 p-3.5 rounded-xl space-y-1">
+              <div className="flex items-center justify-between text-emerald-300 font-bold">
+                <span>Phase 2 : Jour J de Paie</span>
+                <span className="text-[10px] bg-emerald-900 text-emerald-200 px-1.5 py-0.5 rounded font-bold">Jour {paydayPredictions.primaryPayDay}</span>
+              </div>
+              <div className="text-lg font-black font-mono text-emerald-400">
+                +{paydayPredictions.totalSalaryIncome.toLocaleString("fr-FR")} <span className="text-xs text-emerald-300">MAD</span>
+              </div>
+              <p className="text-[10px] text-emerald-200/80">
+                Injection massive de trésorerie par versement des salaires (jour_paiement: {paydayPredictions.primaryPayDay}).
+              </p>
+            </div>
+
+            {/* Phase 3: Post Paie */}
+            <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl space-y-1">
+              <div className="flex items-center justify-between text-slate-400 font-bold">
+                <span>Phase 3 : Post Paie (Fin Mois)</span>
+                <span className="text-[10px] text-indigo-300 bg-indigo-950/60 px-1.5 py-0.5 rounded">Du {paydayPredictions.primaryPayDay} au 30/31</span>
+              </div>
+              <div className="text-lg font-black font-mono text-indigo-300">
+                ~{paydayPredictions.postPaydayLiquidity.toLocaleString("fr-FR")} <span className="text-xs text-slate-400">MAD</span>
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Trésorerie nette consolidée disponible pour l'épargne, les loisirs et la transition vers le mois suivant.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
     </div>
   );

@@ -2964,6 +2964,7 @@ export default function App() {
             { key: "source", label: "Source / Employeur", type: "text", required: true },
             { key: "grossAmount", label: "Montant Brut", type: "number", required: true },
             { key: "netAmount", label: "Montant Net Reçu", type: "number", required: true },
+            { key: "jour_paiement", label: "Jour de Paie (1-31)", type: "number" },
             { key: "status", label: "Statut", type: "select", options: ["Reçu", "En attente"] }
           ] as TableColumn[]
         };
@@ -5125,6 +5126,7 @@ export default function App() {
                       weeklyObjectives={weeklyObjectives}
                       onNavigate={handleMenuClick}
                       initialTab={activeMenu === "charts" ? "charts" : "overview"}
+                      triggerToast={triggerToast}
                     />
                   ) : activeMenu === "productivity_dash" ? (
                     <ProductivitySectionDashboard
@@ -5170,7 +5172,13 @@ export default function App() {
                   ) : activeMenu === "skin" ? (
                     <SkinTrackerSection skinTrackers={skinTrackers} setSkinTrackers={setSkinTrackers} />
                   ) : activeMenu === "meal" ? (
-                    <MealPlannerSection mealPlanners={mealPlanners} setMealPlanners={setMealPlanners} />
+                    <MealPlannerSection 
+                      mealPlanners={mealPlanners} 
+                      setMealPlanners={setMealPlanners} 
+                      transactions={transactions}
+                      setTransactions={setTransactions}
+                      triggerToast={triggerToast}
+                    />
                   ) : activeMenu === "books" ? (
                     <MediaHubSection key="books" books={books} setBooks={setBooks} screenMedia={screenMedia} setScreenMedia={setScreenMedia} initialFormatFilter="Livre" />
                   ) : activeMenu === "screenmedia" ? (

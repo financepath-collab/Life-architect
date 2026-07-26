@@ -32,7 +32,11 @@ import {
   Zap,
   Briefcase,
   SlidersHorizontal,
-  FolderTree
+  FolderTree,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Repeat
 } from "lucide-react";
 import { 
   FinanceTransaction, 
@@ -167,14 +171,17 @@ export default function UnifiedFinancialEntrySection({
   const [amount, setAmount] = useState<string>("");
   const [account, setAccount] = useState<string>(accounts[0]?.name || "Attijariwafa Bank");
   const [recipient, setRecipient] = useState<string>("");
-  const [recurrence, setRecurrence] = useState<"Ponctuel" | "Mensuel" | "Annuel">("Ponctuel");
+  const [isRecurring, setIsRecurring] = useState<boolean>(false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<string>("Mensuel");
   const [status, setStatus] = useState<"Effectué" | "En attente">("Effectué");
   const [note, setNote] = useState<string>("");
 
-  // Filters
+  // Filters & Sorting
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("Tous");
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>("Tous");
+  const [sortKey, setSortKey] = useState<"date" | "amount" | "description">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   // Local State for Dynamic Financial Taxonomy (Categories & Subcategories)
   const [taxonomyMap, setTaxonomyMap] = useState<Record<string, { label: string; icon: any; color: string; subCategories: string[] }>>(() => {
@@ -199,7 +206,7 @@ export default function UnifiedFinancialEntrySection({
     return FINANCIAL_TAXONOMY;
   });
 
-  // Persist taxonomyMap changes
+  // Persist taxonomyMap changes and dispatch event
   React.useEffect(() => {
     const serializable: Record<string, { label: string; color: string; subCategories: string[] }> = {};
     Object.keys(taxonomyMap).forEach(k => {
@@ -211,6 +218,32 @@ export default function UnifiedFinancialEntrySection({
     });
     localStorage.setItem("mp_finance_taxonomy_v2", JSON.stringify(serializable));
   }, [taxonomyMap]);
+
+  // Sync with global taxonomy updates
+  React.useEffect(() => {
+    const handleTaxonomyUpdate = () => {
+      const saved = localStorage.getItem("mp_finance_taxonomy_v2");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const merged = { ...FINANCIAL_TAXONOMY };
+          Object.keys(parsed).forEach(k => {
+            merged[k] = {
+              label: parsed[k].label || k,
+              icon: FINANCIAL_TAXONOMY[k]?.icon || Tag,
+              color: parsed[k].color || "indigo",
+              subCategories: Array.isArray(parsed[k].subCategories) ? parsed[k].subCategories : ["Général"]
+            };
+          });
+          setTaxonomyMap(merged);
+        } catch (e) {}
+      } else {
+        setTaxonomyMap(FINANCIAL_TAXONOMY);
+      }
+    };
+    window.addEventListener("taxonomyUpdated", handleTaxonomyUpdate);
+    return () => window.removeEventListener("taxonomyUpdated", handleTaxonomyUpdate);
+  }, []);
 
   // Modal & Form States for Category Management
   const [isTaxonomyModalOpen, setIsTaxonomyModalOpen] = useState(false);
@@ -225,6 +258,9 @@ export default function UnifiedFinancialEntrySection({
   const [quickCatInput, setQuickCatInput] = useState("");
   const [isQuickAddSubCategory, setIsQuickAddSubCategory] = useState(false);
   const [quickSubCatInput, setQuickSubCatInput] = useState("");
+
+  // Salary Day state for Cash Flow Prediction (jour_paiement)
+  const [jourPaiement, setJourPaiement] = useState<number>(28);
 
   // Handlers for Taxonomy Management
   const handleAddMainCategory = (name: string, color: string = "indigo", rawSubcats: string = "") => {
@@ -325,6 +361,12 @@ export default function UnifiedFinancialEntrySection({
     setSubCategory(availableSubs[0]);
     if (newCat === "Salaire & Revenus") {
       setType("Revenue");
+      // Auto-position salary payment date to 27th of active/current month
+      if (!editingTx) {
+        const currentDate = date || new Date().toISOString().split("T")[0];
+        const ym = currentDate.substring(0, 7);
+        setDate(`${ym}-27`);
+      }
     } else if (newCat === "Épargne & Projets Futurs") {
       setType("Épargne");
     } else if (newCat === "Investissements & Actifs") {
@@ -345,9 +387,11 @@ export default function UnifiedFinancialEntrySection({
     setAmount("");
     setAccount(accounts[0]?.name || "Attijariwafa Bank");
     setRecipient("");
-    setRecurrence("Ponctuel");
+    setIsRecurring(false);
+    setRecurrenceFrequency("Mensuel");
     setStatus("Effectué");
     setNote("");
+    setJourPaiement(28);
     setIsModalOpen(true);
   };
 
@@ -363,9 +407,13 @@ export default function UnifiedFinancialEntrySection({
     setAmount(tx.amount ? String(tx.amount) : "");
     setAccount(tx.account || accounts[0]?.name || "Attijariwafa Bank");
     setRecipient(tx.recipient || "");
-    setRecurrence(tx.recurrence || "Ponctuel");
+    const isRec = Boolean(tx.recurrence && tx.recurrence !== "Ponctuel");
+    setIsRecurring(isRec);
+    setRecurrenceFrequency(isRec ? (tx.recurrence || "Mensuel") : "Mensuel");
     setStatus(tx.status === "En attente" ? "En attente" : "Effectué");
     setNote(tx.note || "");
+    const dayFromDate = tx.date ? parseInt(tx.date.split("-")[2], 10) : 28;
+    setJourPaiement(isNaN(dayFromDate) ? 28 : dayFromDate);
     setIsModalOpen(true);
   };
 
@@ -382,6 +430,7 @@ export default function UnifiedFinancialEntrySection({
       return;
     }
 
+    const finalRecurrence = isRecurring ? recurrenceFrequency : "Ponctuel";
     const txId = editingTx ? editingTx.id : "tx_" + Date.now();
     const updatedTx: FinanceTransaction = {
       id: txId,
@@ -393,7 +442,7 @@ export default function UnifiedFinancialEntrySection({
       amount: parsedAmount,
       account,
       recipient,
-      recurrence,
+      recurrence: finalRecurrence,
       status,
       note
     };
@@ -415,19 +464,20 @@ export default function UnifiedFinancialEntrySection({
         source: recipient ? `${description} (${recipient})` : description,
         grossAmount: parsedAmount,
         netAmount: parsedAmount,
-        status: status === "En attente" ? "En attente" : "Reçu"
+        status: status === "En attente" ? "En attente" : "Reçu",
+        jour_paiement: jourPaiement || 28
       };
       setSalaires(prev => [salEntry, ...prev]);
-      dispatchLog.push("Déversé dans 'Salaires & Revenus'");
+      dispatchLog.push(`Déversé dans 'Salaires & Revenus' (Jour de paie : ${jourPaiement || 28})`);
     }
 
     // 3. DISPATCH TO ABONNEMENTS & CHARGES
-    if (category === "Charges Fixes & Abonnements" || recurrence === "Mensuel" || recurrence === "Annuel") {
+    if (category === "Charges Fixes & Abonnements" || isRecurring || finalRecurrence !== "Ponctuel") {
       const subEntry: Abonnement = {
         id: "sub_" + Date.now(),
         serviceName: description,
-        costMonthly: recurrence === "Annuel" ? Math.round(parsedAmount / 12) : parsedAmount,
-        billingPeriod: recurrence === "Annuel" ? "Annuel" : "Mensuel",
+        costMonthly: finalRecurrence === "Annuel" ? Math.round(parsedAmount / 12) : parsedAmount,
+        billingPeriod: finalRecurrence === "Annuel" ? "Annuel" : "Mensuel",
         nextBillingDate: date,
         status: "Actif"
       };
@@ -532,9 +582,9 @@ export default function UnifiedFinancialEntrySection({
     return { totalRev, totalCharges, totalAchats, totalEpargne, netBalance };
   }, [transactions]);
 
-  // Filtered Transactions
+  // Filtered & Sorted Transactions
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => {
+    let list = transactions.filter(t => {
       const matchesSearch = (t.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (t.recipient || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (t.subCategory || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -545,7 +595,19 @@ export default function UnifiedFinancialEntrySection({
 
       return matchesSearch && matchesCat && matchesType;
     });
-  }, [transactions, searchTerm, selectedCategoryFilter, selectedTypeFilter]);
+
+    return list.sort((a, b) => {
+      let comp = 0;
+      if (sortKey === "date") {
+        comp = (a.date || "").localeCompare(b.date || "");
+      } else if (sortKey === "amount") {
+        comp = (Number(a.amount) || 0) - (Number(b.amount) || 0);
+      } else if (sortKey === "description") {
+        comp = (a.description || "").localeCompare(b.description || "");
+      }
+      return sortDir === "asc" ? comp : -comp;
+    });
+  }, [transactions, searchTerm, selectedCategoryFilter, selectedTypeFilter, sortKey, sortDir]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -732,7 +794,7 @@ export default function UnifiedFinancialEntrySection({
 
       {/* MASTER TRANSACTIONS TABLE */}
       <div className="bg-white border border-neutral-200 rounded-3xl p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-base font-extrabold text-neutral-900 tracking-tight flex items-center gap-2">
               <FolderTree className="w-4 h-4 text-indigo-600" />
@@ -741,13 +803,74 @@ export default function UnifiedFinancialEntrySection({
             <p className="text-xs text-neutral-500">Chaque entrée est classée par catégorie & sous-catégorie et transmise aux dashboards respectifs.</p>
           </div>
 
-          <button
-            onClick={handleOpenNewModal}
-            className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-3xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Ajouter une ligne</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Quick Sort Buttons */}
+            <div className="bg-neutral-100 p-1 rounded-2xl flex items-center gap-1 border border-neutral-200/60">
+              <button
+                type="button"
+                onClick={() => { setSortKey("date"); setSortDir("desc"); }}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  sortKey === "date" && sortDir === "desc"
+                    ? "bg-white text-neutral-900 shadow-2xs font-extrabold"
+                    : "text-neutral-600 hover:text-neutral-900"
+                }`}
+                title="Trier par date (récent en premier)"
+              >
+                <Calendar className="w-3 h-3 text-indigo-600" />
+                <span>Date ↓</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setSortKey("date"); setSortDir("asc"); }}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  sortKey === "date" && sortDir === "asc"
+                    ? "bg-white text-neutral-900 shadow-2xs font-extrabold"
+                    : "text-neutral-600 hover:text-neutral-900"
+                }`}
+                title="Trier par date (ancien en premier)"
+              >
+                <Calendar className="w-3 h-3 text-indigo-600" />
+                <span>Date ↑</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setSortKey("amount"); setSortDir("desc"); }}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  sortKey === "amount" && sortDir === "desc"
+                    ? "bg-white text-emerald-700 shadow-2xs font-extrabold"
+                    : "text-neutral-600 hover:text-neutral-900"
+                }`}
+                title="Trier par montant (plus élevé en premier)"
+              >
+                <Coins className="w-3 h-3 text-emerald-600" />
+                <span>Montant ↓</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setSortKey("amount"); setSortDir("asc"); }}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  sortKey === "amount" && sortDir === "asc"
+                    ? "bg-white text-emerald-700 shadow-2xs font-extrabold"
+                    : "text-neutral-600 hover:text-neutral-900"
+                }`}
+                title="Trier par montant (plus bas en premier)"
+              >
+                <Coins className="w-3 h-3 text-emerald-600" />
+                <span>Montant ↑</span>
+              </button>
+            </div>
+
+            <button
+              onClick={handleOpenNewModal}
+              className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-3xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Ajouter une ligne</span>
+            </button>
+          </div>
         </div>
 
         {filteredTransactions.length === 0 ? (
@@ -767,12 +890,61 @@ export default function UnifiedFinancialEntrySection({
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-neutral-200 bg-neutral-50/80 text-neutral-500 font-bold uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4 rounded-l-xl">Date</th>
-                  <th className="py-3 px-4">Libellé & Destinataire</th>
+                  <th 
+                    onClick={() => {
+                      if (sortKey === "date") setSortDir(prev => prev === "asc" ? "desc" : "asc");
+                      else { setSortKey("date"); setSortDir("desc"); }
+                    }}
+                    className="py-3 px-4 rounded-l-xl cursor-pointer hover:bg-neutral-200/60 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Date</span>
+                      {sortKey === "date" ? (
+                        sortDir === "desc" ? <ArrowDown className="w-3.5 h-3.5 text-indigo-600" /> : <ArrowUp className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-neutral-400" />
+                      )}
+                    </div>
+                  </th>
+
+                  <th 
+                    onClick={() => {
+                      if (sortKey === "description") setSortDir(prev => prev === "asc" ? "desc" : "asc");
+                      else { setSortKey("description"); setSortDir("asc"); }
+                    }}
+                    className="py-3 px-4 cursor-pointer hover:bg-neutral-200/60 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Libellé & Destinataire</span>
+                      {sortKey === "description" ? (
+                        sortDir === "desc" ? <ArrowDown className="w-3.5 h-3.5 text-indigo-600" /> : <ArrowUp className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-neutral-400" />
+                      )}
+                    </div>
+                  </th>
+
                   <th className="py-3 px-4">Catégorie Principale</th>
                   <th className="py-3 px-4">Sous-Catégorie Détaillée</th>
                   <th className="py-3 px-4">Compte Source</th>
-                  <th className="py-3 px-4 text-right">Montant (MAD)</th>
+
+                  <th 
+                    onClick={() => {
+                      if (sortKey === "amount") setSortDir(prev => prev === "asc" ? "desc" : "asc");
+                      else { setSortKey("amount"); setSortDir("desc"); }
+                    }}
+                    className="py-3 px-4 text-right cursor-pointer hover:bg-neutral-200/60 transition-colors select-none"
+                  >
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>Montant (MAD)</span>
+                      {sortKey === "amount" ? (
+                        sortDir === "desc" ? <ArrowDown className="w-3.5 h-3.5 text-emerald-600" /> : <ArrowUp className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-neutral-400" />
+                      )}
+                    </div>
+                  </th>
+
                   <th className="py-3 px-4 rounded-r-xl text-center">Actions</th>
                 </tr>
               </thead>
@@ -788,8 +960,19 @@ export default function UnifiedFinancialEntrySection({
                       </td>
                       
                       <td className="py-3 px-4">
-                        <div className="font-extrabold text-neutral-900 group-hover:text-indigo-600 transition-colors">
-                          {tx.description}
+                        <div className="font-extrabold text-neutral-900 group-hover:text-indigo-600 transition-colors flex items-center gap-1.5 flex-wrap">
+                          <span>{tx.description}</span>
+                          {tx.recurrence && tx.recurrence !== "Ponctuel" && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-indigo-800 bg-indigo-100 border border-indigo-300 px-2 py-0.5 rounded-md">
+                              <Repeat className="w-3 h-3 text-indigo-600" />
+                              <span>{tx.recurrence}</span>
+                            </span>
+                          )}
+                          {isRevenue && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">
+                              📅 Paie le {tx.date ? (parseInt(tx.date.split('-')[2], 10) || 28) : 28}
+                            </span>
+                          )}
                         </div>
                         {tx.recipient && (
                           <div className="text-[10px] text-neutral-400 font-mono">
@@ -1041,13 +1224,54 @@ export default function UnifiedFinancialEntrySection({
                 {/* DATE, TYPE & RECURRENCE */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-neutral-700 font-bold mb-1">Date du flux</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-neutral-700 font-bold">Date du flux</label>
+                      {(category === "Salaire & Revenus" || type === "Revenue") && (
+                        <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
+                          Paie (27-28)
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="date"
                       value={date}
                       onChange={e => setDate(e.target.value)}
                       className="w-full px-3 py-2 bg-neutral-50 border border-neutral-300 rounded-xl font-medium text-neutral-800"
                     />
+                    {(category === "Salaire & Revenus" || type === "Revenue") && (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setJourPaiement(27);
+                            const ym = (date || new Date().toISOString().split("T")[0]).substring(0, 7);
+                            setDate(`${ym}-27`);
+                          }}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+                            jourPaiement === 27
+                              ? "bg-emerald-700 text-white font-extrabold"
+                              : "bg-emerald-100 hover:bg-emerald-200 text-emerald-800"
+                          }`}
+                        >
+                          📅 27 du mois
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setJourPaiement(28);
+                            const ym = (date || new Date().toISOString().split("T")[0]).substring(0, 7);
+                            setDate(`${ym}-28`);
+                          }}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+                            jourPaiement === 28
+                              ? "bg-emerald-700 text-white font-extrabold"
+                              : "bg-emerald-100 hover:bg-emerald-200 text-emerald-800"
+                          }`}
+                        >
+                          📅 28 du mois
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -1057,26 +1281,139 @@ export default function UnifiedFinancialEntrySection({
                       onChange={e => setType(e.target.value as any)}
                       className="w-full px-3 py-2 bg-neutral-50 border border-neutral-300 rounded-xl font-bold text-neutral-800"
                     >
-                      <option value="Dépense font-bold">🔴 Dépense / Sortie</option>
+                      <option value="Dépense">🔴 Dépense / Sortie</option>
                       <option value="Revenue">🟢 Revenu / Rentrée</option>
                       <option value="Épargne">🔵 Épargne & Transfert</option>
                       <option value="Investissement">🟣 Investissement (Actif)</option>
                     </select>
                   </div>
-
-                  <div>
-                    <label className="block text-neutral-700 font-bold mb-1">Périodicité / Récurrence</label>
-                    <select
-                      value={recurrence}
-                      onChange={e => setRecurrence(e.target.value as any)}
-                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-300 rounded-xl font-bold text-neutral-800"
-                    >
-                      <option value="Ponctuel">Ponctuel (1 fois)</option>
-                      <option value="Mensuel">Mensuel (Récurrent)</option>
-                      <option value="Annuel">Annuel</option>
-                    </select>
-                  </div>
                 </div>
+
+                {/* RECURRENCE TOGGLE & FREQUENCY SELECTOR */}
+                <div className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2.5 rounded-xl border transition-all shrink-0 ${
+                        isRecurring ? "bg-indigo-600 text-white border-indigo-600 shadow-2xs" : "bg-white text-neutral-400 border-neutral-200"
+                      }`}>
+                        <Repeat className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <label htmlFor="is-recurring-checkbox" className="text-xs font-extrabold text-neutral-900 block cursor-pointer">
+                          Marquer comme Transaction Récurrente
+                        </label>
+                        <p className="text-[11px] text-neutral-500 font-medium">
+                          Activer pour définir la fréquence de renouvellement périodique.
+                        </p>
+                      </div>
+                    </div>
+
+                    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                      <input
+                        id="is-recurring-checkbox"
+                        type="checkbox"
+                        checked={isRecurring}
+                        onChange={e => {
+                          setIsRecurring(e.target.checked);
+                          if (e.target.checked && !recurrenceFrequency) {
+                            setRecurrenceFrequency("Mensuel");
+                          }
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+
+                  {isRecurring && (
+                    <div className="pt-3 border-t border-neutral-200/80 animate-in fade-in duration-200 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-neutral-800 mb-1">
+                            Fréquence de Récurrence <span className="text-rose-500">*</span>
+                          </label>
+                          <select
+                            value={recurrenceFrequency}
+                            onChange={e => setRecurrenceFrequency(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-indigo-300 rounded-xl font-extrabold text-indigo-950 focus:outline-hidden focus:border-indigo-600"
+                          >
+                            <option value="Hebdomadaire">Hebdomadaire (Toutes les semaines)</option>
+                            <option value="Bi-mensuel">Bi-mensuel (Toutes les 2 semaines)</option>
+                            <option value="Mensuel">Mensuel (Chaque mois - Standard)</option>
+                            <option value="Bimestriel">Bimestriel (Tous les 2 mois)</option>
+                            <option value="Trimestriel">Trimestriel (Tous les 3 mois)</option>
+                            <option value="Semestriel">Semestriel (Tous les 6 mois)</option>
+                            <option value="Annuel">Annuel (Chaque année)</option>
+                          </select>
+                        </div>
+
+                        <div className="bg-indigo-50/80 border border-indigo-200/80 rounded-xl p-3 flex items-center gap-2.5">
+                          <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                          <p className="text-[11px] text-indigo-950 font-medium leading-tight">
+                            Cette transaction sera automatiquement considérée comme <strong className="font-extrabold text-indigo-700">{recurrenceFrequency}</strong> et synchronisée avec le module des charges récurrentes.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* JOUR PAIEMENT CUSTOM SELECTOR FOR REVENUE/SALARY */}
+                {(category === "Salaire & Revenus" || type === "Revenue") && (
+                  <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-2">
+                        <span>Jour Habituel de Réception du Salaire</span>
+                        <span className="text-[10px] bg-emerald-200 text-emerald-900 font-extrabold px-2 py-0.5 rounded-md font-mono">
+                          jour_paiement: {jourPaiement}
+                        </span>
+                      </label>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-200">
+                        Saisie pour prédiction trésorerie
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-neutral-700">Jour du mois :</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={jourPaiement}
+                          onChange={e => {
+                            const val = Math.min(31, Math.max(1, parseInt(e.target.value, 10) || 28));
+                            setJourPaiement(val);
+                            const ym = (date || new Date().toISOString().split("T")[0]).substring(0, 7);
+                            setDate(`${ym}-${String(val).padStart(2, "0")}`);
+                          }}
+                          className="w-20 px-3 py-1.5 bg-white border border-emerald-300 rounded-xl font-black font-mono text-xs text-emerald-900 focus:outline-hidden focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {[27, 28, 25, 30, 1].map(d => (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => {
+                              setJourPaiement(d);
+                              const ym = (date || new Date().toISOString().split("T")[0]).substring(0, 7);
+                              setDate(`${ym}-${String(d).padStart(2, "0")}`);
+                            }}
+                            className={`px-2.5 py-1 text-xs rounded-xl font-bold transition-all cursor-pointer ${
+                              jourPaiement === d
+                                ? "bg-emerald-700 text-white shadow-2xs font-extrabold"
+                                : "bg-white text-emerald-800 hover:bg-emerald-100 border border-emerald-200"
+                            }`}
+                          >
+                            {d === 28 ? "Jour 28 (Standard)" : d === 27 ? "Jour 27 (Paie)" : `Jour ${d}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* COMPTE BANCAIRE & DESTINATAIRE */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

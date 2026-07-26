@@ -72,9 +72,9 @@ export const INITIAL_BUDGETS: FinanceBudget[] = [
 ];
 
 export const INITIAL_SALAIRES: FinanceSalaire[] = [
-  { id: "sa1", date: "2026-07-01", source: "Consulting Mensuel CFO Maroc", grossAmount: 20000, netAmount: 18500, status: "Reçu" },
-  { id: "sa2", date: "2026-07-28", source: "Sponsorship Vidéo Banque Populaire", grossAmount: 12000, netAmount: 12000, status: "En attente" },
-  { id: "sa3", date: "2026-07-30", source: "Dividendes Actions Portefeuille", grossAmount: 3500, netAmount: 3000, status: "En attente" }
+  { id: "sa1", date: "2026-07-28", source: "Consulting Mensuel CFO Maroc", grossAmount: 20000, netAmount: 18500, status: "Reçu", jour_paiement: 28 },
+  { id: "sa2", date: "2026-07-28", source: "Sponsorship Vidéo Banque Populaire", grossAmount: 12000, netAmount: 12000, status: "En attente", jour_paiement: 28 },
+  { id: "sa3", date: "2026-07-30", source: "Dividendes Actions Portefeuille", grossAmount: 3500, netAmount: 3000, status: "En attente", jour_paiement: 30 }
 ];
 
 export const INITIAL_EPARGNES: FinanceEpargne[] = [
@@ -527,9 +527,33 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
     description: "Création de contenu éducatif sur la modélisation financière, les études de cas d'entreprises et l'analyse macroéconomique.",
     category: "YouTube",
     createdAt: "2026-05-15",
+    statusPhase: "Croissance & Ventes",
+    launchDate: "2026-09-01",
+    projectBudget: 15000,
+    techStack: ["YouTube Studio", "AdSense", "Adobe Premiere", "Canva", "Substack"],
+    keyRisks: "Complexité de la modélisation Excel pour débutants, variations de l'algorithme YouTube",
+    valueProposition: "Analyses de valorisation financières de niveau fonds d'investissement expliquées de manière claire et visuelle.",
+    teamStakeholders: "Fondateur & Analyste principal, Monteur vidéo freelance",
     targetAudience: "Étudiants en finance, jeunes professionnels M&A/Private Equity & passionnés d'analyse d'entreprises.",
     coreGoal: "Développer une audience qualifiée de 10 000 passionnés de finance d'ici la fin d'année et établir une autorité de marque incontournable.",
     keyMetricTarget: "10,000 abonnés / 25,000 vues mensuelles",
+    businessKPIs: {
+      targetPayingSubscribers: 250,
+      currentPayingSubscribers: 65,
+      targetProductsSold: 120,
+      currentProductsSold: 32,
+      targetFormationsSold: 50,
+      currentFormationsSold: 18,
+      targetCoachingSold: 15,
+      currentCoachingSold: 6,
+      targetAdsenseRevenue: 12000,
+      currentAdsenseRevenue: 3850,
+      targetCustomRevenue: 60000,
+      currentCustomRevenue: 22400,
+      customKPIs: [
+        { id: "ckpi_1", label: "Partenariats B2B Sponsoring", target: "5", current: "2", unit: "marques" }
+      ]
+    },
     associatedFormationIds: ["f1", "f2"],
     associatedLinkIds: [],
     associatedGoalIds: ["mg1"],
@@ -556,9 +580,33 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
     description: "Création, structuration et monétisation des programmes d'accompagnement avancés (Private Equity, Modélisation & Excel Financier).",
     category: "Formation",
     createdAt: "2026-06-10",
+    statusPhase: "Lancement",
+    launchDate: "2026-09-15",
+    projectBudget: 25000,
+    techStack: ["Kajabi", "Stripe", "Loom", "Notion", "Substack", "Zoom"],
+    keyRisks: "Délais d'enregistrement des modules, taux de conversion des appels de vente",
+    valueProposition: "Accompagnement intensif et bootcamp pratique pour décrocher des offres en Private Equity & M&A.",
+    teamStakeholders: "Coach principal, Formateur M&A invite, Customer Success Manager",
     targetAudience: "Professionnels en reconversion ou analystes souhaitant décrocher une offre en M&A, TS ou Private Equity.",
     coreGoal: "Construire un catalogue de 3 formations phares haut de gamme générant un chiffre d'affaires récurrent et des taux de satisfaction client > 95%.",
     keyMetricTarget: "50 premiers étudiants / 15 000€ de CA au 1er lancement",
+    businessKPIs: {
+      targetPayingSubscribers: 150,
+      currentPayingSubscribers: 42,
+      targetProductsSold: 200,
+      currentProductsSold: 58,
+      targetFormationsSold: 100,
+      currentFormationsSold: 36,
+      targetCoachingSold: 30,
+      currentCoachingSold: 12,
+      targetAdsenseRevenue: 0,
+      currentAdsenseRevenue: 0,
+      targetCustomRevenue: 120000,
+      currentCustomRevenue: 48000,
+      customKPIs: [
+        { id: "ckpi_2", label: "Taux de Réussite aux Entretiens M&A", target: "90", current: "85", unit: "%" }
+      ]
+    },
     associatedFormationIds: ["f3"],
     associatedLinkIds: [],
     associatedGoalIds: ["mg2"],
@@ -583,9 +631,30 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
     description: "Publication hebdomadaire d'analyses financières confidentielles et animation de la communauté d'élite.",
     category: "YouTube",
     createdAt: "2026-07-01",
+    statusPhase: "Croissance & Ventes",
+    launchDate: "2026-07-15",
+    projectBudget: 5000,
+    techStack: ["Substack", "ConvertKit", "Discord", "Typeform"],
+    keyRisks: "Désabonnements si la régularité baisse, délivrabilité e-mail dans les spams",
+    valueProposition: "Analyses M&A exclusives et opportunités de networking réservées aux membres du cercle.",
+    teamStakeholders: "Rédacteur en chef, Lead Community Manager",
     targetAudience: "Abonnés investis souhaitant recevoir des dossiers d'analyse financière poussés directement par e-mail.",
     coreGoal: "Créer une relation de confiance directe et convertir les lecteurs réguliers en étudiants de l'Académie.",
     keyMetricTarget: "2,500 inscrits Newsletter / Taux d'ouverture de 45%",
+    businessKPIs: {
+      targetPayingSubscribers: 500,
+      currentPayingSubscribers: 180,
+      targetProductsSold: 150,
+      currentProductsSold: 45,
+      targetFormationsSold: 40,
+      currentFormationsSold: 15,
+      targetCoachingSold: 10,
+      currentCoachingSold: 4,
+      targetAdsenseRevenue: 0,
+      currentAdsenseRevenue: 0,
+      targetCustomRevenue: 35000,
+      currentCustomRevenue: 12800
+    },
     associatedFormationIds: [],
     associatedLinkIds: [],
     associatedGoalIds: [],

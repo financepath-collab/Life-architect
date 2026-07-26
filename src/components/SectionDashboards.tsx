@@ -5,7 +5,8 @@ import {
   ListTodo, Calendar, Award, Target, Trophy, Sparkles, Smile, RefreshCw, 
   Plus, Trash2, Dumbbell, Play, Pause, ExternalLink, GraduationCap, Link2, 
   BookOpenCheck, CheckSquare, Coffee, ChevronRight, Activity, FolderPlus,
-  BarChart3, LayoutDashboard
+  BarChart3, LayoutDashboard, FolderTree, ArrowUpDown, ArrowUp, ArrowDown,
+  Search, Filter
 } from "lucide-react";
 import MonthlyExpenseAnalysisCard from "./MonthlyExpenseAnalysisCard";
 import MonthlyNetIncomeWidget from "./MonthlyNetIncomeWidget";
@@ -17,6 +18,7 @@ import NetSavingsChart from "./NetSavingsChart";
 import SavingsTrendChart from "./SavingsTrendChart";
 import PerformanceCorrelations from "./PerformanceCorrelations";
 import FireCalculator from "./FireCalculator";
+import FinanceCategorySettings from "./FinanceCategorySettings";
 import { 
   Account, FinanceBudget, FinanceEpargne, Abonnement, StockEntry, FinanceTransaction,
   DailyHabit, Action30Jours, WeeklyObjective, ProfilAmelioration, PossibiliteGoal, JournalEntry,
@@ -91,14 +93,58 @@ interface FinanceDashProps {
   sportHistory?: string[];
   weeklyObjectives?: WeeklyObjective[];
   onNavigate: (moduleId: string) => void;
-  initialTab?: "overview" | "charts" | "correlations" | "fire";
+  initialTab?: "overview" | "charts" | "correlations" | "fire" | "settings";
+  triggerToast?: (message: string, type?: "success" | "info" | "warning" | "error") => void;
 }
 
 export function FinanceSectionDashboard({ 
   accounts, budgets, epargnes, abonnements, stocks, transactions, salaires,
-  sportHistory = [], weeklyObjectives = [], onNavigate, initialTab = "overview"
+  sportHistory = [], weeklyObjectives = [], onNavigate, initialTab = "overview", triggerToast
 }: FinanceDashProps) {
-  const [activeDashTab, setActiveDashTab] = useState<"overview" | "charts" | "correlations" | "fire">(initialTab);
+  const [activeDashTab, setActiveDashTab] = useState<"overview" | "charts" | "correlations" | "fire" | "settings">(initialTab);
+
+  // Transaction sorting & filtering state for dashboard analysis
+  const [txSortKey, setTxSortKey] = useState<"date" | "amount" | "description">("date");
+  const [txSortDir, setTxSortDir] = useState<"asc" | "desc">("desc");
+  const [txSearch, setTxSearch] = useState("");
+  const [txTypeFilter, setTxTypeFilter] = useState<string>("Tous");
+  const [txCategoryFilter, setTxCategoryFilter] = useState<string>("Tous");
+
+  // Sorted and filtered transactions memo
+  const sortedAndFilteredTransactions = React.useMemo(() => {
+    let list = transactions.filter(t => {
+      const matchesSearch = !txSearch || 
+        (t.description || "").toLowerCase().includes(txSearch.toLowerCase()) ||
+        (t.category || "").toLowerCase().includes(txSearch.toLowerCase()) ||
+        (t.subCategory || "").toLowerCase().includes(txSearch.toLowerCase()) ||
+        (t.account || "").toLowerCase().includes(txSearch.toLowerCase());
+
+      const matchesType = txTypeFilter === "Tous" || t.type === txTypeFilter;
+      const matchesCat = txCategoryFilter === "Tous" || t.category === txCategoryFilter;
+
+      return matchesSearch && matchesType && matchesCat;
+    });
+
+    return [...list].sort((a, b) => {
+      let comp = 0;
+      if (txSortKey === "date") {
+        comp = (a.date || "").localeCompare(b.date || "");
+      } else if (txSortKey === "amount") {
+        comp = (Number(a.amount) || 0) - (Number(b.amount) || 0);
+      } else if (txSortKey === "description") {
+        comp = (a.description || "").localeCompare(b.description || "");
+      }
+      return txSortDir === "asc" ? comp : -comp;
+    });
+  }, [transactions, txSortKey, txSortDir, txSearch, txTypeFilter, txCategoryFilter]);
+
+  const uniqueTxCategories = React.useMemo(() => {
+    const set = new Set<string>();
+    transactions.forEach(t => {
+      if (t.category) set.add(t.category);
+    });
+    return Array.from(set);
+  }, [transactions]);
   // Calculations
   const totalAccountBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
   const totalStockValuation = stocks.reduce((sum, s) => sum + (s.currentPrice * s.quantity), 0);
@@ -376,6 +422,19 @@ export function FinanceSectionDashboard({
               <Flame className="w-3.5 h-3.5 text-amber-500" />
               <span>Liberté FIRE</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveDashTab("settings")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeDashTab === "settings"
+                  ? "bg-neutral-950 text-white shadow-xs font-black"
+                  : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
+              }`}
+            >
+              <FolderTree className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Paramètres Catégories</span>
+            </button>
           </div>
 
           {activeDashTab === "overview" && (
@@ -478,6 +537,7 @@ export function FinanceSectionDashboard({
         abonnements={abonnements}
         transactions={transactions}
         salaires={salaires}
+        accounts={accounts}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -982,6 +1042,278 @@ export function FinanceSectionDashboard({
           </div>
         </div>
       </div>
+
+      {/* TRANSACTION ANALYSIS & SORTING CARD */}
+      <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-5 shadow-3xs animate-in fade-in duration-300">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-50 border border-indigo-200/80 text-indigo-700 rounded-2xl shrink-0">
+              <ArrowUpDown className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-neutral-950 uppercase tracking-tight">
+                  Analyse & Tri des Transactions ({sortedAndFilteredTransactions.length})
+                </h3>
+                <span className="text-[10px] bg-indigo-100 border border-indigo-200 text-indigo-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Tri Dynamique
+                </span>
+              </div>
+              <p className="text-xs text-neutral-500 font-medium">
+                Triez instantanément l'ensemble de vos transactions par date ou par montant pour analyser vos flux.
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Preset Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider hidden xl:inline">Accès rapide :</span>
+            <button
+              type="button"
+              onClick={() => { setTxSortKey("date"); setTxSortDir("desc"); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                txSortKey === "date" && txSortDir === "desc"
+                  ? "bg-neutral-900 text-white border-neutral-900 shadow-xs"
+                  : "bg-neutral-50 hover:bg-neutral-100 border-neutral-200 text-neutral-700"
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Récent ↓</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setTxSortKey("date"); setTxSortDir("asc"); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                txSortKey === "date" && txSortDir === "asc"
+                  ? "bg-neutral-900 text-white border-neutral-900 shadow-xs"
+                  : "bg-neutral-50 hover:bg-neutral-100 border-neutral-200 text-neutral-700"
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Ancien ↑</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setTxSortKey("amount"); setTxSortDir("desc"); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                txSortKey === "amount" && txSortDir === "desc"
+                  ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                  : "bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-800"
+              }`}
+            >
+              <Coins className="w-3.5 h-3.5" />
+              <span>Montant Max ↓</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setTxSortKey("amount"); setTxSortDir("asc"); }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                txSortKey === "amount" && txSortDir === "asc"
+                  ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                  : "bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-800"
+              }`}
+            >
+              <Coins className="w-3.5 h-3.5" />
+              <span>Montant Min ↑</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filter and Control Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 bg-neutral-50/80 border border-neutral-200/80 p-3 rounded-2xl">
+          {/* Search Input */}
+          <div className="lg:col-span-4 relative flex items-center">
+            <Search className="w-4 h-4 text-neutral-400 absolute left-3 pointer-events-none" />
+            <input
+              type="text"
+              value={txSearch}
+              onChange={(e) => setTxSearch(e.target.value)}
+              placeholder="Rechercher par libellé, compte, catégorie..."
+              className="w-full bg-white border border-neutral-200 text-neutral-900 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold placeholder-neutral-400 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          {/* Type Filter */}
+          <div className="lg:col-span-3 flex items-center">
+            <select
+              value={txTypeFilter}
+              onChange={(e) => setTxTypeFilter(e.target.value)}
+              className="w-full bg-white border border-neutral-200 text-neutral-800 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-indigo-500"
+            >
+              <option value="Tous">Tous les types (Revenu, Dépense, Épargne)</option>
+              <option value="Revenue">Entrées / Revenus</option>
+              <option value="Dépense">Sorties / Dépenses</option>
+              <option value="Épargne">Transferts Épargne</option>
+            </select>
+          </div>
+
+          {/* Category Filter */}
+          <div className="lg:col-span-3 flex items-center">
+            <select
+              value={txCategoryFilter}
+              onChange={(e) => setTxCategoryFilter(e.target.value)}
+              className="w-full bg-white border border-neutral-200 text-neutral-800 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-indigo-500"
+            >
+              <option value="Tous">Toutes les catégories ({uniqueTxCategories.length})</option>
+              {uniqueTxCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort Key & Direction Toggle */}
+          <div className="lg:col-span-2 flex items-center gap-1">
+            <select
+              value={txSortKey}
+              onChange={(e) => setTxSortKey(e.target.value as "date" | "amount" | "description")}
+              className="w-full bg-white border border-neutral-200 text-neutral-900 rounded-xl px-2.5 py-2 text-xs font-extrabold focus:outline-none focus:border-indigo-500"
+            >
+              <option value="date">Tri: Date</option>
+              <option value="amount">Tri: Montant</option>
+              <option value="description">Tri: Libellé</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => setTxSortDir(prev => prev === "asc" ? "desc" : "asc")}
+              className="p-2 bg-white border border-neutral-200 rounded-xl hover:bg-neutral-100 text-neutral-800 font-bold transition-all cursor-pointer shrink-0"
+              title={txSortDir === "asc" ? "Ordre croissant" : "Ordre décroissant"}
+            >
+              {txSortDir === "asc" ? <ArrowUp className="w-4 h-4 text-emerald-600" /> : <ArrowDown className="w-4 h-4 text-indigo-600" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Transactions Table */}
+        {sortedAndFilteredTransactions.length === 0 ? (
+          <div className="text-center py-12 border-2 border-dashed border-neutral-200 rounded-2xl bg-neutral-50/50">
+            <Coins className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+            <p className="text-xs font-bold text-neutral-600">Aucune transaction trouvée.</p>
+            <p className="text-[11px] text-neutral-400 mt-1">Essayez de réinitialiser vos critères de recherche ou de filtre.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-neutral-200/80">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-neutral-100/90 text-neutral-600 font-extrabold uppercase text-[10px] tracking-wider border-b border-neutral-200">
+                  {/* Clickable Date Column Header */}
+                  <th 
+                    onClick={() => {
+                      if (txSortKey === "date") {
+                        setTxSortDir(prev => prev === "asc" ? "desc" : "asc");
+                      } else {
+                        setTxSortKey("date");
+                        setTxSortDir("desc");
+                      }
+                    }}
+                    className="py-3 px-4 cursor-pointer hover:bg-neutral-200/60 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Date</span>
+                      {txSortKey === "date" ? (
+                        txSortDir === "desc" ? <ArrowDown className="w-3.5 h-3.5 text-indigo-600" /> : <ArrowUp className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-neutral-400" />
+                      )}
+                    </div>
+                  </th>
+
+                  {/* Clickable Description Column Header */}
+                  <th 
+                    onClick={() => {
+                      if (txSortKey === "description") {
+                        setTxSortDir(prev => prev === "asc" ? "desc" : "asc");
+                      } else {
+                        setTxSortKey("description");
+                        setTxSortDir("asc");
+                      }
+                    }}
+                    className="py-3 px-4 cursor-pointer hover:bg-neutral-200/60 transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Libellé & Destinataire</span>
+                      {txSortKey === "description" ? (
+                        txSortDir === "desc" ? <ArrowDown className="w-3.5 h-3.5 text-indigo-600" /> : <ArrowUp className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-neutral-400" />
+                      )}
+                    </div>
+                  </th>
+
+                  <th className="py-3 px-4">Catégorie</th>
+                  <th className="py-3 px-4">Compte Source</th>
+
+                  {/* Clickable Amount Column Header */}
+                  <th 
+                    onClick={() => {
+                      if (txSortKey === "amount") {
+                        setTxSortDir(prev => prev === "asc" ? "desc" : "asc");
+                      } else {
+                        setTxSortKey("amount");
+                        setTxSortDir("desc");
+                      }
+                    }}
+                    className="py-3 px-4 text-right cursor-pointer hover:bg-neutral-200/60 transition-colors select-none"
+                  >
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>Montant (MAD)</span>
+                      {txSortKey === "amount" ? (
+                        txSortDir === "desc" ? <ArrowDown className="w-3.5 h-3.5 text-emerald-600" /> : <ArrowUp className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-neutral-400" />
+                      )}
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100 font-medium">
+                {sortedAndFilteredTransactions.map((tx) => {
+                  const isRev = tx.type === "Revenue" || tx.category === "Salaire & Revenus";
+                  const isEpar = tx.type === "Épargne" || tx.category === "Épargne & Projets Futurs";
+
+                  return (
+                    <tr key={tx.id} className="hover:bg-neutral-50 transition-colors">
+                      <td className="py-3 px-4 font-mono text-[11px] font-bold text-neutral-600 whitespace-nowrap">
+                        {tx.date || "2026-07-01"}
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <span className="font-extrabold text-neutral-900 block leading-tight">
+                          {tx.description}
+                        </span>
+                        {tx.recipient && (
+                          <span className="text-[10px] text-neutral-400 font-mono block">
+                            Destinataire: {tx.recipient}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-neutral-100 text-neutral-700 border border-neutral-200/80">
+                          {tx.category || "Général"}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-4 text-[11px] font-mono text-neutral-500">
+                        {tx.account || "Attijariwafa Bank"}
+                      </td>
+
+                      <td className="py-3 px-4 text-right font-mono font-black text-sm whitespace-nowrap">
+                        <span className={isRev ? "text-emerald-600" : isEpar ? "text-indigo-600" : "text-neutral-900"}>
+                          {isRev ? "+" : isEpar ? "➡️ " : "-"}{(Number(tx.amount) || 0).toLocaleString("fr-FR")} <span className="text-[10px] font-normal text-neutral-400">MAD</span>
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
         </div>
       ) : activeDashTab === "charts" ? (
         <div className="space-y-6 animate-in fade-in duration-300">
@@ -1002,6 +1334,10 @@ export function FinanceSectionDashboard({
             weeklyObjectives={weeklyObjectives}
             transactions={transactions}
           />
+        </div>
+      ) : activeDashTab === "settings" ? (
+        <div className="animate-in fade-in duration-300">
+          <FinanceCategorySettings triggerToast={triggerToast} />
         </div>
       ) : (
         <div className="animate-in fade-in duration-300">

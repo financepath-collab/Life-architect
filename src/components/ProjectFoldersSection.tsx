@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent, TopicToCover } from "../types";
+import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent, TopicToCover, ProjectBusinessKPIs } from "../types";
 import { 
   Folder, 
   FolderOpen, 
@@ -41,7 +41,25 @@ import {
   Lock,
   Mail,
   Eye,
-  EyeOff
+  EyeOff,
+  Users,
+  ShoppingBag,
+  Video,
+  UserCheck,
+  DollarSign,
+  TrendingUp,
+  BarChart3,
+  PieChart,
+  ShieldAlert,
+  Rocket,
+  Cpu,
+  Coins,
+  Briefcase,
+  Award,
+  Activity,
+  Layers3,
+  PlusCircle,
+  Minus
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -115,10 +133,58 @@ export default function ProjectFoldersSection({
   const [projKeyMetricTargetModal, setProjKeyMetricTargetModal] = useState("");
   const [showPasswordInDetails, setShowPasswordInDetails] = useState(false);
 
-  // Strategy & Goal states for selected project
+  // Modal extended project states
+  const [projStatusPhaseModal, setProjStatusPhaseModal] = useState<ProjectFolder["statusPhase"]>("Croissance & Ventes");
+  const [projLaunchDateModal, setProjLaunchDateModal] = useState("");
+  const [projBudgetModal, setProjBudgetModal] = useState<string>("");
+  const [projTechStackModal, setProjTechStackModal] = useState("");
+  const [projKeyRisksModal, setProjKeyRisksModal] = useState("");
+  const [projValuePropModal, setProjValuePropModal] = useState("");
+  const [projTeamModal, setProjTeamModal] = useState("");
+
+  const [targetSubscribersModal, setTargetSubscribersModal] = useState<string>("");
+  const [currentSubscribersModal, setCurrentSubscribersModal] = useState<string>("");
+  const [targetProductsModal, setTargetProductsModal] = useState<string>("");
+  const [currentProductsModal, setCurrentProductsModal] = useState<string>("");
+  const [targetFormationsModal, setTargetFormationsModal] = useState<string>("");
+  const [currentFormationsModal, setCurrentFormationsModal] = useState<string>("");
+  const [targetCoachingModal, setTargetCoachingModal] = useState<string>("");
+  const [currentCoachingModal, setCurrentCoachingModal] = useState<string>("");
+  const [targetAdsenseModal, setTargetAdsenseModal] = useState<string>("");
+  const [currentAdsenseModal, setCurrentAdsenseModal] = useState<string>("");
+  const [targetCustomRevModal, setTargetCustomRevModal] = useState<string>("");
+  const [currentCustomRevModal, setCurrentCustomRevModal] = useState<string>("");
+
+  // Strategy & Goal states for selected project (Inline)
   const [projTargetAudience, setProjTargetAudience] = useState("");
   const [projCoreGoal, setProjCoreGoal] = useState("");
   const [projKeyMetricTarget, setProjKeyMetricTarget] = useState("");
+  const [projStatusPhase, setProjStatusPhase] = useState<ProjectFolder["statusPhase"]>("Croissance & Ventes");
+  const [projLaunchDate, setProjLaunchDate] = useState("");
+  const [projBudget, setProjBudget] = useState<string>("");
+  const [projTechStack, setProjTechStack] = useState("");
+  const [projKeyRisks, setProjKeyRisks] = useState("");
+  const [projValueProp, setProjValueProp] = useState("");
+  const [projTeam, setProjTeam] = useState("");
+
+  const [targetSubscribers, setTargetSubscribers] = useState<string>("");
+  const [currentSubscribers, setCurrentSubscribers] = useState<string>("");
+  const [targetProducts, setTargetProducts] = useState<string>("");
+  const [currentProducts, setCurrentProducts] = useState<string>("");
+  const [targetFormations, setTargetFormations] = useState<string>("");
+  const [currentFormations, setCurrentFormations] = useState<string>("");
+  const [targetCoaching, setTargetCoaching] = useState<string>("");
+  const [currentCoaching, setCurrentCoaching] = useState<string>("");
+  const [targetAdsense, setTargetAdsense] = useState<string>("");
+  const [currentAdsense, setCurrentAdsense] = useState<string>("");
+  const [targetCustomRev, setTargetCustomRev] = useState<string>("");
+  const [currentCustomRev, setCurrentCustomRev] = useState<string>("");
+
+  const [customKPIList, setCustomKPIList] = useState<{ id: string; label: string; target: string; current: string; unit?: string }[]>([]);
+  const [newCustomKPILabel, setNewCustomKPILabel] = useState("");
+  const [newCustomKPITarget, setNewCustomKPITarget] = useState("");
+  const [newCustomKPICurrent, setNewCustomKPICurrent] = useState("");
+  const [newCustomKPIUnit, setNewCustomKPIUnit] = useState("");
   const [isEditingStrategy, setIsEditingStrategy] = useState(false);
 
   // Topics to cover (Sujets à traiter) states
@@ -145,20 +211,132 @@ export default function ProjectFoldersSection({
       setProjTargetAudience(selectedFolder.targetAudience || "");
       setProjCoreGoal(selectedFolder.coreGoal || "");
       setProjKeyMetricTarget(selectedFolder.keyMetricTarget || "");
+      setProjStatusPhase(selectedFolder.statusPhase || "Croissance & Ventes");
+      setProjLaunchDate(selectedFolder.launchDate || "");
+      setProjBudget(selectedFolder.projectBudget ? String(selectedFolder.projectBudget) : "");
+      setProjTechStack(selectedFolder.techStack ? selectedFolder.techStack.join(", ") : "");
+      setProjKeyRisks(selectedFolder.keyRisks || "");
+      setProjValueProp(selectedFolder.valueProposition || "");
+      setProjTeam(selectedFolder.teamStakeholders || "");
+
+      const kpis = selectedFolder.businessKPIs || {};
+      setTargetSubscribers(kpis.targetPayingSubscribers !== undefined ? String(kpis.targetPayingSubscribers) : "");
+      setCurrentSubscribers(kpis.currentPayingSubscribers !== undefined ? String(kpis.currentPayingSubscribers) : "");
+      setTargetProducts(kpis.targetProductsSold !== undefined ? String(kpis.targetProductsSold) : "");
+      setCurrentProducts(kpis.currentProductsSold !== undefined ? String(kpis.currentProductsSold) : "");
+      setTargetFormations(kpis.targetFormationsSold !== undefined ? String(kpis.targetFormationsSold) : "");
+      setCurrentFormations(kpis.currentFormationsSold !== undefined ? String(kpis.currentFormationsSold) : "");
+      setTargetCoaching(kpis.targetCoachingSold !== undefined ? String(kpis.targetCoachingSold) : "");
+      setCurrentCoaching(kpis.currentCoachingSold !== undefined ? String(kpis.currentCoachingSold) : "");
+      setTargetAdsense(kpis.targetAdsenseRevenue !== undefined ? String(kpis.targetAdsenseRevenue) : "");
+      setCurrentAdsense(kpis.currentAdsenseRevenue !== undefined ? String(kpis.currentAdsenseRevenue) : "");
+      setTargetCustomRev(kpis.targetCustomRevenue !== undefined ? String(kpis.targetCustomRevenue) : "");
+      setCurrentCustomRev(kpis.currentCustomRevenue !== undefined ? String(kpis.currentCustomRevenue) : "");
+      setCustomKPIList(kpis.customKPIs || []);
+
       setIsEditingStrategy(false);
     }
-  }, [selectedFolderId]);
+  }, [selectedFolderId, selectedFolder]);
 
   // Save strategy handler
   const handleSaveStrategy = () => {
     if (!selectedFolder) return;
+
+    const updatedBusinessKPIs: ProjectBusinessKPIs = {
+      targetPayingSubscribers: targetSubscribers !== "" ? parseFloat(targetSubscribers) : undefined,
+      currentPayingSubscribers: currentSubscribers !== "" ? parseFloat(currentSubscribers) : undefined,
+      targetProductsSold: targetProducts !== "" ? parseFloat(targetProducts) : undefined,
+      currentProductsSold: currentProducts !== "" ? parseFloat(currentProducts) : undefined,
+      targetFormationsSold: targetFormations !== "" ? parseFloat(targetFormations) : undefined,
+      currentFormationsSold: currentFormations !== "" ? parseFloat(currentFormations) : undefined,
+      targetCoachingSold: targetCoaching !== "" ? parseFloat(targetCoaching) : undefined,
+      currentCoachingSold: currentCoaching !== "" ? parseFloat(currentCoaching) : undefined,
+      targetAdsenseRevenue: targetAdsense !== "" ? parseFloat(targetAdsense) : undefined,
+      currentAdsenseRevenue: currentAdsense !== "" ? parseFloat(currentAdsense) : undefined,
+      targetCustomRevenue: targetCustomRev !== "" ? parseFloat(targetCustomRev) : undefined,
+      currentCustomRevenue: currentCustomRev !== "" ? parseFloat(currentCustomRev) : undefined,
+      customKPIs: customKPIList
+    };
+
+    const parsedTech = projTechStack.split(",").map(s => s.trim()).filter(Boolean);
+
     setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
       ...f,
       targetAudience: projTargetAudience.trim(),
       coreGoal: projCoreGoal.trim(),
-      keyMetricTarget: projKeyMetricTarget.trim()
+      keyMetricTarget: projKeyMetricTarget.trim(),
+      statusPhase: projStatusPhase,
+      launchDate: projLaunchDate,
+      projectBudget: projBudget !== "" ? parseFloat(projBudget) : undefined,
+      techStack: parsedTech.length > 0 ? parsedTech : undefined,
+      keyRisks: projKeyRisks.trim(),
+      valueProposition: projValueProp.trim(),
+      teamStakeholders: projTeam.trim(),
+      businessKPIs: updatedBusinessKPIs
     } : f));
+
     setIsEditingStrategy(false);
+  };
+
+  // Quick increment/decrement KPI directly on project sheet
+  const handleQuickUpdateKPI = (kpiField: keyof ProjectBusinessKPIs, delta: number) => {
+    if (!selectedFolder) return;
+    const currentKPIs = selectedFolder.businessKPIs || {};
+    let val = (currentKPIs[kpiField] as number) || 0;
+    val = Math.max(0, val + delta);
+
+    const updatedKPIs = {
+      ...currentKPIs,
+      [kpiField]: val
+    };
+
+    setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
+      ...f,
+      businessKPIs: updatedKPIs
+    } : f));
+  };
+
+  // Add Custom Business KPI
+  const handleAddCustomKPI = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustomKPILabel.trim() || !selectedFolder) return;
+    const newKpi = {
+      id: "ckpi_" + Date.now(),
+      label: newCustomKPILabel.trim(),
+      target: newCustomKPITarget.trim() || "0",
+      current: newCustomKPICurrent.trim() || "0",
+      unit: newCustomKPIUnit.trim() || ""
+    };
+    const updatedList = [...customKPIList, newKpi];
+    setCustomKPIList(updatedList);
+    
+    const updatedKPIs = {
+      ...(selectedFolder.businessKPIs || {}),
+      customKPIs: updatedList
+    };
+    setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
+      ...f,
+      businessKPIs: updatedKPIs
+    } : f));
+
+    setNewCustomKPILabel("");
+    setNewCustomKPITarget("");
+    setNewCustomKPICurrent("");
+    setNewCustomKPIUnit("");
+  };
+
+  const handleDeleteCustomKPI = (kpiId: string) => {
+    if (!selectedFolder) return;
+    const updatedList = customKPIList.filter(k => k.id !== kpiId);
+    setCustomKPIList(updatedList);
+    const updatedKPIs = {
+      ...(selectedFolder.businessKPIs || {}),
+      customKPIs: updatedList
+    };
+    setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
+      ...f,
+      businessKPIs: updatedKPIs
+    } : f));
   };
 
   // Add topic to cover handler
@@ -331,6 +509,30 @@ export default function ProjectFoldersSection({
     setProjTargetAudienceModal("");
     setProjCoreGoalModal("");
     setProjKeyMetricTargetModal("");
+
+    // Extended fields
+    setProjStatusPhaseModal("Croissance & Ventes");
+    setProjLaunchDateModal("");
+    setProjBudgetModal("");
+    setProjTechStackModal("");
+    setProjKeyRisksModal("");
+    setProjValuePropModal("");
+    setProjTeamModal("");
+
+    // KPIs
+    setTargetSubscribersModal("");
+    setCurrentSubscribersModal("");
+    setTargetProductsModal("");
+    setCurrentProductsModal("");
+    setTargetFormationsModal("");
+    setCurrentFormationsModal("");
+    setTargetCoachingModal("");
+    setCurrentCoachingModal("");
+    setTargetAdsenseModal("");
+    setCurrentAdsenseModal("");
+    setTargetCustomRevModal("");
+    setCurrentCustomRevModal("");
+
     setShowProjectModal(true);
   };
 
@@ -350,6 +552,31 @@ export default function ProjectFoldersSection({
     setProjTargetAudienceModal(proj.targetAudience || "");
     setProjCoreGoalModal(proj.coreGoal || "");
     setProjKeyMetricTargetModal(proj.keyMetricTarget || "");
+
+    // Extended fields
+    setProjStatusPhaseModal(proj.statusPhase || "Croissance & Ventes");
+    setProjLaunchDateModal(proj.launchDate || "");
+    setProjBudgetModal(proj.projectBudget ? String(proj.projectBudget) : "");
+    setProjTechStackModal(proj.techStack ? proj.techStack.join(", ") : "");
+    setProjKeyRisksModal(proj.keyRisks || "");
+    setProjValuePropModal(proj.valueProposition || "");
+    setProjTeamModal(proj.teamStakeholders || "");
+
+    // KPIs
+    const kpis = proj.businessKPIs || {};
+    setTargetSubscribersModal(kpis.targetPayingSubscribers !== undefined ? String(kpis.targetPayingSubscribers) : "");
+    setCurrentSubscribersModal(kpis.currentPayingSubscribers !== undefined ? String(kpis.currentPayingSubscribers) : "");
+    setTargetProductsModal(kpis.targetProductsSold !== undefined ? String(kpis.targetProductsSold) : "");
+    setCurrentProductsModal(kpis.currentProductsSold !== undefined ? String(kpis.currentProductsSold) : "");
+    setTargetFormationsModal(kpis.targetFormationsSold !== undefined ? String(kpis.targetFormationsSold) : "");
+    setCurrentFormationsModal(kpis.currentFormationsSold !== undefined ? String(kpis.currentFormationsSold) : "");
+    setTargetCoachingModal(kpis.targetCoachingSold !== undefined ? String(kpis.targetCoachingSold) : "");
+    setCurrentCoachingModal(kpis.currentCoachingSold !== undefined ? String(kpis.currentCoachingSold) : "");
+    setTargetAdsenseModal(kpis.targetAdsenseRevenue !== undefined ? String(kpis.targetAdsenseRevenue) : "");
+    setCurrentAdsenseModal(kpis.currentAdsenseRevenue !== undefined ? String(kpis.currentAdsenseRevenue) : "");
+    setTargetCustomRevModal(kpis.targetCustomRevenue !== undefined ? String(kpis.targetCustomRevenue) : "");
+    setCurrentCustomRevModal(kpis.currentCustomRevenue !== undefined ? String(kpis.currentCustomRevenue) : "");
+
     setShowProjectModal(true);
   };
 
@@ -357,6 +584,23 @@ export default function ProjectFoldersSection({
   const handleProjectSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!projName.trim()) return;
+
+    const parsedTech = projTechStackModal.split(",").map(s => s.trim()).filter(Boolean);
+    const businessKPIsModal: ProjectBusinessKPIs = {
+      targetPayingSubscribers: targetSubscribersModal !== "" ? parseFloat(targetSubscribersModal) : undefined,
+      currentPayingSubscribers: currentSubscribersModal !== "" ? parseFloat(currentSubscribersModal) : undefined,
+      targetProductsSold: targetProductsModal !== "" ? parseFloat(targetProductsModal) : undefined,
+      currentProductsSold: currentProductsModal !== "" ? parseFloat(currentProductsModal) : undefined,
+      targetFormationsSold: targetFormationsModal !== "" ? parseFloat(targetFormationsModal) : undefined,
+      currentFormationsSold: currentFormationsModal !== "" ? parseFloat(currentFormationsModal) : undefined,
+      targetCoachingSold: targetCoachingModal !== "" ? parseFloat(targetCoachingModal) : undefined,
+      currentCoachingSold: currentCoachingModal !== "" ? parseFloat(currentCoachingModal) : undefined,
+      targetAdsenseRevenue: targetAdsenseModal !== "" ? parseFloat(targetAdsenseModal) : undefined,
+      currentAdsenseRevenue: currentAdsenseModal !== "" ? parseFloat(currentAdsenseModal) : undefined,
+      targetCustomRevenue: targetCustomRevModal !== "" ? parseFloat(targetCustomRevModal) : undefined,
+      currentCustomRevenue: currentCustomRevModal !== "" ? parseFloat(currentCustomRevModal) : undefined,
+      customKPIs: editingProject?.businessKPIs?.customKPIs || []
+    };
 
     if (editingProject) {
       // Edit mode
@@ -371,7 +615,15 @@ export default function ProjectFoldersSection({
         archivedAt: projIsArchived ? (f.archivedAt || new Date().toISOString().split("T")[0]) : undefined,
         targetAudience: projTargetAudienceModal.trim(),
         coreGoal: projCoreGoalModal.trim(),
-        keyMetricTarget: projKeyMetricTargetModal.trim()
+        keyMetricTarget: projKeyMetricTargetModal.trim(),
+        statusPhase: projStatusPhaseModal,
+        launchDate: projLaunchDateModal,
+        projectBudget: projBudgetModal !== "" ? parseFloat(projBudgetModal) : undefined,
+        techStack: parsedTech.length > 0 ? parsedTech : undefined,
+        keyRisks: projKeyRisksModal.trim(),
+        valueProposition: projValuePropModal.trim(),
+        teamStakeholders: projTeamModal.trim(),
+        businessKPIs: businessKPIsModal
       } : f));
     } else {
       // Create mode
@@ -410,6 +662,14 @@ export default function ProjectFoldersSection({
         targetAudience: projTargetAudienceModal.trim(),
         coreGoal: projCoreGoalModal.trim(),
         keyMetricTarget: projKeyMetricTargetModal.trim(),
+        statusPhase: projStatusPhaseModal,
+        launchDate: projLaunchDateModal,
+        projectBudget: projBudgetModal !== "" ? parseFloat(projBudgetModal) : undefined,
+        techStack: parsedTech.length > 0 ? parsedTech : undefined,
+        keyRisks: projKeyRisksModal.trim(),
+        valueProposition: projValuePropModal.trim(),
+        teamStakeholders: projTeamModal.trim(),
+        businessKPIs: businessKPIsModal,
         associatedFormationIds: [],
         associatedLinkIds: [],
         associatedGoalIds: [],
@@ -420,6 +680,13 @@ export default function ProjectFoldersSection({
         isArchived: projIsArchived,
         archivedAt: projIsArchived ? new Date().toISOString().split("T")[0] : undefined
       };
+      setFolders(prev => [...prev, newFolder]);
+      setSelectedFolderId(newFolder.id);
+    }
+
+    setShowProjectModal(false);
+    setEditingProject(null);
+  };
       setFolders(prev => [...prev, newFolder]);
       setSelectedFolderId(newFolder.id);
     }
