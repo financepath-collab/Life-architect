@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { 
   FinanceTransaction, 
   FinanceBudget, 
@@ -14,8 +14,28 @@ import {
   PieChart as PieIcon, 
   CheckCircle2, 
   AlertCircle,
-  BarChart3
+  BarChart3,
+  Utensils,
+  Laptop,
+  Cloud,
+  Megaphone,
+  Car,
+  Sparkles,
+  Tag,
+  AlertTriangle,
+  Gauge
 } from "lucide-react";
+
+function getCategoryIcon(catName: string) {
+  const name = (catName || "").toLowerCase();
+  if (name.includes("aliment") || name.includes("nourriture") || name.includes("resto")) return Utensils;
+  if (name.includes("équip") || name.includes("matériel") || name.includes("tech")) return Laptop;
+  if (name.includes("logiciel") || name.includes("saas") || name.includes("cloud")) return Cloud;
+  if (name.includes("market") || name.includes("pub") || name.includes("promo")) return Megaphone;
+  if (name.includes("transport") || name.includes("carburant") || name.includes("auto")) return Car;
+  if (name.includes("loisir") || name.includes("sortie") || name.includes("divertiss")) return Sparkles;
+  return Tag;
+}
 import { 
   ResponsiveContainer, 
   ComposedChart, 
@@ -225,9 +245,55 @@ export default function FinanceCharts({
   const maxExpenseCategoryAmount = expensesByCategory[0]?.[1] || 1;
 
   // 3. Build monthly budgets overview
-  const totalBudgetLimit = budgets.reduce((sum, b) => sum + b.limitAmount, 0);
-  const totalBudgetSpent = budgets.reduce((sum, b) => sum + b.spentAmount, 0);
+  const [budgetCategoryFilter, setBudgetCategoryFilter] = useState<"all" | "warning">("all");
+
+  const currentMonthKey = React.useMemo(() => {
+    return `${referenceDate.getFullYear()}-${String(referenceDate.getMonth() + 1).padStart(2, "0")}`;
+  }, [referenceDate]);
+
+  const categoryActualSpentMap = React.useMemo(() => {
+    const map: { [key: string]: number } = {};
+    transactions
+      .filter(t => t.type === "Dépense" && t.date && t.date.startsWith(currentMonthKey))
+      .forEach(t => {
+        map[t.category] = (map[t.category] || 0) + t.amount;
+      });
+    return map;
+  }, [transactions, currentMonthKey]);
+
+  const processedBudgets = React.useMemo(() => {
+    return budgets.map(b => {
+      const actualSpent = (categoryActualSpentMap[b.category] !== undefined && categoryActualSpentMap[b.category] > 0)
+        ? categoryActualSpentMap[b.category]
+        : b.spentAmount;
+      const limit = b.limitAmount || 1;
+      const rate = Math.round((actualSpent / limit) * 100);
+      const remaining = limit - actualSpent;
+      const thresholdPct = b.alertThresholdPct || 80;
+      const isOver = actualSpent > limit;
+      const isWarning = rate >= thresholdPct && !isOver;
+      return {
+        ...b,
+        actualSpent,
+        rate,
+        remaining,
+        thresholdPct,
+        isOver,
+        isWarning
+      };
+    });
+  }, [budgets, categoryActualSpentMap]);
+
+  const totalBudgetLimit = processedBudgets.reduce((sum, b) => sum + b.limitAmount, 0);
+  const totalBudgetSpent = processedBudgets.reduce((sum, b) => sum + b.actualSpent, 0);
   const budgetUtilizationRate = totalBudgetLimit > 0 ? (totalBudgetSpent / totalBudgetLimit) * 100 : 0;
+
+  const filteredBudgets = React.useMemo(() => {
+    if (budgetCategoryFilter === "warning") {
+      return processedBudgets.filter(b => b.isWarning || b.isOver);
+    }
+    return processedBudgets;
+  }, [processedBudgets, budgetCategoryFilter]);
 
   return (
     <div className="space-y-6">
@@ -570,47 +636,125 @@ export default function FinanceCharts({
               </div>
 
               {/* Individual budget breakdown */}
-              <div className="space-y-3 pt-2">
-                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Suivi par catégorie</span>
-                {budgets.map(b => {
-                  const rate = b.limitAmount > 0 ? Math.round((b.spentAmount / b.limitAmount) * 100) : 0;
+              <div className="space-y-3.5 pt-2 border-t border-dashed border-neutral-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
+                    Suivi des Plafonds Budgétaires
+                  </span>
                   
-                  // Transition hue from emerald green (142) to bright red (0)
-                  const ratio = Math.min(100, rate) / 100;
-                  const hue = Math.max(0, 142 - ratio * 142);
-                  const barColor = `hsl(${hue}, 80%, 45%)`;
-                  const badgeBg = `hsl(${hue}, 85%, 96%)`;
-                  const badgeText = `hsl(${hue}, 85%, 35%)`;
+                  {/* Filter Pills */}
+                  <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setBudgetCategoryFilter("all")}
+                      className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                        budgetCategoryFilter === "all"
+                          ? "bg-white text-neutral-900 shadow-3xs"
+                          : "text-neutral-500 hover:text-neutral-900"
+                      }`}
+                    >
+                      Tous ({processedBudgets.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBudgetCategoryFilter("warning")}
+                      className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
+                        budgetCategoryFilter === "warning"
+                          ? "bg-amber-500 text-white shadow-3xs"
+                          : "text-amber-700 hover:text-amber-900"
+                      }`}
+                    >
+                      <AlertTriangle className="w-3 h-3" />
+                      Alertes ({processedBudgets.filter(b => b.isWarning || b.isOver).length})
+                    </button>
+                  </div>
+                </div>
 
-                  return (
-                    <div key={b.id} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-neutral-700 font-bold">{b.category}</span>
-                        <div className="flex items-center gap-1.5 font-mono">
-                          <span className="text-neutral-500">
-                            {b.spentAmount} / <span className="text-neutral-400">{b.limitAmount} MAD</span>
-                          </span>
-                          <span 
-                            className="text-[9px] font-black px-1 py-0.5 rounded text-center min-w-[32px]"
-                            style={{ backgroundColor: badgeBg, color: badgeText }}
-                          >
-                            {rate}%
-                          </span>
+                {filteredBudgets.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-neutral-400 italic">
+                    Aucune catégorie budgétaire ne nécessite d'attention particulière pour le moment.
+                  </div>
+                ) : (
+                  <div className="space-y-3.5">
+                    {filteredBudgets.map(b => {
+                      const IconComp = getCategoryIcon(b.category);
+                      
+                      // Progress Bar Color Logic
+                      let barColor = "bg-emerald-600";
+                      let badgeBg = "bg-emerald-50 text-emerald-700 border-emerald-200";
+                      let statusText = "Sous plafond";
+
+                      if (b.isOver) {
+                        barColor = "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]";
+                        badgeBg = "bg-rose-50 text-rose-700 border-rose-200";
+                        statusText = "Plafond dépassé";
+                      } else if (b.isWarning) {
+                        barColor = "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.3)]";
+                        badgeBg = "bg-amber-50 text-amber-700 border-amber-200";
+                        statusText = `Seuil >${b.thresholdPct}%`;
+                      }
+
+                      return (
+                        <div key={b.id} className="bg-neutral-50/70 border border-neutral-200/80 rounded-xl p-3 space-y-2 hover:border-neutral-300 transition-all">
+                          {/* Top Row: Category Info & Amount */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-white border border-neutral-200 text-neutral-700 shrink-0">
+                                <IconComp className="w-3.5 h-3.5" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-bold text-neutral-900">{b.category}</span>
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border ${badgeBg}`}>
+                                    {statusText}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-right font-mono text-xs">
+                              <div className="font-bold text-neutral-900">
+                                {b.actualSpent.toLocaleString("fr-FR")}{" "}
+                                <span className="text-neutral-400 font-normal">/ {b.limitAmount.toLocaleString("fr-FR")} MAD</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Progress Bar Container */}
+                          <div className="space-y-1">
+                            <div className="relative w-full bg-neutral-200/80 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden p-[1px]">
+                              {/* 80% Threshold Indicator Line */}
+                              <div 
+                                className="absolute top-0 bottom-0 w-[2px] bg-neutral-400/60 z-10 pointer-events-none"
+                                style={{ left: `${b.thresholdPct}%` }}
+                                title={`Seuil d'alerte à ${b.thresholdPct}%`}
+                              />
+                              
+                              {/* Animated Progress Bar Fill */}
+                              <div 
+                                className={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`} 
+                                style={{ width: `${Math.min(100, b.rate)}%` }}
+                              />
+                            </div>
+
+                            {/* Sub-row: Remaining allowance & percentage */}
+                            <div className="flex justify-between items-center text-[10px] text-neutral-500 font-mono pt-0.5">
+                              <span className={b.isOver ? "text-rose-600 font-bold" : b.isWarning ? "text-amber-700 font-bold" : "text-neutral-500"}>
+                                {b.isOver 
+                                  ? `Excédent de +${Math.abs(b.remaining).toLocaleString("fr-FR")} MAD` 
+                                  : `Reste ${b.remaining.toLocaleString("fr-FR")} MAD disponible`
+                                }
+                              </span>
+                              <span className="font-bold text-neutral-800 bg-white border border-neutral-200 px-1.5 py-0.2 rounded">
+                                {b.rate}% consommé
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden p-[1px] shadow-inner relative">
-                        <div 
-                          className="h-full rounded-full transition-all duration-500 ease-out" 
-                          style={{ 
-                            width: `${Math.min(100, rate)}%`,
-                            backgroundColor: barColor,
-                            boxShadow: rate > 100 ? '0 0 6px rgba(239, 68, 68, 0.4)' : `0 0 4px ${barColor}30`
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>

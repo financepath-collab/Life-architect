@@ -2764,9 +2764,8 @@ export default function App() {
         { id: "finance_dash", label: "Dashboard Finance", icon: LayoutDashboard, desc: "Indicateurs financiers clés, budgets et analyses." },
         { id: "comptes", label: "Comptes Bancaires", icon: Landmark, desc: "Gestion des comptes pro, perso et liquidités." },
         { id: "budgets", label: "Budgets Mensuels", icon: Landmark, desc: "Gestion de vos plafonds de dépenses par enveloppe." },
-        { id: "epargnes", label: "Objectifs Épargne", icon: PiggyBank, desc: "Progression vers vos projets immobiliers ou d'équipements." },
+        { id: "epargnes", label: "Objectifs Épargne & Wishlist", icon: PiggyBank, desc: "Progression vers vos grands projets de vie, rêves, envies d'achats et objectifs d'épargne." },
         { id: "stocks", label: "Portefeuille Bourse", icon: Wallet, desc: "Suivi de vos investissements en BVC." },
-        { id: "wishlist", label: "Wish List", icon: Gift, desc: "Objets de désir et grands projets d'achat à long terme." },
         { id: "achats_couteux", label: "Achats Coûteux", icon: Hourglass, desc: "Achats importants de moyenne échelle prévus à moyen terme." }
       ]
     },
@@ -2970,20 +2969,21 @@ export default function App() {
         };
 
       case "epargnes":
+      case "wishlist":
         return {
-          title: "Objectifs d'Épargne",
-          description: "Prévoyez vos grands projets de vie (Immobilier, Voyage, Matériel).",
+          title: "Objectifs d'Épargne & Wishlist",
+          description: "Prévoyez vos grands projets de vie, rêves et envies d'achats (Immobilier, Voyage, Matériel, Tech, Projets).",
           data: epargnes,
           onAdd: (item: any) => setEpargnes(prev => [item, ...prev]),
           onEdit: (id: string, updated: any) => setEpargnes(prev => prev.map(x => x.id === id ? updated : x)),
           onDelete: (id: string) => setEpargnes(prev => prev.filter(x => x.id !== id)),
           onImport: (items: any[]) => setEpargnes(prev => [...items, ...prev]),
           columns: [
-            { key: "name", label: "Intitulé du Projet", type: "text", required: true },
-            { key: "targetAmount", label: "Montant Cible (MAD)", type: "number", required: true },
-            { key: "currentAmount", label: "Montant Actuel", type: "number", required: true },
-            { key: "deadline", label: "Échéance Cible", type: "date", required: true },
-            { key: "status", label: "Statut", type: "select", options: ["En cours", "Atteint"] }
+            { key: "name", label: "Intitulé du Projet / Article", type: "text", required: true },
+            { key: "targetAmount", label: "Montant Cible / Prix Estimé (MAD)", type: "number", required: true },
+            { key: "currentAmount", label: "Montant Épargné (MAD)", type: "number", required: true },
+            { key: "deadline", label: "Échéance Cible", type: "date" },
+            { key: "status", label: "Statut", type: "select", options: ["En cours", "Atteint", "En pause", "Rêve"] }
           ] as TableColumn[]
         };
 
@@ -3113,25 +3113,6 @@ export default function App() {
             { key: "billingPeriod", label: "Période Facturation", type: "select", options: ["Mensuel", "Annuel"] },
             { key: "nextBillingDate", label: "Prochain Prélèvement", type: "date" },
             { key: "status", label: "État", type: "select", options: ["Actif", "Suspendu"] }
-          ] as TableColumn[]
-        };
-
-      case "wishlist":
-        return {
-          title: "Wish List (Liste d'envies)",
-          description: "Vos rêves et grands projets d'achats à long terme de valeur importante.",
-          data: wishList,
-          onAdd: (item: any) => setWishList(prev => [item, ...prev]),
-          onEdit: (id: string, updated: any) => setWishList(prev => prev.map(x => x.id === id ? updated : x)),
-          onDelete: (id: string) => setWishList(prev => prev.filter(x => x.id !== id)),
-          onImport: (items: any[]) => setWishList(prev => [...items, ...prev]),
-          columns: [
-            { key: "itemName", label: "Nom de l'Article", type: "text", required: true },
-            { key: "store", label: "Boutique / Site", type: "text" },
-            { key: "estimatedPrice", label: "Prix Estimé (MAD)", type: "number", required: true },
-            { key: "priority", label: "Priorité", type: "select", options: ["Rêve", "Peut-être", "Bientôt"] },
-            { key: "link", label: "Lien URL", type: "text" },
-            { key: "note", label: "Notes / Détails", type: "text" }
           ] as TableColumn[]
         };
 

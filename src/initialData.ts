@@ -88,8 +88,13 @@ export const INITIAL_EPARGNES: FinanceEpargne[] = [
   { id: "e8", name: "Chaise Ergonomique - Contenu", targetAmount: 2000, currentAmount: 2000, deadline: "2026-07-10", status: "Atteint" },
   { id: "e9", name: "Abonnement gym de Salle de sport", targetAmount: 4000, currentAmount: 1500, deadline: "2026-09-30", status: "En cours" },
   { id: "e10", name: "Console de jeu Nintendo Switch", targetAmount: 6000, currentAmount: 2000, deadline: "2026-11-25", status: "En cours" },
-  { id: "e11", name: "Moto", targetAmount: 45000, currentAmount: 8000, deadline: "2027-04-30", status: "En cours" },
-  { id: "e12", name: "Caravane", targetAmount: 120000, currentAmount: 15000, deadline: "2028-06-30", status: "En cours" }
+  { id: "e11", name: "Moto de ville (Yamaha MT-07)", targetAmount: 85000, currentAmount: 8000, deadline: "2027-04-30", status: "En cours" },
+  { id: "e12", name: "Caravane de Voyage Aménagée", targetAmount: 180000, currentAmount: 15000, deadline: "2028-06-30", status: "En cours" },
+  { id: "e13", name: "Villa Éco-conçue à Bouskoura (Rêve)", targetAmount: 4500000, currentAmount: 150000, deadline: "2030-12-31", status: "En cours" },
+  { id: "e14", name: "Porsche Taycan Électrique (Rêve)", targetAmount: 1200000, currentAmount: 50000, deadline: "2029-12-31", status: "En cours" },
+  { id: "e15", name: "Studio de Production Complet", targetAmount: 150000, currentAmount: 30000, deadline: "2027-06-30", status: "En cours" },
+  { id: "e16", name: "Drone DJI Air 3S Fly More Combo", targetAmount: 16500, currentAmount: 4000, deadline: "2026-12-15", status: "En cours" },
+  { id: "e17", name: "Voiture Hybride Moderne", targetAmount: 290000, currentAmount: 45000, deadline: "2028-09-30", status: "En cours" }
 ];
 
 export const INITIAL_ACTIONS_30_JOURS: Action30Jours[] = [
