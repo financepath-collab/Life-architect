@@ -176,10 +176,152 @@ export default function UnifiedFinancialEntrySection({
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("Tous");
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>("Tous");
 
+  // Local State for Dynamic Financial Taxonomy (Categories & Subcategories)
+  const [taxonomyMap, setTaxonomyMap] = useState<Record<string, { label: string; icon: any; color: string; subCategories: string[] }>>(() => {
+    const saved = localStorage.getItem("mp_finance_taxonomy_v2");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const merged = { ...FINANCIAL_TAXONOMY };
+        Object.keys(parsed).forEach(k => {
+          merged[k] = {
+            label: parsed[k].label || k,
+            icon: FINANCIAL_TAXONOMY[k]?.icon || Tag,
+            color: parsed[k].color || "indigo",
+            subCategories: Array.isArray(parsed[k].subCategories) ? parsed[k].subCategories : ["Général"]
+          };
+        });
+        return merged;
+      } catch (e) {
+        return FINANCIAL_TAXONOMY;
+      }
+    }
+    return FINANCIAL_TAXONOMY;
+  });
+
+  // Persist taxonomyMap changes
+  React.useEffect(() => {
+    const serializable: Record<string, { label: string; color: string; subCategories: string[] }> = {};
+    Object.keys(taxonomyMap).forEach(k => {
+      serializable[k] = {
+        label: taxonomyMap[k].label || k,
+        color: taxonomyMap[k].color || "indigo",
+        subCategories: taxonomyMap[k].subCategories || ["Général"]
+      };
+    });
+    localStorage.setItem("mp_finance_taxonomy_v2", JSON.stringify(serializable));
+  }, [taxonomyMap]);
+
+  // Modal & Form States for Category Management
+  const [isTaxonomyModalOpen, setIsTaxonomyModalOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatColor, setNewCatColor] = useState("indigo");
+  const [newCatSubcats, setNewCatSubcats] = useState("");
+  const [selectedParentCat, setSelectedParentCat] = useState("Dépenses Courantes & Achats");
+  const [newSubcatName, setNewSubcatName] = useState("");
+
+  // Quick inline add states inside transaction modal
+  const [isQuickAddCategory, setIsQuickAddCategory] = useState(false);
+  const [quickCatInput, setQuickCatInput] = useState("");
+  const [isQuickAddSubCategory, setIsQuickAddSubCategory] = useState(false);
+  const [quickSubCatInput, setQuickSubCatInput] = useState("");
+
+  // Handlers for Taxonomy Management
+  const handleAddMainCategory = (name: string, color: string = "indigo", rawSubcats: string = "") => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      if (triggerToast) triggerToast("Veuillez saisir un nom de catégorie valide.", "error");
+      return;
+    }
+    const subList = rawSubcats
+      .split(",")
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+    if (subList.length === 0) subList.push("Général");
+
+    setTaxonomyMap(prev => ({
+      ...prev,
+      [trimmed]: {
+        label: trimmed,
+        icon: Tag,
+        color: color,
+        subCategories: Array.from(new Set(subList))
+      }
+    }));
+
+    setCategory(trimmed);
+    setSubCategory(subList[0]);
+    if (triggerToast) triggerToast(`Catégorie '${trimmed}' créée avec succès !`, "success");
+  };
+
+  const handleAddSubCategory = (parentCat: string, subName: string) => {
+    const trimmedSub = subName.trim();
+    if (!trimmedSub) {
+      if (triggerToast) triggerToast("Veuillez saisir un nom de sous-catégorie valide.", "error");
+      return;
+    }
+    const currentCatObj = taxonomyMap[parentCat];
+    if (!currentCatObj) return;
+
+    const updatedSubcats = Array.from(new Set([...currentCatObj.subCategories, trimmedSub]));
+    setTaxonomyMap(prev => ({
+      ...prev,
+      [parentCat]: {
+        ...prev[parentCat],
+        subCategories: updatedSubcats
+      }
+    }));
+
+    if (category === parentCat) {
+      setSubCategory(trimmedSub);
+    }
+    if (triggerToast) triggerToast(`Sous-catégorie '${trimmedSub}' ajoutée à '${parentCat}'.`, "success");
+  };
+
+  const handleDeleteSubCategory = (parentCat: string, subName: string) => {
+    const currentCatObj = taxonomyMap[parentCat];
+    if (!currentCatObj) return;
+    if (currentCatObj.subCategories.length <= 1) {
+      if (triggerToast) triggerToast("Une catégorie doit conserver au moins une sous-catégorie.", "warning");
+      return;
+    }
+    setTaxonomyMap(prev => ({
+      ...prev,
+      [parentCat]: {
+        ...prev[parentCat],
+        subCategories: prev[parentCat].subCategories.filter(s => s !== subName)
+      }
+    }));
+    if (triggerToast) triggerToast(`Sous-catégorie '${subName}' supprimée.`, "info");
+  };
+
+  const handleDeleteMainCategory = (catKey: string) => {
+    if (Object.keys(FINANCIAL_TAXONOMY).includes(catKey)) {
+      if (triggerToast) triggerToast("Les catégories système par défaut ne peuvent pas être supprimées.", "warning");
+      return;
+    }
+    setTaxonomyMap(prev => {
+      const copy = { ...prev };
+      delete copy[catKey];
+      return copy;
+    });
+    if (category === catKey) {
+      setCategory(Object.keys(FINANCIAL_TAXONOMY)[0]);
+      setSubCategory(FINANCIAL_TAXONOMY[Object.keys(FINANCIAL_TAXONOMY)[0]].subCategories[0]);
+    }
+    if (triggerToast) triggerToast(`Catégorie '${catKey}' supprimée.`, "info");
+  };
+
+  const handleResetTaxonomy = () => {
+    setTaxonomyMap(FINANCIAL_TAXONOMY);
+    localStorage.removeItem("mp_finance_taxonomy_v2");
+    if (triggerToast) triggerToast("Taxonomie financière réinitialisée aux valeurs par défaut.", "info");
+  };
+
   // Sync subcategories dropdown when category changes
   const handleCategoryChange = (newCat: string) => {
     setCategory(newCat);
-    const availableSubs = FINANCIAL_TAXONOMY[newCat]?.subCategories || ["Général"];
+    const availableSubs = taxonomyMap[newCat]?.subCategories || ["Général"];
     setSubCategory(availableSubs[0]);
     if (newCat === "Salaire & Revenus") {
       setType("Revenue");
@@ -214,9 +356,9 @@ export default function UnifiedFinancialEntrySection({
     setEditingTx(tx);
     setDate(tx.date || new Date().toISOString().split("T")[0]);
     setDescription(tx.description || "");
-    const matchedCat = Object.keys(FINANCIAL_TAXONOMY).find(k => k.toLowerCase() === (tx.category || "").toLowerCase()) || tx.category || "Dépenses Courantes & Achats";
+    const matchedCat = Object.keys(taxonomyMap).find(k => k.toLowerCase() === (tx.category || "").toLowerCase()) || tx.category || "Dépenses Courantes & Achats";
     setCategory(matchedCat);
-    setSubCategory(tx.subCategory || FINANCIAL_TAXONOMY[matchedCat]?.subCategories[0] || "Général");
+    setSubCategory(tx.subCategory || taxonomyMap[matchedCat]?.subCategories[0] || "Général");
     setType((tx.type as any) || "Dépense");
     setAmount(tx.amount ? String(tx.amount) : "");
     setAccount(tx.account || accounts[0]?.name || "Attijariwafa Bank");
@@ -424,7 +566,14 @@ export default function UnifiedFinancialEntrySection({
           </p>
         </div>
 
-        <div className="flex items-center gap-3 relative z-10">
+        <div className="flex flex-wrap items-center gap-3 relative z-10">
+          <button
+            onClick={() => setIsTaxonomyModalOpen(true)}
+            className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-2xl font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <FolderTree className="w-4 h-4 text-indigo-300" />
+            <span>Gérer / Ajouter Catégories</span>
+          </button>
           <button
             onClick={handleOpenNewModal}
             className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-extrabold text-xs shadow-lg transition-all flex items-center gap-2 cursor-pointer border border-indigo-400/40 hover:scale-[1.02] active:scale-[0.98]"
@@ -554,8 +703,8 @@ export default function UnifiedFinancialEntrySection({
             Toutes les Catégories ({transactions.length})
           </button>
 
-          {Object.keys(FINANCIAL_TAXONOMY).map(catKey => {
-            const tax = FINANCIAL_TAXONOMY[catKey];
+          {Object.keys(taxonomyMap).map(catKey => {
+            const tax = taxonomyMap[catKey];
             const count = transactions.filter(t => t.category === catKey).length;
             const isSelected = selectedCategoryFilter === catKey;
 
@@ -569,7 +718,7 @@ export default function UnifiedFinancialEntrySection({
                     : "bg-neutral-50 border border-neutral-200 text-neutral-700 hover:bg-neutral-100"
                 }`}
               >
-                <span>{tax.label}</span>
+                <span>{tax.label || catKey}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono font-bold ${
                   isSelected ? "bg-white/20 text-white" : "bg-neutral-200/80 text-neutral-700"
                 }`}>
@@ -736,17 +885,60 @@ export default function UnifiedFinancialEntrySection({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl">
                   {/* Catégorie Principale */}
                   <div>
-                    <label className="block text-neutral-800 font-bold mb-1.5">
-                      Catégorie Principale <span className="text-rose-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-neutral-800 font-bold">
+                        Catégorie Principale <span className="text-rose-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsQuickAddCategory(!isQuickAddCategory)}
+                        className="text-[11px] font-extrabold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer bg-white px-2 py-0.5 rounded-md border border-indigo-200 shadow-3xs"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Catégorie</span>
+                      </button>
+                    </div>
+
+                    {isQuickAddCategory ? (
+                      <div className="flex items-center gap-1.5 mb-1.5 animate-in fade-in">
+                        <input
+                          type="text"
+                          placeholder="Nom nouvelle catégorie..."
+                          value={quickCatInput}
+                          onChange={e => setQuickCatInput(e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs bg-white border border-indigo-300 rounded-lg font-semibold focus:outline-hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (quickCatInput.trim()) {
+                              handleAddMainCategory(quickCatInput, "indigo", "Général");
+                              setQuickCatInput("");
+                              setIsQuickAddCategory(false);
+                            }
+                          }}
+                          className="px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 cursor-pointer shrink-0"
+                        >
+                          Ajouter
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsQuickAddCategory(false)}
+                          className="p-1.5 text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : null}
+
                     <select
                       value={category}
                       onChange={e => handleCategoryChange(e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-xl font-bold text-neutral-900 focus:outline-hidden focus:border-indigo-500"
                     >
-                      {Object.keys(FINANCIAL_TAXONOMY).map(cKey => (
+                      {Object.keys(taxonomyMap).map(cKey => (
                         <option key={cKey} value={cKey}>
-                          {FINANCIAL_TAXONOMY[cKey].label}
+                          {taxonomyMap[cKey].label || cKey}
                         </option>
                       ))}
                     </select>
@@ -754,15 +946,58 @@ export default function UnifiedFinancialEntrySection({
 
                   {/* Sous-catégorie Détaillée */}
                   <div>
-                    <label className="block text-neutral-800 font-bold mb-1.5">
-                      Sous-Catégorie Détaillée <span className="text-rose-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-neutral-800 font-bold">
+                        Sous-Catégorie Détaillée <span className="text-rose-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsQuickAddSubCategory(!isQuickAddSubCategory)}
+                        className="text-[11px] font-extrabold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer bg-white px-2 py-0.5 rounded-md border border-indigo-200 shadow-3xs"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Sous-catégorie</span>
+                      </button>
+                    </div>
+
+                    {isQuickAddSubCategory ? (
+                      <div className="flex items-center gap-1.5 mb-1.5 animate-in fade-in">
+                        <input
+                          type="text"
+                          placeholder="Nom nouvelle sous-catégorie..."
+                          value={quickSubCatInput}
+                          onChange={e => setQuickSubCatInput(e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs bg-white border border-indigo-300 rounded-lg font-semibold focus:outline-hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (quickSubCatInput.trim()) {
+                              handleAddSubCategory(category, quickSubCatInput);
+                              setQuickSubCatInput("");
+                              setIsQuickAddSubCategory(false);
+                            }
+                          }}
+                          className="px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 cursor-pointer shrink-0"
+                        >
+                          Ajouter
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsQuickAddSubCategory(false)}
+                          className="p-1.5 text-neutral-400 hover:text-neutral-600 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : null}
+
                     <select
                       value={subCategory}
                       onChange={e => setSubCategory(e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-xl font-bold text-indigo-900 focus:outline-hidden focus:border-indigo-500"
                     >
-                      {(FINANCIAL_TAXONOMY[category]?.subCategories || ["Général"]).map(sub => (
+                      {(taxonomyMap[category]?.subCategories || ["Général"]).map(sub => (
                         <option key={sub} value={sub}>
                           {sub}
                         </option>
@@ -915,6 +1150,249 @@ export default function UnifiedFinancialEntrySection({
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL FOR TAXONOMY & CATEGORY MANAGEMENT */}
+      <AnimatePresence>
+        {isTaxonomyModalOpen && (
+          <div className="fixed inset-0 bg-neutral-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white border border-neutral-200 rounded-3xl p-6 shadow-2xl max-w-4xl w-full space-y-6 max-h-[90vh] overflow-y-auto"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+                    <FolderTree className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900 tracking-tight">
+                      Gestion des Catégories & Sous-Catégories Financières
+                    </h3>
+                    <p className="text-xs text-neutral-500">
+                      Personnalisez l'arborescence de vos flux financiers pour l'adapter parfaitement à vos projets.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsTaxonomyModalOpen(false)}
+                  className="p-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-600 transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Action Forms Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Form 1: Ajouter une nouvelle Catégorie Principale */}
+                <div className="bg-indigo-50/40 border border-indigo-100 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-xs font-black text-indigo-950 uppercase tracking-wider flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-indigo-600" />
+                    Créer une Catégorie Principale
+                  </h4>
+
+                  <div className="space-y-3 text-xs">
+                    <div>
+                      <label className="block text-neutral-800 font-bold mb-1">
+                        Intitulé de la Catégorie <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="ex: Projets Micro-Entreprise, Santé & Well-being"
+                        value={newCatName}
+                        onChange={e => setNewCatName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-xl font-medium focus:outline-hidden focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-neutral-800 font-bold mb-1">
+                        Couleur d'Accentuation
+                      </label>
+                      <select
+                        value={newCatColor}
+                        onChange={e => setNewCatColor(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-xl font-bold text-neutral-800"
+                      >
+                        <option value="indigo">Indigo / Violet</option>
+                        <option value="emerald">Émeraude / Vert (Revenus)</option>
+                        <option value="rose">Rose / Rouge (Dépenses)</option>
+                        <option value="amber">Ambre / Orange (Fixe)</option>
+                        <option value="cyan">Cyan / Bleu (Invest)</option>
+                        <option value="purple">Pourpre / Luxe</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-neutral-800 font-bold mb-1">
+                        Sous-catégories initiales (séparées par une virgule)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="ex: Matériel, Logiciels, Prestations"
+                        value={newCatSubcats}
+                        onChange={e => setNewCatSubcats(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-xl font-medium focus:outline-hidden focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleAddMainCategory(newCatName, newCatColor, newCatSubcats);
+                        setNewCatName("");
+                        setNewCatSubcats("");
+                      }}
+                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Ajouter cette Catégorie</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Form 2: Ajouter une Sous-Catégorie */}
+                <div className="bg-neutral-50 border border-neutral-200 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wider flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-emerald-600" />
+                    Ajouter une Sous-Catégorie
+                  </h4>
+
+                  <div className="space-y-3 text-xs">
+                    <div>
+                      <label className="block text-neutral-800 font-bold mb-1">
+                        Sélectionner la Catégorie Parente
+                      </label>
+                      <select
+                        value={selectedParentCat}
+                        onChange={e => setSelectedParentCat(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-xl font-bold text-neutral-900"
+                      >
+                        {Object.keys(taxonomyMap).map(k => (
+                          <option key={k} value={k}>
+                            {taxonomyMap[k].label || k}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-neutral-800 font-bold mb-1">
+                        Intitulé de la Sous-Catégorie <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="ex: Protéines, Vétérinaire, Amazon Pro, Bourse US"
+                        value={newSubcatName}
+                        onChange={e => setNewSubcatName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-neutral-300 rounded-xl font-medium focus:outline-hidden focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleAddSubCategory(selectedParentCat, newSubcatName);
+                        setNewSubcatName("");
+                      }}
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Ajouter la Sous-Catégorie</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Existing Categories Tree Breakdown */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wider">
+                    Arborescence Actuelle des Catégories & Sous-Catégories ({Object.keys(taxonomyMap).length})
+                  </h4>
+                  <button
+                    onClick={handleResetTaxonomy}
+                    className="text-[11px] font-extrabold text-neutral-500 hover:text-rose-600 underline cursor-pointer"
+                  >
+                    Réinitialiser aux catégories par défaut
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
+                  {Object.keys(taxonomyMap).map(catKey => {
+                    const catObj = taxonomyMap[catKey];
+                    const isSystemDefault = Object.keys(FINANCIAL_TAXONOMY).includes(catKey);
+                    const txCount = transactions.filter(t => t.category === catKey).length;
+
+                    return (
+                      <div
+                        key={catKey}
+                        className="bg-white border border-neutral-200 p-3.5 rounded-2xl shadow-2xs space-y-2.5 hover:border-indigo-300 transition-all"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
+                            <span className="font-extrabold text-xs text-neutral-900">
+                              {catObj.label || catKey}
+                            </span>
+                            <span className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full font-mono">
+                              {txCount} op.
+                            </span>
+                          </div>
+
+                          {!isSystemDefault && (
+                            <button
+                              onClick={() => handleDeleteMainCategory(catKey)}
+                              className="p-1 rounded bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer"
+                              title="Supprimer la catégorie personnalisée"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Subcategories Badges */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {catObj.subCategories.map(sub => (
+                            <span
+                              key={sub}
+                              className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-neutral-50 border border-neutral-200 text-neutral-700 px-2.5 py-1 rounded-lg"
+                            >
+                              <span>{sub}</span>
+                              {catObj.subCategories.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSubCategory(catKey, sub)}
+                                  className="text-neutral-400 hover:text-rose-600 cursor-pointer"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end pt-3 border-t border-neutral-100">
+                <button
+                  onClick={() => setIsTaxonomyModalOpen(false)}
+                  className="px-6 py-2.5 bg-neutral-900 text-white font-extrabold rounded-xl text-xs hover:bg-neutral-800 transition-all cursor-pointer"
+                >
+                  Fermer la Gestion
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
