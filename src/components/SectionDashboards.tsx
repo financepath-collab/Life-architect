@@ -4,13 +4,19 @@ import {
   ArrowRight, TrendingUp, TrendingDown, PiggyBank, Landmark, ClipboardCheck, CheckCircle2, 
   ListTodo, Calendar, Award, Target, Trophy, Sparkles, Smile, RefreshCw, 
   Plus, Trash2, Dumbbell, Play, Pause, ExternalLink, GraduationCap, Link2, 
-  BookOpenCheck, CheckSquare, Coffee, ChevronRight, Activity, FolderPlus
+  BookOpenCheck, CheckSquare, Coffee, ChevronRight, Activity, FolderPlus,
+  BarChart3, LayoutDashboard
 } from "lucide-react";
 import MonthlyExpenseAnalysisCard from "./MonthlyExpenseAnalysisCard";
 import MonthlyNetIncomeWidget from "./MonthlyNetIncomeWidget";
 import MonthlySavingsGaugeCard from "./MonthlySavingsGaugeCard";
 import MonthlyComparisonCard from "./MonthlyComparisonCard";
 import RequiredMonthlySavingsCard from "./RequiredMonthlySavingsCard";
+import FinanceCharts from "./FinanceCharts";
+import NetSavingsChart from "./NetSavingsChart";
+import SavingsTrendChart from "./SavingsTrendChart";
+import PerformanceCorrelations from "./PerformanceCorrelations";
+import FireCalculator from "./FireCalculator";
 import { 
   Account, FinanceBudget, FinanceEpargne, Abonnement, StockEntry, FinanceTransaction,
   DailyHabit, Action30Jours, WeeklyObjective, ProfilAmelioration, PossibiliteGoal, JournalEntry,
@@ -82,12 +88,17 @@ interface FinanceDashProps {
   stocks: StockEntry[];
   transactions: FinanceTransaction[];
   salaires?: FinanceSalaire[];
+  sportHistory?: string[];
+  weeklyObjectives?: WeeklyObjective[];
   onNavigate: (moduleId: string) => void;
+  initialTab?: "overview" | "charts" | "correlations" | "fire";
 }
 
 export function FinanceSectionDashboard({ 
-  accounts, budgets, epargnes, abonnements, stocks, transactions, salaires, onNavigate 
+  accounts, budgets, epargnes, abonnements, stocks, transactions, salaires,
+  sportHistory = [], weeklyObjectives = [], onNavigate, initialTab = "overview"
 }: FinanceDashProps) {
+  const [activeDashTab, setActiveDashTab] = useState<"overview" | "charts" | "correlations" | "fire">(initialTab);
   // Calculations
   const totalAccountBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
   const totalStockValuation = stocks.reduce((sum, s) => sum + (s.currentPrice * s.quantity), 0);
@@ -300,27 +311,88 @@ export function FinanceSectionDashboard({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200/60 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-200/60 pb-4">
         <div>
           <h2 className="text-lg font-black text-neutral-900 uppercase tracking-tight flex items-center gap-2">
             <Coins className="w-5 h-5 text-neutral-800" />
-            <span>Tableau de bord de Trésorerie & Investissements</span>
+            <span>Tableau de bord Financier & Analyses</span>
           </h2>
           <p className="text-xs text-neutral-500">
-            Aperçu global de votre patrimoine estimé, respect budgétaire d'élite et de vos actifs financiers.
+            Aperçu global de votre patrimoine estimé, respect budgétaire, graphiques d'analyse et projections FIRE.
           </p>
         </div>
 
-        <button
-          onClick={() => onNavigate("saisie_unifiee")}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs border border-indigo-400/30"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Guichet Unique : Saisie Unifiée (Dispatch)</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Sub-Tabs Selector */}
+          <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-2xl border border-neutral-200/60">
+            <button
+              type="button"
+              onClick={() => setActiveDashTab("overview")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeDashTab === "overview"
+                  ? "bg-neutral-950 text-white shadow-xs font-black"
+                  : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span>Synthèse</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveDashTab("charts")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeDashTab === "charts"
+                  ? "bg-neutral-950 text-white shadow-xs font-black"
+                  : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Graphiques & Trends</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveDashTab("correlations")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeDashTab === "correlations"
+                  ? "bg-neutral-950 text-white shadow-xs font-black"
+                  : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>Corrélations Effort</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveDashTab("fire")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeDashTab === "fire"
+                  ? "bg-neutral-950 text-white shadow-xs font-black"
+                  : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-500" />
+              <span>Liberté FIRE</span>
+            </button>
+          </div>
+
+          {activeDashTab === "overview" && (
+            <button
+              onClick={() => onNavigate("saisie_unifiee")}
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border border-indigo-400/30"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Guichet Unique</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Stats Bento Grid */}
+      {activeDashTab === "overview" ? (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Stats Bento Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 text-white flex flex-col justify-between h-32 shadow-sm">
           <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Patrimoine Total</span>
@@ -910,6 +982,32 @@ export function FinanceSectionDashboard({
           </div>
         </div>
       </div>
+        </div>
+      ) : activeDashTab === "charts" ? (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <FinanceCharts
+            transactions={transactions}
+            budgets={budgets}
+            stocks={stocks}
+            epargnes={epargnes}
+            abonnements={abonnements}
+          />
+          <NetSavingsChart transactions={transactions} abonnements={abonnements} />
+          <SavingsTrendChart transactions={transactions} abonnements={abonnements} />
+        </div>
+      ) : activeDashTab === "correlations" ? (
+        <div className="animate-in fade-in duration-300">
+          <PerformanceCorrelations
+            sportHistory={sportHistory}
+            weeklyObjectives={weeklyObjectives}
+            transactions={transactions}
+          />
+        </div>
+      ) : (
+        <div className="animate-in fade-in duration-300">
+          <FireCalculator />
+        </div>
+      )}
     </div>
   );
 }

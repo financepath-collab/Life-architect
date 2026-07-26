@@ -2766,7 +2766,6 @@ export default function App() {
         { id: "budgets", label: "Budgets Mensuels", icon: Landmark, desc: "Gestion de vos plafonds de dépenses par enveloppe." },
         { id: "epargnes", label: "Objectifs Épargne", icon: PiggyBank, desc: "Progression vers vos projets immobiliers ou d'équipements." },
         { id: "stocks", label: "Portefeuille Bourse", icon: Wallet, desc: "Suivi de vos investissements en BVC." },
-        { id: "charts", label: "Graphiques & Analyses", icon: BarChart3, desc: "Visualisation complète de votre santé financière." },
         { id: "wishlist", label: "Wish List", icon: Gift, desc: "Objets de désir et grands projets d'achat à long terme." },
         { id: "achats_couteux", label: "Achats Coûteux", icon: Hourglass, desc: "Achats importants de moyenne échelle prévus à moyen terme." }
       ]
@@ -5132,7 +5131,7 @@ export default function App() {
                       setEpargnes={setEpargnes}
                       triggerToast={triggerToast}
                     />
-                  ) : activeMenu === "finance_dash" ? (
+                  ) : (activeMenu === "finance_dash" || activeMenu === "charts") ? (
                     <FinanceSectionDashboard
                       accounts={accounts}
                       budgets={budgets}
@@ -5141,7 +5140,10 @@ export default function App() {
                       stocks={stocks}
                       transactions={transactions}
                       salaires={salaires}
+                      sportHistory={sportHistory}
+                      weeklyObjectives={weeklyObjectives}
                       onNavigate={handleMenuClick}
+                      initialTab={activeMenu === "charts" ? "charts" : "overview"}
                     />
                   ) : activeMenu === "productivity_dash" ? (
                     <ProductivitySectionDashboard
@@ -5177,72 +5179,7 @@ export default function App() {
                       screenMedia={screenMedia}
                       onNavigate={handleMenuClick}
                     />
-                  ) : activeMenu === "charts" ? (
-                    <div className="space-y-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
-                        <div className="space-y-1">
-                          <h3 className="text-base font-extrabold text-neutral-900 tracking-tight">Graphiques & Analyses Croisées</h3>
-                          <p className="text-xs text-neutral-400">Analyse de vos flux financiers croisée avec vos indices d'effort et d'autodiscipline.</p>
-                        </div>
-                        
-                        {/* CHART SUB-TABS SELECTOR */}
-                        <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-xl self-start">
-                          <button
-                            onClick={() => setActiveChartsSubTab("finance")}
-                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                              activeChartsSubTab === "finance"
-                                ? "bg-white text-neutral-950 shadow-3xs"
-                                : "text-neutral-500 hover:text-neutral-900"
-                            }`}
-                          >
-                            Analyses Financières
-                          </button>
-                          <button
-                            onClick={() => setActiveChartsSubTab("correlations")}
-                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                              activeChartsSubTab === "correlations"
-                                ? "bg-white text-neutral-950 shadow-3xs"
-                                : "text-neutral-500 hover:text-neutral-900"
-                            }`}
-                          >
-                            Corrélations Bien-être
-                          </button>
-                          <button
-                            onClick={() => setActiveChartsSubTab("fire")}
-                            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                              activeChartsSubTab === "fire"
-                                ? "bg-white text-neutral-950 shadow-3xs"
-                                : "text-neutral-500 hover:text-neutral-900"
-                            }`}
-                          >
-                            Liberté Financière (FIRE)
-                          </button>
-                        </div>
-                      </div>
-
-                      {activeChartsSubTab === "finance" ? (
-                        <div className="space-y-6 animate-in fade-in duration-300">
-                          <FinanceCharts
-                            transactions={transactions}
-                            budgets={budgets}
-                            stocks={stocks}
-                            epargnes={epargnes}
-                            abonnements={abonnements}
-                          />
-                          <NetSavingsChart transactions={transactions} abonnements={abonnements} />
-                          <SavingsTrendChart transactions={transactions} abonnements={abonnements} />
-                        </div>
-                      ) : activeChartsSubTab === "correlations" ? (
-                        <PerformanceCorrelations
-                          sportHistory={sportHistory}
-                          weeklyObjectives={weeklyObjectives}
-                          transactions={transactions}
-                        />
-                      ) : (
-                        <FireCalculator />
-                      )}
-                    </div>
-                                    ) : activeMenu === "sport" ? (
+                  ) : activeMenu === "sport" ? (
                     <FocusSport 
                       exercises={sportExercises} 
                       setExercises={setSportExercises} 
