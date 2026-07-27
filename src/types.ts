@@ -404,6 +404,13 @@ export interface ProjectBusinessKPIs {
   customKPIs?: { id: string; label: string; target: string; current: string; unit?: string }[];
 }
 
+export interface ProjectObjective {
+  title: string;
+  targetValue: number;
+  currentValue: number;
+  unit: string;
+}
+
 export interface ProjectFolder {
   id: string;
   name: string;
@@ -430,6 +437,9 @@ export interface ProjectFolder {
 
   // Detailed Business Goals & Metrics Targets
   businessKPIs?: ProjectBusinessKPIs;
+
+  // Structured KPI Objectives
+  objectives?: ProjectObjective[];
 
   associatedFormationIds: string[];
   associatedLinkIds: string[];

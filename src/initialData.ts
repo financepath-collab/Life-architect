@@ -554,6 +554,12 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
         { id: "ckpi_1", label: "Partenariats B2B Sponsoring", target: "5", current: "2", unit: "marques" }
       ]
     },
+    objectives: [
+      { title: "Abonnés YouTube", targetValue: 10000, currentValue: 3450, unit: "abonnés" },
+      { title: "Ventes Modèles Excel & Bourse", targetValue: 120, currentValue: 32, unit: "ventes" },
+      { title: "Revenus Publicitaires AdSense", targetValue: 12000, currentValue: 3850, unit: "MAD" },
+      { title: "Inscriptions Formations M&A", targetValue: 50, currentValue: 18, unit: "inscrits" }
+    ],
     associatedFormationIds: ["f1", "f2"],
     associatedLinkIds: [],
     associatedGoalIds: ["mg1"],
@@ -607,6 +613,12 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
         { id: "ckpi_2", label: "Taux de Réussite aux Entretiens M&A", target: "90", current: "85", unit: "%" }
       ]
     },
+    objectives: [
+      { title: "Inscrits Programme Académie", targetValue: 100, currentValue: 36, unit: "élèves" },
+      { title: "Ventes Modèles LBO & Valo", targetValue: 200, currentValue: 58, unit: "ventes" },
+      { title: "Clients Coaching Immersion PE", targetValue: 30, currentValue: 12, unit: "clients" },
+      { title: "Chiffre d'Affaires Académie", targetValue: 120000, currentValue: 48000, unit: "MAD" }
+    ],
     associatedFormationIds: ["f3"],
     associatedLinkIds: [],
     associatedGoalIds: ["mg2"],
@@ -655,6 +667,11 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
       targetCustomRevenue: 35000,
       currentCustomRevenue: 12800
     },
+    objectives: [
+      { title: "Membres Abonnés Newsletter", targetValue: 500, currentValue: 180, unit: "membres" },
+      { title: "Ventes Guides & Subscriptions", targetValue: 150, currentValue: 45, unit: "ventes" },
+      { title: "Revenu Récurrent Mensuel (MRR)", targetValue: 35000, currentValue: 12800, unit: "MAD" }
+    ],
     associatedFormationIds: [],
     associatedLinkIds: [],
     associatedGoalIds: [],

@@ -2761,9 +2761,8 @@ export default function App() {
       icon: Coins,
       items: [
         { id: "saisie_unifiee", label: "Saisie Unifiée des Flux", icon: Layers, desc: "Guichet unique de saisie avec catégories & sous-catégories détaillées, dispatch automatique vers salaires, abonnements, charges et comptes." },
-        { id: "finance_dash", label: "Dashboard Finance", icon: LayoutDashboard, desc: "Indicateurs financiers clés, budgets et analyses." },
-        { id: "comptes", label: "Comptes Bancaires", icon: Landmark, desc: "Gestion des comptes pro, perso et liquidités." },
-        { id: "budgets", label: "Budgets Mensuels", icon: Landmark, desc: "Gestion de vos plafonds de dépenses par enveloppe." },
+        { id: "finance_dash", label: "Dashboard Finance", icon: LayoutDashboard, desc: "Indicateurs financiers clés, suivi des flux et synthèses." },
+        { id: "comptes", label: "Comptes Bancaires & Trésorerie", icon: Landmark, desc: "Gestion et suivi des soldes réels de vos comptes pro, perso et liquidités." },
         { id: "epargnes", label: "Objectifs Épargne & Wishlist", icon: PiggyBank, desc: "Progression vers vos grands projets de vie, rêves, envies d'achats et objectifs d'épargne." },
         { id: "stocks", label: "Portefeuille Bourse", icon: Wallet, desc: "Suivi de vos investissements en BVC." },
         { id: "achats_couteux", label: "Achats Coûteux", icon: Hourglass, desc: "Achats importants de moyenne échelle prévus à moyen terme." }

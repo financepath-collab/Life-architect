@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent, TopicToCover, ProjectBusinessKPIs } from "../types";
+import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent, TopicToCover, ProjectBusinessKPIs, ProjectObjective } from "../types";
 import { 
   Folder, 
   FolderOpen, 
@@ -185,6 +185,13 @@ export default function ProjectFoldersSection({
   const [newCustomKPITarget, setNewCustomKPITarget] = useState("");
   const [newCustomKPICurrent, setNewCustomKPICurrent] = useState("");
   const [newCustomKPIUnit, setNewCustomKPIUnit] = useState("");
+
+  // Direct Project Objectives (objectives field: ProjectObjective[])
+  const [newObjTitle, setNewObjTitle] = useState("");
+  const [newObjTarget, setNewObjTarget] = useState("");
+  const [newObjCurrent, setNewObjCurrent] = useState("");
+  const [newObjUnit, setNewObjUnit] = useState("");
+
   const [isEditingStrategy, setIsEditingStrategy] = useState(false);
 
   // Topics to cover (Sujets à traiter) states
@@ -336,6 +343,56 @@ export default function ProjectFoldersSection({
     setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
       ...f,
       businessKPIs: updatedKPIs
+    } : f));
+  };
+
+  // Structured Project Objectives (f.objectives) handlers
+  const handleAddObjectiveItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newObjTitle.trim() || !selectedFolder) return;
+    const newObj: ProjectObjective = {
+      title: newObjTitle.trim(),
+      targetValue: parseFloat(newObjTarget) || 0,
+      currentValue: parseFloat(newObjCurrent) || 0,
+      unit: newObjUnit.trim() || "unités"
+    };
+    const currentObjs = selectedFolder.objectives || [];
+    const updatedObjs = [...currentObjs, newObj];
+
+    setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
+      ...f,
+      objectives: updatedObjs
+    } : f));
+
+    setNewObjTitle("");
+    setNewObjTarget("");
+    setNewObjCurrent("");
+    setNewObjUnit("");
+  };
+
+  const handleQuickUpdateObjCurrent = (idx: number, delta: number) => {
+    if (!selectedFolder || !selectedFolder.objectives) return;
+    const updatedObjs = selectedFolder.objectives.map((obj, i) => {
+      if (i === idx) {
+        return {
+          ...obj,
+          currentValue: Math.max(0, obj.currentValue + delta)
+        };
+      }
+      return obj;
+    });
+    setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
+      ...f,
+      objectives: updatedObjs
+    } : f));
+  };
+
+  const handleDeleteObjectiveItem = (idx: number) => {
+    if (!selectedFolder || !selectedFolder.objectives) return;
+    const updatedObjs = selectedFolder.objectives.filter((_, i) => i !== idx);
+    setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
+      ...f,
+      objectives: updatedObjs
     } : f));
   };
 
@@ -680,13 +737,6 @@ export default function ProjectFoldersSection({
         isArchived: projIsArchived,
         archivedAt: projIsArchived ? new Date().toISOString().split("T")[0] : undefined
       };
-      setFolders(prev => [...prev, newFolder]);
-      setSelectedFolderId(newFolder.id);
-    }
-
-    setShowProjectModal(false);
-    setEditingProject(null);
-  };
       setFolders(prev => [...prev, newFolder]);
       setSelectedFolderId(newFolder.id);
     }
@@ -1615,10 +1665,10 @@ export default function ProjectFoldersSection({
                     <div>
                       <h4 className="text-xs font-black text-neutral-900 uppercase flex items-center gap-2">
                         <Target className="w-4 h-4 text-rose-500" />
-                        <span>Objectifs Stratégiques & Orientation du Projet</span>
+                        <span>Fiche Technique & Objectifs Business du Projet</span>
                       </h4>
                       <p className="text-[10.5px] text-neutral-400 mt-0.5">
-                        Définissez la cible, le but ultime et les KPIs clés pour clarifier chaque projet de chaîne ou formation.
+                        Supervisez les objectifs chiffrés (abonnés payants, ventes, formations, AdSense) et la fiche stratégique globale.
                       </p>
                     </div>
 
@@ -1639,21 +1689,176 @@ export default function ProjectFoldersSection({
                       {isEditingStrategy ? (
                         <>
                           <Check className="w-3.5 h-3.5" />
-                          <span>Enregistrer la Stratégie</span>
+                          <span>Enregistrer les Modifications</span>
                         </>
                       ) : (
                         <>
                           <Pencil className="w-3.5 h-3.5 text-indigo-600" />
-                          <span>Modifier les Objectifs</span>
+                          <span>Modifier la Fiche & Cibles</span>
                         </>
                       )}
                     </button>
                   </div>
 
-                  {/* Cards for Strategy */}
+                  {/* 1. Extended Technical Overview Banner */}
+                  <div className="bg-gradient-to-r from-neutral-900 via-neutral-950 to-indigo-950 text-white p-5 rounded-2xl space-y-4 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Rocket className="w-4 h-4 text-rose-400" />
+                        <span className="text-xs font-black uppercase tracking-wider text-rose-300">Phase & Avancement Produit</span>
+                      </div>
+                      
+                      {isEditingStrategy ? (
+                        <select
+                          value={projStatusPhase}
+                          onChange={(e) => setProjStatusPhase(e.target.value as ProjectFolder["statusPhase"])}
+                          className="text-xs font-extrabold bg-neutral-800 border border-neutral-700 text-white rounded-lg px-2.5 py-1 focus:outline-hidden"
+                        >
+                          <option value="Idéation">Phase : Idéation</option>
+                          <option value="Conception">Phase : Conception</option>
+                          <option value="Prototypage & MVP">Phase : Prototypage & MVP</option>
+                          <option value="Lancement">Phase : Lancement</option>
+                          <option value="Croissance & Ventes">Phase : Croissance & Ventes</option>
+                          <option value="Scalabilité & Maturité">Phase : Scalabilité & Maturité</option>
+                        </select>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-200 font-mono">
+                          {selectedFolder.statusPhase || "Croissance & Ventes"}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs font-medium">
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block">Date de Lancement :</span>
+                        {isEditingStrategy ? (
+                          <input
+                            type="date"
+                            value={projLaunchDate}
+                            onChange={(e) => setProjLaunchDate(e.target.value)}
+                            className="text-xs bg-neutral-800 border border-neutral-700 text-white rounded-lg p-1.5 w-full font-mono"
+                          />
+                        ) : (
+                          <span className="text-white font-bold font-mono">
+                            {selectedFolder.launchDate || "Non définie"}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block">Budget & Investissement :</span>
+                        {isEditingStrategy ? (
+                          <input
+                            type="number"
+                            value={projBudget}
+                            onChange={(e) => setProjBudget(e.target.value)}
+                            placeholder="ex: 15000"
+                            className="text-xs bg-neutral-800 border border-neutral-700 text-white rounded-lg p-1.5 w-full font-mono"
+                          />
+                        ) : (
+                          <span className="text-emerald-400 font-bold font-mono">
+                            {selectedFolder.projectBudget ? `${selectedFolder.projectBudget.toLocaleString()} MAD / €` : "Non spécifié"}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1 sm:col-span-2">
+                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block">Équipe & Intervenants :</span>
+                        {isEditingStrategy ? (
+                          <input
+                            type="text"
+                            value={projTeam}
+                            onChange={(e) => setProjTeam(e.target.value)}
+                            placeholder="ex: Fondateur, Monteur, Customer Manager..."
+                            className="text-xs bg-neutral-800 border border-neutral-700 text-white rounded-lg p-1.5 w-full"
+                          />
+                        ) : (
+                          <span className="text-neutral-200 font-medium">
+                            {selectedFolder.teamStakeholders || "Fondateur principal"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tech Stack & Risks */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-white/10 text-xs">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-indigo-300 uppercase tracking-wider">
+                          <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Stack Technique & Outils Outilés :</span>
+                        </div>
+                        {isEditingStrategy ? (
+                          <input
+                            type="text"
+                            value={projTechStack}
+                            onChange={(e) => setProjTechStack(e.target.value)}
+                            placeholder="ex: YouTube Studio, Stripe, Kajabi, Substack..."
+                            className="text-xs bg-neutral-800 border border-neutral-700 text-white rounded-lg p-1.5 w-full"
+                          />
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {selectedFolder.techStack && selectedFolder.techStack.length > 0 ? (
+                              selectedFolder.techStack.map((tech, idx) => (
+                                <span key={idx} className="text-[9.5px] font-bold bg-white/10 border border-white/15 px-2 py-0.5 rounded-md text-neutral-200 font-mono">
+                                  {tech}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-neutral-400 italic text-[11px]">Aucun outil renseigné</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-amber-300 uppercase tracking-wider">
+                          <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Risques Clés & Freins Identifiés :</span>
+                        </div>
+                        {isEditingStrategy ? (
+                          <input
+                            type="text"
+                            value={projKeyRisks}
+                            onChange={(e) => setProjKeyRisks(e.target.value)}
+                            placeholder="ex: Risque d'algorithme, délai d'enregistrement..."
+                            className="text-xs bg-neutral-800 border border-neutral-700 text-white rounded-lg p-1.5 w-full"
+                          />
+                        ) : (
+                          <span className="text-neutral-300 italic text-[11px] block pt-0.5">
+                            {selectedFolder.keyRisks || "Aucun risque bloquant identifié pour l'instant."}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Proposition de Valeur & Strategic Baseline */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* UVP */}
+                    <div className="bg-neutral-50/70 border border-neutral-200/80 rounded-2xl p-4 space-y-2 md:col-span-1">
+                      <div className="flex items-center gap-2 text-indigo-900 text-xs font-extrabold uppercase tracking-wide">
+                        <div className="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
+                          <Award className="w-4 h-4" />
+                        </div>
+                        <span>Proposition de Valeur (UVP)</span>
+                      </div>
+                      {isEditingStrategy ? (
+                        <textarea
+                          value={projValueProp}
+                          onChange={(e) => setProjValueProp(e.target.value)}
+                          placeholder="Ex: Analyses financières de niveau fonds M&A rendues accessibles..."
+                          rows={3}
+                          className="w-full text-xs font-medium text-neutral-800 bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                        />
+                      ) : (
+                        <p className="text-xs text-neutral-700 font-medium leading-relaxed bg-white/60 p-3 rounded-xl border border-neutral-100 min-h-[80px]">
+                          {selectedFolder.valueProposition || <span className="text-neutral-400 italic">Renseignez votre élément différenciateur principal.</span>}
+                        </p>
+                      )}
+                    </div>
+
                     {/* Target Audience */}
-                    <div className="bg-neutral-50/70 border border-neutral-200/80 rounded-2xl p-4 space-y-2">
+                    <div className="bg-neutral-50/70 border border-neutral-200/80 rounded-2xl p-4 space-y-2 md:col-span-1">
                       <div className="flex items-center gap-2 text-indigo-900 text-xs font-extrabold uppercase tracking-wide">
                         <div className="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
                           <Compass className="w-4 h-4" />
@@ -1665,62 +1870,747 @@ export default function ProjectFoldersSection({
                           value={projTargetAudience}
                           onChange={(e) => setProjTargetAudience(e.target.value)}
                           placeholder="Ex: Étudiants en finance, jeunes professionnels M&A / Private Equity..."
-                          rows={4}
+                          rows={3}
                           className="w-full text-xs font-medium text-neutral-800 bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                         />
                       ) : (
-                        <p className="text-xs text-neutral-700 font-medium leading-relaxed bg-white/60 p-3 rounded-xl border border-neutral-100 min-h-[90px]">
-                          {selectedFolder.targetAudience || <span className="text-neutral-400 italic">Aucune audience définie. Cliquez sur Modifier pour la spécifier.</span>}
+                        <p className="text-xs text-neutral-700 font-medium leading-relaxed bg-white/60 p-3 rounded-xl border border-neutral-100 min-h-[80px]">
+                          {selectedFolder.targetAudience || <span className="text-neutral-400 italic">Aucune audience définie.</span>}
                         </p>
                       )}
                     </div>
 
                     {/* Core Goal */}
-                    <div className="bg-neutral-50/70 border border-neutral-200/80 rounded-2xl p-4 space-y-2">
+                    <div className="bg-neutral-50/70 border border-neutral-200/80 rounded-2xl p-4 space-y-2 md:col-span-1">
                       <div className="flex items-center gap-2 text-rose-900 text-xs font-extrabold uppercase tracking-wide">
                         <div className="p-1.5 bg-rose-100 text-rose-700 rounded-lg">
                           <Target className="w-4 h-4" />
                         </div>
-                        <span>Objectif Stratégique Principal</span>
+                        <span>Objectif Stratégique Globale</span>
                       </div>
                       {isEditingStrategy ? (
                         <textarea
                           value={projCoreGoal}
                           onChange={(e) => setProjCoreGoal(e.target.value)}
-                          placeholder="Ex: Développer une audience qualifiée et se positionner comme l'expert de référence..."
-                          rows={4}
+                          placeholder="Ex: Développer une audience qualifiée et générer 100k€ de CA..."
+                          rows={3}
                           className="w-full text-xs font-medium text-neutral-800 bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-rose-500"
                         />
                       ) : (
-                        <p className="text-xs text-neutral-700 font-medium leading-relaxed bg-white/60 p-3 rounded-xl border border-neutral-100 min-h-[90px]">
-                          {selectedFolder.coreGoal || <span className="text-neutral-400 italic">Aucun objectif stratégique défini. Cliquez sur Modifier pour le spécifier.</span>}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Key Metric Target */}
-                    <div className="bg-neutral-50/70 border border-neutral-200/80 rounded-2xl p-4 space-y-2">
-                      <div className="flex items-center gap-2 text-amber-900 text-xs font-extrabold uppercase tracking-wide">
-                        <div className="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
-                          <Sparkles className="w-4 h-4" />
-                        </div>
-                        <span>Métriques & Cibles KPIs</span>
-                      </div>
-                      {isEditingStrategy ? (
-                        <textarea
-                          value={projKeyMetricTarget}
-                          onChange={(e) => setProjKeyMetricTarget(e.target.value)}
-                          placeholder="Ex: 10,000 abonnés / 15 000€ CA sur le 1er lancement..."
-                          rows={4}
-                          className="w-full text-xs font-medium text-neutral-800 bg-white border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
-                        />
-                      ) : (
-                        <p className="text-xs text-neutral-700 font-medium leading-relaxed bg-white/60 p-3 rounded-xl border border-neutral-100 min-h-[90px]">
-                          {selectedFolder.keyMetricTarget || <span className="text-neutral-400 italic">Aucune cible métrique renseignée.</span>}
+                        <p className="text-xs text-neutral-700 font-medium leading-relaxed bg-white/60 p-3 rounded-xl border border-neutral-100 min-h-[80px]">
+                          {selectedFolder.coreGoal || <span className="text-neutral-400 italic">Aucun objectif stratégique défini.</span>}
                         </p>
                       )}
                     </div>
                   </div>
+
+                  {/* 3. Detailed Business Targets & Sales Metrics Section */}
+                  <div className="space-y-4 pt-2 border-t border-neutral-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-black text-neutral-900 uppercase">
+                        <Coins className="w-4 h-4 text-emerald-600" />
+                        <span>Objectifs Chiffrés de Monétisation & Ventes</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-neutral-400">
+                        Suivi dynamique des conversions
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      
+                      {/* KPI 1: Abonnés Payants / Subscribers */}
+                      <div className="bg-gradient-to-br from-indigo-50/50 to-neutral-50 border border-indigo-100 p-4 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-extrabold text-indigo-950 uppercase">
+                            <Users className="w-4 h-4 text-indigo-600" />
+                            <span>Abonnés Payants</span>
+                          </div>
+                          {!isEditingStrategy && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleQuickUpdateKPI("currentPayingSubscribers", -1)}
+                                className="w-5 h-5 bg-white border border-neutral-200 text-neutral-600 hover:text-indigo-600 rounded flex items-center justify-center font-black cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <button
+                                onClick={() => handleQuickUpdateKPI("currentPayingSubscribers", 1)}
+                                className="w-5 h-5 bg-indigo-600 text-white rounded flex items-center justify-center font-black hover:bg-indigo-500 cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {isEditingStrategy ? (
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Actuel</label>
+                              <input
+                                type="number"
+                                value={currentSubscribers}
+                                onChange={(e) => setCurrentSubscribers(e.target.value)}
+                                placeholder="0"
+                                className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Cible</label>
+                              <input
+                                type="number"
+                                value={targetSubscribers}
+                                onChange={(e) => setTargetSubscribers(e.target.value)}
+                                placeholder="100"
+                                className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-xl font-black font-mono text-neutral-900">
+                                {selectedFolder.businessKPIs?.currentPayingSubscribers || 0}
+                              </span>
+                              <span className="text-xs font-extrabold font-mono text-neutral-400">
+                                / {selectedFolder.businessKPIs?.targetPayingSubscribers || 0} abonnés
+                              </span>
+                            </div>
+
+                            {/* Progress bar */}
+                            {(() => {
+                              const curr = selectedFolder.businessKPIs?.currentPayingSubscribers || 0;
+                              const tgt = selectedFolder.businessKPIs?.targetPayingSubscribers || 1;
+                              const pct = Math.min(100, Math.round((curr / (tgt || 1)) * 100));
+                              return (
+                                <div className="space-y-1">
+                                  <div className="h-2 w-full bg-indigo-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-indigo-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-[9.5px] font-bold font-mono text-indigo-700 block text-right">
+                                    {pct}% de l'objectif atteint
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+
+                      {/* KPI 2: Produits Vendus / Digital Products */}
+                      <div className="bg-gradient-to-br from-amber-50/50 to-neutral-50 border border-amber-100 p-4 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-extrabold text-amber-950 uppercase">
+                            <ShoppingBag className="w-4 h-4 text-amber-600" />
+                            <span>Produits Numériques Vendus</span>
+                          </div>
+                          {!isEditingStrategy && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleQuickUpdateKPI("currentProductsSold", -1)}
+                                className="w-5 h-5 bg-white border border-neutral-200 text-neutral-600 hover:text-amber-600 rounded flex items-center justify-center font-black cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <button
+                                onClick={() => handleQuickUpdateKPI("currentProductsSold", 1)}
+                                className="w-5 h-5 bg-amber-600 text-white rounded flex items-center justify-center font-black hover:bg-amber-500 cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {isEditingStrategy ? (
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Actuel</label>
+                              <input
+                                type="number"
+                                value={currentProducts}
+                                onChange={(e) => setCurrentProducts(e.target.value)}
+                                placeholder="0"
+                                className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Cible</label>
+                              <input
+                                type="number"
+                                value={targetProducts}
+                                onChange={(e) => setTargetProducts(e.target.value)}
+                                placeholder="50"
+                                className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-xl font-black font-mono text-neutral-900">
+                                {selectedFolder.businessKPIs?.currentProductsSold || 0}
+                              </span>
+                              <span className="text-xs font-extrabold font-mono text-neutral-400">
+                                / {selectedFolder.businessKPIs?.targetProductsSold || 0} ventes
+                              </span>
+                            </div>
+
+                            {(() => {
+                              const curr = selectedFolder.businessKPIs?.currentProductsSold || 0;
+                              const tgt = selectedFolder.businessKPIs?.targetProductsSold || 1;
+                              const pct = Math.min(100, Math.round((curr / (tgt || 1)) * 100));
+                              return (
+                                <div className="space-y-1">
+                                  <div className="h-2 w-full bg-amber-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-amber-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-[9.5px] font-bold font-mono text-amber-700 block text-right">
+                                    {pct}% de l'objectif atteint
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+
+                      {/* KPI 3: Formations Vendues / Inscriptions */}
+                      <div className="bg-gradient-to-br from-emerald-50/50 to-neutral-50 border border-emerald-100 p-4 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-extrabold text-emerald-950 uppercase">
+                            <GraduationCap className="w-4 h-4 text-emerald-600" />
+                            <span>Formations & Inscriptions</span>
+                          </div>
+                          {!isEditingStrategy && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleQuickUpdateKPI("currentFormationsSold", -1)}
+                                className="w-5 h-5 bg-white border border-neutral-200 text-neutral-600 hover:text-emerald-600 rounded flex items-center justify-center font-black cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <button
+                                onClick={() => handleQuickUpdateKPI("currentFormationsSold", 1)}
+                                className="w-5 h-5 bg-emerald-600 text-white rounded flex items-center justify-center font-black hover:bg-emerald-500 cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {isEditingStrategy ? (
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Actuel</label>
+                              <input
+                                type="number"
+                                value={currentFormations}
+                                onChange={(e) => setCurrentFormations(e.target.value)}
+                                placeholder="0"
+                                className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Cible</label>
+                              <input
+                                type="number"
+                                value={targetFormations}
+                                onChange={(e) => setTargetFormations(e.target.value)}
+                                placeholder="30"
+                                className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-xl font-black font-mono text-neutral-900">
+                                {selectedFolder.businessKPIs?.currentFormationsSold || 0}
+                              </span>
+                              <span className="text-xs font-extrabold font-mono text-neutral-400">
+                                / {selectedFolder.businessKPIs?.targetFormationsSold || 0} inscrits
+                              </span>
+                            </div>
+
+                            {(() => {
+                              const curr = selectedFolder.businessKPIs?.currentFormationsSold || 0;
+                              const tgt = selectedFolder.businessKPIs?.targetFormationsSold || 1;
+                              const pct = Math.min(100, Math.round((curr / (tgt || 1)) * 100));
+                              return (
+                                <div className="space-y-1">
+                                  <div className="h-2 w-full bg-emerald-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-[9.5px] font-bold font-mono text-emerald-700 block text-right">
+                                    {pct}% de l'objectif atteint
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+
+                      {/* KPI 4: Accompagnement / Coaching */}
+                      <div className="bg-gradient-to-br from-rose-50/50 to-neutral-50 border border-rose-100 p-4 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-extrabold text-rose-950 uppercase">
+                            <UserCheck className="w-4 h-4 text-rose-600" />
+                            <span>Accompagnement / Coaching</span>
+                          </div>
+                          {!isEditingStrategy && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleQuickUpdateKPI("currentCoachingSold", -1)}
+                                className="w-5 h-5 bg-white border border-neutral-200 text-neutral-600 hover:text-rose-600 rounded flex items-center justify-center font-black cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <button
+                                onClick={() => handleQuickUpdateKPI("currentCoachingSold", 1)}
+                                className="w-5 h-5 bg-rose-600 text-white rounded flex items-center justify-center font-black hover:bg-rose-500 cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {isEditingStrategy ? (
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Actuel</label>
+                              <input
+                                type="number"
+                                value={currentCoaching}
+                                onChange={(e) => setCurrentCoaching(e.target.value)}
+                                placeholder="0"
+                                className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Cible</label>
+                              <input
+                                type="number"
+                                value={targetCoaching}
+                                onChange={(e) => setTargetCoaching(e.target.value)}
+                                placeholder="10"
+                                className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-xl font-black font-mono text-neutral-900">
+                                {selectedFolder.businessKPIs?.currentCoachingSold || 0}
+                              </span>
+                              <span className="text-xs font-extrabold font-mono text-neutral-400">
+                                / {selectedFolder.businessKPIs?.targetCoachingSold || 0} clients
+                              </span>
+                            </div>
+
+                            {(() => {
+                              const curr = selectedFolder.businessKPIs?.currentCoachingSold || 0;
+                              const tgt = selectedFolder.businessKPIs?.targetCoachingSold || 1;
+                              const pct = Math.min(100, Math.round((curr / (tgt || 1)) * 100));
+                              return (
+                                <div className="space-y-1">
+                                  <div className="h-2 w-full bg-rose-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-rose-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-[9.5px] font-bold font-mono text-rose-700 block text-right">
+                                    {pct}% de l'objectif atteint
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+
+                      {/* KPI 5: Revenue AdSense & Média */}
+                      <div className="bg-gradient-to-br from-red-50/50 to-neutral-50 border border-red-100 p-4 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-extrabold text-red-950 uppercase">
+                            <Video className="w-4 h-4 text-red-600" />
+                            <span>Revenus AdSense & Pub</span>
+                          </div>
+                          {!isEditingStrategy && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleQuickUpdateKPI("currentAdsenseRevenue", -500)}
+                                className="w-5 h-5 bg-white border border-neutral-200 text-neutral-600 hover:text-red-600 rounded flex items-center justify-center font-black cursor-pointer text-[10px]"
+                              >
+                                -
+                              </button>
+                              <button
+                                onClick={() => handleQuickUpdateKPI("currentAdsenseRevenue", 500)}
+                                className="w-5 h-5 bg-red-600 text-white rounded flex items-center justify-center font-black hover:bg-red-500 cursor-pointer text-[10px]"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {isEditingStrategy ? (
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Actuel (€/MAD)</label>
+                              <input
+                                type="number"
+                                value={currentAdsense}
+                                onChange={(e) => setCurrentAdsense(e.target.value)}
+                                placeholder="0"
+                                className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Cible (€/MAD)</label>
+                              <input
+                                type="number"
+                                value={targetAdsense}
+                                onChange={(e) => setTargetAdsense(e.target.value)}
+                                placeholder="10000"
+                                className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-xl font-black font-mono text-neutral-900">
+                                {(selectedFolder.businessKPIs?.currentAdsenseRevenue || 0).toLocaleString()}
+                              </span>
+                              <span className="text-xs font-extrabold font-mono text-neutral-400">
+                                / {(selectedFolder.businessKPIs?.targetAdsenseRevenue || 0).toLocaleString()} MAD/€
+                              </span>
+                            </div>
+
+                            {(() => {
+                              const curr = selectedFolder.businessKPIs?.currentAdsenseRevenue || 0;
+                              const tgt = selectedFolder.businessKPIs?.targetAdsenseRevenue || 1;
+                              const pct = Math.min(100, Math.round((curr / (tgt || 1)) * 100));
+                              return (
+                                <div className="space-y-1">
+                                  <div className="h-2 w-full bg-red-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-red-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-[9.5px] font-bold font-mono text-red-700 block text-right">
+                                    {pct}% de l'objectif atteint
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+
+                      {/* KPI 6: Chiffre d'Affaires Global Projet */}
+                      <div className="bg-gradient-to-br from-neutral-900 via-neutral-950 to-indigo-950 text-white border border-neutral-800 p-4 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-extrabold text-emerald-400 uppercase">
+                            <TrendingUp className="w-4 h-4 text-emerald-400" />
+                            <span>Chiffre d'Affaires Total</span>
+                          </div>
+                        </div>
+
+                        {isEditingStrategy ? (
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Généré Actuel</label>
+                              <input
+                                type="number"
+                                value={currentCustomRev}
+                                onChange={(e) => setCurrentCustomRev(e.target.value)}
+                                placeholder="0"
+                                className="w-full p-2 bg-neutral-800 border border-neutral-700 text-white rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase">Objectif Cible</label>
+                              <input
+                                type="number"
+                                value={targetCustomRev}
+                                onChange={(e) => setTargetCustomRev(e.target.value)}
+                                placeholder="50000"
+                                className="w-full p-2 bg-neutral-800 border border-neutral-700 text-white rounded-lg text-xs font-mono font-bold"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-xl font-black font-mono text-emerald-400">
+                                {(selectedFolder.businessKPIs?.currentCustomRevenue || 0).toLocaleString()}
+                              </span>
+                              <span className="text-xs font-extrabold font-mono text-neutral-400">
+                                / {(selectedFolder.businessKPIs?.targetCustomRevenue || 0).toLocaleString()} MAD/€
+                              </span>
+                            </div>
+
+                            {(() => {
+                              const curr = selectedFolder.businessKPIs?.currentCustomRevenue || 0;
+                              const tgt = selectedFolder.businessKPIs?.targetCustomRevenue || 1;
+                              const pct = Math.min(100, Math.round((curr / (tgt || 1)) * 100));
+                              return (
+                                <div className="space-y-1">
+                                  <div className="h-2 w-full bg-neutral-800 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-[9.5px] font-bold font-mono text-emerald-400 block text-right">
+                                    {pct}% accompli
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* 4. Custom Additional KPIs */}
+                  <div className="space-y-3 pt-4 border-t border-neutral-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-black text-neutral-900 uppercase">
+                        <BarChart3 className="w-4 h-4 text-indigo-600" />
+                        <span>KPIs Personnalisés Spécifiques au Projet</span>
+                      </div>
+                    </div>
+
+                    {/* Add custom KPI form */}
+                    <form onSubmit={handleAddCustomKPI} className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-neutral-50 p-3 rounded-xl border border-neutral-200/60">
+                      <div className="sm:col-span-4">
+                        <input
+                          type="text"
+                          value={newCustomKPILabel}
+                          onChange={(e) => setNewCustomKPILabel(e.target.value)}
+                          placeholder="Nom du KPI (ex: Partenariats B2B...)"
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 text-neutral-800"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <input
+                          type="text"
+                          value={newCustomKPICurrent}
+                          onChange={(e) => setNewCustomKPICurrent(e.target.value)}
+                          placeholder="Actuel (ex: 2)"
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 text-neutral-800 font-mono"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <input
+                          type="text"
+                          value={newCustomKPITarget}
+                          onChange={(e) => setNewCustomKPITarget(e.target.value)}
+                          placeholder="Cible (ex: 5)"
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 text-neutral-800 font-mono"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <input
+                          type="text"
+                          value={newCustomKPIUnit}
+                          onChange={(e) => setNewCustomKPIUnit(e.target.value)}
+                          placeholder="Unité (ex: marques, %)"
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 text-neutral-800 font-mono"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <button
+                          type="submit"
+                          className="w-full bg-neutral-900 hover:bg-neutral-800 text-white p-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Ajouter</span>
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Custom KPIs List */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {customKPIList.map((kpi) => {
+                        const currNum = parseFloat(kpi.current) || 0;
+                        const tgtNum = parseFloat(kpi.target) || 1;
+                        const pct = Math.min(100, Math.round((currNum / (tgtNum || 1)) * 100));
+                        return (
+                          <div key={kpi.id} className="bg-white border border-neutral-200/90 p-3 rounded-xl flex flex-col justify-between space-y-2 shadow-2xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-neutral-900">{kpi.label}</span>
+                              <button
+                                onClick={() => handleDeleteCustomKPI(kpi.id)}
+                                className="text-neutral-400 hover:text-red-600 transition-colors p-1"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="flex justify-between items-baseline font-mono text-xs">
+                              <span className="font-black text-indigo-600">{kpi.current} {kpi.unit}</span>
+                              <span className="text-neutral-400">/ {kpi.target} {kpi.unit}</span>
+                            </div>
+
+                            <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-indigo-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {customKPIList.length === 0 && (
+                        <div className="sm:col-span-2 text-center py-4 text-neutral-400 text-xs italic bg-neutral-50/50 rounded-xl border border-dashed border-neutral-200">
+                          Aucun KPI sur mesure ajouté pour l'instant. Créez-en un ci-dessus si besoin !
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 5. Direct Project Objectives Array (objectives: { title, targetValue, currentValue, unit }[]) */}
+                  <div className="space-y-4 pt-4 border-t border-neutral-200/80">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-black text-neutral-900 uppercase">
+                        <Target className="w-4 h-4 text-emerald-600" />
+                        <span>Objectifs KPIs Structurés (Champ objectives)</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-neutral-500">
+                        {selectedFolder.objectives?.length || 0} objectif(s) actif(s)
+                      </span>
+                    </div>
+
+                    {/* Add Objective Item Form */}
+                    <form onSubmit={handleAddObjectiveItem} className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-emerald-50/40 p-3 rounded-xl border border-emerald-200/60">
+                      <div className="sm:col-span-4">
+                        <label className="text-[9px] font-bold text-emerald-900 uppercase block mb-1">Titre de l'Objectif / KPI</label>
+                        <input
+                          type="text"
+                          value={newObjTitle}
+                          onChange={(e) => setNewObjTitle(e.target.value)}
+                          placeholder="ex: Abonnés YouTube, Ventes..."
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 text-neutral-800"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] font-bold text-emerald-900 uppercase block mb-1">Actuel</label>
+                        <input
+                          type="number"
+                          value={newObjCurrent}
+                          onChange={(e) => setNewObjCurrent(e.target.value)}
+                          placeholder="ex: 3450"
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 font-mono"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] font-bold text-emerald-900 uppercase block mb-1">Cible</label>
+                        <input
+                          type="number"
+                          value={newObjTarget}
+                          onChange={(e) => setNewObjTarget(e.target.value)}
+                          placeholder="ex: 10000"
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2 font-mono"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] font-bold text-emerald-900 uppercase block mb-1">Unité</label>
+                        <input
+                          type="text"
+                          value={newObjUnit}
+                          onChange={(e) => setNewObjUnit(e.target.value)}
+                          placeholder="ex: abonnés, MAD..."
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2"
+                        />
+                      </div>
+                      <div className="sm:col-span-2 flex items-end">
+                        <button
+                          type="submit"
+                          className="w-full bg-emerald-700 hover:bg-emerald-800 text-white p-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Ajouter</span>
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Objectives Cards Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {(selectedFolder.objectives || []).map((obj, idx) => {
+                        const tgt = obj.targetValue || 1;
+                        const curr = obj.currentValue || 0;
+                        const pct = Math.min(100, Math.round((curr / tgt) * 100));
+
+                        return (
+                          <div key={idx} className="bg-white border border-neutral-200/90 p-3.5 rounded-2xl space-y-2.5 shadow-2xs">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-extrabold text-neutral-900 truncate">{obj.title}</span>
+                              <button
+                                onClick={() => handleDeleteObjectiveItem(idx)}
+                                title="Supprimer cet objectif"
+                                className="text-neutral-300 hover:text-rose-600 transition-colors p-1"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="flex justify-between items-baseline font-mono text-xs">
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-lg font-black text-emerald-700">{curr.toLocaleString()}</span>
+                                <span className="text-xs font-bold text-neutral-500">{obj.unit}</span>
+                              </div>
+                              <div className="text-neutral-400 font-bold text-[11px]">
+                                Cible : {tgt.toLocaleString()} {obj.unit}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <div className="flex justify-between items-center text-[10px]">
+                                <span className="font-bold text-emerald-800">{pct}% réalisé</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleQuickUpdateObjCurrent(idx, -1)}
+                                    className="px-1.5 py-0.5 bg-neutral-100 hover:bg-neutral-200 rounded font-mono font-bold text-neutral-700 cursor-pointer"
+                                    title="-1"
+                                  >
+                                    -1
+                                  </button>
+                                  <button
+                                    onClick={() => handleQuickUpdateObjCurrent(idx, 1)}
+                                    className="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 rounded font-mono font-bold text-emerald-800 cursor-pointer"
+                                    title="+1"
+                                  >
+                                    +1
+                                  </button>
+                                  <button
+                                    onClick={() => handleQuickUpdateObjCurrent(idx, 10)}
+                                    className="px-1.5 py-0.5 bg-emerald-200 hover:bg-emerald-300 rounded font-mono font-bold text-emerald-900 cursor-pointer"
+                                    title="+10"
+                                  >
+                                    +10
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {(!selectedFolder.objectives || selectedFolder.objectives.length === 0) && (
+                        <div className="sm:col-span-2 text-center py-5 text-neutral-400 text-xs italic bg-neutral-50/50 rounded-2xl border border-dashed border-neutral-200">
+                          Aucun objectif KPI défini dans <code className="font-mono text-[10px] text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">objectives</code> pour ce projet. Utilisez le formulaire ci-dessus pour en ajouter.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                 </div>
               )}
 
@@ -2701,7 +3591,7 @@ export default function ProjectFoldersSection({
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
-            className="bg-white border border-neutral-200/80 rounded-3xl p-6 w-full max-w-lg shadow-2xl relative"
+            className="bg-white border border-neutral-200/80 rounded-3xl p-6 w-full max-w-xl shadow-2xl relative max-h-[90vh] overflow-y-auto"
           >
             <button
               onClick={() => {
@@ -2852,11 +3742,85 @@ export default function ProjectFoldersSection({
                 </>
               )}
 
-              {/* Strategic Objectives fields */}
-              <div className="space-y-2 pt-2 border-t border-neutral-100 font-sans">
-                <span className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block">
-                  🎯 Orientation & Objectifs Stratégiques
+              {/* Strategic Objectives & Business Targets fields */}
+              <div className="space-y-3 pt-2 border-t border-neutral-100 font-sans">
+                <span className="text-[10px] font-black text-indigo-900 uppercase tracking-widest block flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>🎯 Fiche Technique, Orientation & Objectifs Business</span>
                 </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase">
+                      Phase & Statut du Projet
+                    </label>
+                    <select
+                      value={projStatusPhaseModal}
+                      onChange={(e) => setProjStatusPhaseModal(e.target.value as ProjectFolder["statusPhase"])}
+                      className="w-full text-xs font-semibold bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 text-neutral-800"
+                    >
+                      <option value="Idéation">Idéation</option>
+                      <option value="Conception">Conception</option>
+                      <option value="Prototypage & MVP">Prototypage & MVP</option>
+                      <option value="Lancement">Lancement</option>
+                      <option value="Croissance & Ventes">Croissance & Ventes</option>
+                      <option value="Scalabilité & Maturité">Scalabilité & Maturité</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase">
+                      Date de Lancement Prévue
+                    </label>
+                    <input
+                      type="date"
+                      value={projLaunchDateModal}
+                      onChange={(e) => setProjLaunchDateModal(e.target.value)}
+                      className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 font-mono focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase">
+                      Budget & Investissement (€/MAD)
+                    </label>
+                    <input
+                      type="number"
+                      value={projBudgetModal}
+                      onChange={(e) => setProjBudgetModal(e.target.value)}
+                      placeholder="ex: 15000"
+                      className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 font-mono focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase">
+                      Stack Technique & Outils (séparés par des virgules)
+                    </label>
+                    <input
+                      type="text"
+                      value={projTechStackModal}
+                      onChange={(e) => setProjTechStackModal(e.target.value)}
+                      placeholder="ex: YouTube, Kajabi, Stripe, Premiere..."
+                      className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase">
+                    Proposition de Valeur Unique (UVP)
+                  </label>
+                  <input
+                    type="text"
+                    value={projValuePropModal}
+                    onChange={(e) => setProjValuePropModal(e.target.value)}
+                    placeholder="ex: Analyses de niveau fonds M&A rendues accessibles..."
+                    className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-neutral-500 uppercase">
@@ -2873,28 +3837,91 @@ export default function ProjectFoldersSection({
 
                 <div className="space-y-1">
                   <label className="text-[9px] font-bold text-neutral-500 uppercase">
-                    Objectif Principal
+                    Objectif Stratégique Principal
                   </label>
                   <input
                     type="text"
                     value={projCoreGoalModal}
                     onChange={(e) => setProjCoreGoalModal(e.target.value)}
-                    placeholder="ex: Se positionner comme la référence incontournable..."
+                    placeholder="ex: Se positionner comme la référence..."
                     className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 focus:bg-white"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase">
-                    Cible Métrique / KPIs
-                  </label>
-                  <input
-                    type="text"
-                    value={projKeyMetricTargetModal}
-                    onChange={(e) => setProjKeyMetricTargetModal(e.target.value)}
-                    placeholder="ex: 10,000 abonnés / 15 000€ CA..."
-                    className="w-full text-xs font-medium bg-neutral-50/50 border border-neutral-200 rounded-xl p-2.5 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 focus:bg-white"
-                  />
+                {/* Business Targets Grid inside Modal */}
+                <div className="p-3 bg-neutral-50 border border-neutral-200/80 rounded-2xl space-y-2.5">
+                  <span className="text-[9.5px] font-black text-emerald-800 uppercase tracking-wider block flex items-center gap-1">
+                    <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Cibles & Objectifs Chiffrés de Monétisation</span>
+                  </span>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                    <div>
+                      <label className="text-[8.5px] font-bold text-neutral-500 uppercase">Abonnés Payants</label>
+                      <input
+                        type="number"
+                        value={targetSubscribersModal}
+                        onChange={(e) => setTargetSubscribersModal(e.target.value)}
+                        placeholder="Cible ex: 100"
+                        className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[8.5px] font-bold text-neutral-500 uppercase">Produits Vendus</label>
+                      <input
+                        type="number"
+                        value={targetProductsModal}
+                        onChange={(e) => setTargetProductsModal(e.target.value)}
+                        placeholder="Cible ex: 50"
+                        className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[8.5px] font-bold text-neutral-500 uppercase">Formations Vendues</label>
+                      <input
+                        type="number"
+                        value={targetFormationsModal}
+                        onChange={(e) => setTargetFormationsModal(e.target.value)}
+                        placeholder="Cible ex: 30"
+                        className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[8.5px] font-bold text-neutral-500 uppercase">Coaching / Accomp.</label>
+                      <input
+                        type="number"
+                        value={targetCoachingModal}
+                        onChange={(e) => setTargetCoachingModal(e.target.value)}
+                        placeholder="Cible ex: 10"
+                        className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[8.5px] font-bold text-neutral-500 uppercase">AdSense (€/MAD)</label>
+                      <input
+                        type="number"
+                        value={targetAdsenseModal}
+                        onChange={(e) => setTargetAdsenseModal(e.target.value)}
+                        placeholder="Cible ex: 10000"
+                        className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[8.5px] font-bold text-neutral-500 uppercase">CA Total Cible</label>
+                      <input
+                        type="number"
+                        value={targetCustomRevModal}
+                        onChange={(e) => setTargetCustomRevModal(e.target.value)}
+                        placeholder="Cible ex: 50000"
+                        className="w-full p-2 bg-white border border-neutral-200 rounded-lg text-xs font-mono font-bold"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
