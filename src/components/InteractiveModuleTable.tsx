@@ -28,7 +28,12 @@ import {
   ArrowLeftRight,
   Maximize2,
   Minimize2,
-  Rows
+  Rows,
+  Calculator,
+  Hourglass,
+  PiggyBank,
+  Coins,
+  Target
 } from "lucide-react";
 import DateRangeSelector, { DateRange } from "./DateRangeSelector";
 import { autoCategorizeTransaction, bulkAutoCategorizeTransactions } from "../utils/transactionCategorizer";
@@ -54,6 +59,9 @@ interface InteractiveModuleTableProps {
   currencySymbol?: string; // e.g. "MAD"
   onTransfer?: (item: any) => void;
   transferLabel?: string;
+  salaires?: any[];
+  transactions?: any[];
+  abonnements?: any[];
 }
 
 export default function InteractiveModuleTable({
@@ -68,7 +76,10 @@ export default function InteractiveModuleTable({
   placeholderText = "Rechercher...",
   currencySymbol = "MAD",
   onTransfer,
-  transferLabel
+  transferLabel,
+  salaires = [],
+  transactions = [],
+  abonnements = []
 }: InteractiveModuleTableProps) {
   // State variables
   const [searchTerm, setSearchTerm] = useState("");
@@ -411,6 +422,127 @@ export default function InteractiveModuleTable({
 
     return { top3, total };
   }, [data, title]);
+
+  // Simulation & Allocation Mensuelle pour la section Achats Coûteux (prise en compte dynamique des revenus et charges du mois)
+  const achatsCouteuxAllocation = useMemo(() => {
+    const isAchatCouteuxModule = title.toLowerCase().includes("achats coûteux") || title.toLowerCase().includes("achats couteux");
+    if (!isAchatCouteuxModule) return null;
+
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    // 1. Calcul des Revenus Mensuels réels
+    let salairesAmount = 0;
+    if (salaires && salaires.length > 0) {
+      const salMonth = salaires.filter((s: any) => s.date && s.date.startsWith(currentMonthKey));
+      if (salMonth.length > 0) {
+        salairesAmount = salMonth.reduce((acc: number, s: any) => acc + Number(s.netAmount || s.amount || 0), 0);
+      } else {
+        salairesAmount = salaires.reduce((acc: number, s: any) => acc + Number(s.netAmount || s.amount || 0), 0);
+      }
+    }
+    if (salairesAmount === 0) salairesAmount = 37700;
+
+    let txRevenues = 0;
+    if (transactions && transactions.length > 0) {
+      txRevenues = transactions
+        .filter((t: any) => t.type === "Revenue" && t.date && t.date.startsWith(currentMonthKey))
+        .reduce((acc: number, t: any) => acc + Number(t.amount || 0), 0);
+    }
+    const totalRevenues = salairesAmount + txRevenues;
+
+    // 2. Calcul des Charges Mensuelles réelles (Abonnements + Charges/Dépenses du mois)
+    let totalAbonnements = 0;
+    if (abonnements && abonnements.length > 0) {
+      totalAbonnements = abonnements
+        .filter((a: any) => a.status === "Actif" || !a.status)
+        .reduce((acc: number, a: any) => acc + Number(a.costMonthly || a.amount || 0), 0);
+    }
+
+    let txExpenses = 0;
+    if (transactions && transactions.length > 0) {
+      txExpenses = transactions
+        .filter((t: any) => t.type === "Dépense" && t.date && t.date.startsWith(currentMonthKey))
+        .reduce((acc: number, t: any) => acc + Number(t.amount || 0), 0);
+    }
+
+    let totalExpenses = totalAbonnements + txExpenses;
+    if (totalExpenses === 0) totalExpenses = 4420;
+
+    // 3. Capacité d'épargne nette du mois (Revenus - Charges)
+    const netCapacity = totalRevenues - totalExpenses;
+
+    let totalBudget = 0;
+    let totalMonthlyRequired = 0;
+
+    const items = data.map((item: any) => {
+      if (!item) return null;
+      const price = Number(item.estimatedPrice || item.targetAmount || item.amount || 0);
+      const targetDateStr = item.targetDate || item.deadline || "";
+      const status = item.status || "Planifié";
+
+      let monthsRemaining = 1;
+      let diffDays = 30;
+      let timeText = "Échéance non définie";
+
+      if (targetDateStr) {
+        const dDate = new Date(targetDateStr);
+        if (!isNaN(dDate.getTime())) {
+          const diffMs = dDate.getTime() - now.getTime();
+          diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+          if (diffDays <= 0) {
+            monthsRemaining = 0.5;
+            timeText = "Ce mois-ci / Échéance proche";
+          } else {
+            monthsRemaining = Math.max(0.5, diffDays / 30.4375);
+            const mInt = Math.floor(diffDays / 30.4375);
+            if (mInt >= 12) {
+              const yrs = Math.floor(mInt / 12);
+              const remM = mInt % 12;
+              timeText = `${yrs} an${yrs > 1 ? "s" : ""}${remM > 0 ? ` et ${remM} mois` : ""}`;
+            } else if (mInt > 0) {
+              timeText = `${mInt} mois (${diffDays}j)`;
+            } else {
+              timeText = `${diffDays} jour${diffDays > 1 ? "s" : ""}`;
+            }
+          }
+        }
+      }
+
+      const monthlyAllocation = status === "Acheté" ? 0 : Math.round(price / Math.max(0.5, monthsRemaining));
+      if (status !== "Acheté") {
+        totalBudget += price;
+        totalMonthlyRequired += monthlyAllocation;
+      }
+
+      return {
+        ...item,
+        price,
+        monthsRemaining,
+        timeText,
+        monthlyAllocation,
+        status
+      };
+    }).filter(Boolean);
+
+    // Reste à vivre d'épargne libre après provision des achats coûteux
+    const resteAVivre = netCapacity - totalMonthlyRequired;
+    const isSustainable = resteAVivre >= 0;
+    const impactOnIncomePct = totalRevenues > 0 ? Math.round((totalMonthlyRequired / totalRevenues) * 100) : 0;
+
+    return {
+      items,
+      totalBudget,
+      totalMonthlyRequired,
+      activeCount: items.filter((i: any) => i.status !== "Acheté").length,
+      totalRevenues,
+      totalExpenses,
+      netCapacity,
+      resteAVivre,
+      isSustainable,
+      impactOnIncomePct
+    };
+  }, [data, title, salaires, transactions, abonnements]);
 
   // Real-time Category Breakdown calculation for Pie Chart
   const categoryPieData = useMemo(() => {
@@ -946,6 +1078,201 @@ export default function InteractiveModuleTable({
         </div>
       )}
 
+      {/* Module Achats Coûteux: Simulateur d'Allocation & Pédagogie de Financement */}
+      {achatsCouteuxAllocation && (
+        <div className="bg-gradient-to-br from-indigo-950/90 via-neutral-900 to-slate-950 border border-indigo-500/30 rounded-2xl p-5 md:p-6 text-white space-y-5 shadow-xl">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-indigo-500/20">
+            <div className="flex items-start gap-3">
+              <span className="p-3 bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 rounded-xl shrink-0">
+                <Calculator className="w-6 h-6" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-black uppercase tracking-tight text-white">
+                    Simulateur d'Allocation Mensuelle & Étanchéité du Budget
+                  </h3>
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 rounded-full font-mono">
+                    Principe Actif
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-300 mt-1 max-w-2xl leading-relaxed">
+                  <strong className="text-indigo-200">Comment la simulation intègre vos revenus & charges ?</strong> Le coût total d'un achat futur (ex. 15 000 MAD dans 5 mois) <span className="underline decoration-indigo-400">n'est pas déduit de vos revenus actuels</span>. L'application calcule la <strong>mensualité à mettre de côté (3 000 MAD/mois)</strong> et vérifie si votre <strong>capacité nette (Revenus - Charges)</strong> permet de la supporter sereinement.
+                </p>
+              </div>
+            </div>
+
+            {/* Total KPIs */}
+            <div className="flex items-center gap-3 shrink-0 bg-neutral-950/80 p-3 rounded-xl border border-neutral-800">
+              <div>
+                <span className="text-[10px] uppercase font-mono font-bold text-neutral-400 block">Coût Total Projets</span>
+                <span className="text-sm font-black font-mono text-white">
+                  {achatsCouteuxAllocation.totalBudget.toLocaleString("fr-FR")} {currencySymbol}
+                </span>
+              </div>
+              <div className="h-8 w-px bg-neutral-800" />
+              <div>
+                <span className="text-[10px] uppercase font-mono font-bold text-indigo-400 block">Effort Mensuel Requis</span>
+                <span className="text-base font-black font-mono text-emerald-400">
+                  +{achatsCouteuxAllocation.totalMonthlyRequired.toLocaleString("fr-FR")} <span className="text-xs font-normal">{currencySymbol}/mois</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tableau de bord d'Équilibre Financier (Revenus, Charges, Capacité Nette, Provision & Reste à Vivre) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 p-3.5 bg-neutral-950/80 rounded-xl border border-neutral-800/80">
+            <div className="p-2.5 bg-neutral-900/80 rounded-lg border border-neutral-800">
+              <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider block mb-1">
+                1. Revenus du Mois
+              </span>
+              <span className="text-sm md:text-base font-black font-mono text-white">
+                +{achatsCouteuxAllocation.totalRevenues.toLocaleString("fr-FR")} <span className="text-[10px] font-normal text-neutral-400">{currencySymbol}</span>
+              </span>
+            </div>
+
+            <div className="p-2.5 bg-neutral-900/80 rounded-lg border border-neutral-800">
+              <span className="text-[10px] font-mono font-bold text-rose-400 uppercase tracking-wider block mb-1">
+                2. Charges du Mois
+              </span>
+              <span className="text-sm md:text-base font-black font-mono text-rose-300">
+                -{achatsCouteuxAllocation.totalExpenses.toLocaleString("fr-FR")} <span className="text-[10px] font-normal text-neutral-400">{currencySymbol}</span>
+              </span>
+            </div>
+
+            <div className="p-2.5 bg-neutral-900/80 rounded-lg border border-neutral-800">
+              <span className="text-[10px] font-mono font-bold text-indigo-300 uppercase tracking-wider block mb-1">
+                3. Capacité Nette (1 - 2)
+              </span>
+              <span className="text-sm md:text-base font-black font-mono text-indigo-200">
+                ={achatsCouteuxAllocation.netCapacity.toLocaleString("fr-FR")} <span className="text-[10px] font-normal text-neutral-400">{currencySymbol}</span>
+              </span>
+            </div>
+
+            <div className="p-2.5 bg-neutral-900/80 rounded-lg border border-neutral-800">
+              <span className="text-[10px] font-mono font-bold text-amber-300 uppercase tracking-wider block mb-1">
+                4. Provision Achats
+              </span>
+              <span className="text-sm md:text-base font-black font-mono text-amber-300">
+                -{achatsCouteuxAllocation.totalMonthlyRequired.toLocaleString("fr-FR")} <span className="text-[10px] font-normal text-neutral-400">{currencySymbol}/m</span>
+              </span>
+            </div>
+
+            <div className="col-span-2 sm:col-span-1 p-2.5 bg-emerald-950/40 rounded-lg border border-emerald-500/30">
+              <span className="text-[10px] font-mono font-bold text-emerald-300 uppercase tracking-wider block mb-1">
+                5. Épargne Nette Libre
+              </span>
+              <span className={`text-sm md:text-base font-black font-mono ${achatsCouteuxAllocation.isSustainable ? "text-emerald-300" : "text-rose-400"}`}>
+                ={achatsCouteuxAllocation.resteAVivre.toLocaleString("fr-FR")} <span className="text-[10px] font-normal text-neutral-400">{currencySymbol}/m</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Synthèse de soutenabilité & Conseils d'allocation */}
+          <div className={`p-3.5 rounded-xl border text-xs leading-relaxed flex items-center justify-between gap-3 ${
+            achatsCouteuxAllocation.isSustainable 
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+              : "bg-rose-500/10 border-rose-500/30 text-rose-200"
+          }`}>
+            <div className="flex items-center gap-2.5">
+              <span className="text-base">
+                {achatsCouteuxAllocation.isSustainable ? "🟢" : "🔴"}
+              </span>
+              <div>
+                <strong className="font-bold text-white block mb-0.5">
+                  {achatsCouteuxAllocation.isSustainable ? "Simulation Financière Validée & Soutenable" : "Attention : Capacité d'Épargne Dépassée"}
+                </strong>
+                <span>
+                  {achatsCouteuxAllocation.isSustainable ? (
+                    <>Vos revenus mensuels de <strong className="text-white">{achatsCouteuxAllocation.totalRevenues.toLocaleString("fr-FR")} {currencySymbol}</strong> couvrent vos charges (<strong className="text-white">{achatsCouteuxAllocation.totalExpenses.toLocaleString("fr-FR")} {currencySymbol}</strong>) et permettent d'allouer <strong className="text-emerald-300">{achatsCouteuxAllocation.totalMonthlyRequired.toLocaleString("fr-FR")} {currencySymbol}/mois</strong> (soit {achatsCouteuxAllocation.impactOnIncomePct}% de vos revenus) à vos projets tout en conservant <strong className="text-emerald-300">{achatsCouteuxAllocation.resteAVivre.toLocaleString("fr-FR")} {currencySymbol}</strong> d'épargne disponible.</>
+                  ) : (
+                    <>La provision mensuelle requise (<strong className="text-rose-300">{achatsCouteuxAllocation.totalMonthlyRequired.toLocaleString("fr-FR")} {currencySymbol}/mois</strong>) dépasse votre capacité d'épargne disponible (<strong className="text-white">{achatsCouteuxAllocation.netCapacity.toLocaleString("fr-FR")} {currencySymbol}</strong>). Envisagez d'étaler la date d'échéance de vos projets.</>
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <span className="hidden md:inline-block px-2.5 py-1 bg-black/40 border border-white/10 rounded-lg font-mono text-[11px] shrink-0 font-bold">
+              Impact : {achatsCouteuxAllocation.impactOnIncomePct}% des revenus
+            </span>
+          </div>
+
+          {/* Detailed item list allocation */}
+          {achatsCouteuxAllocation.items.length === 0 ? (
+            <div className="text-xs text-neutral-400 italic text-center py-4 bg-neutral-950/40 rounded-xl border border-dashed border-neutral-800">
+              Aucun achat coûteux configuré. Ajoutez vos futurs projets pour calculer l'allocation mensuelle recommandée.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-neutral-400 uppercase tracking-wider font-mono px-1">
+                <span>Décomposition par projet d'achat</span>
+                <span>{achatsCouteuxAllocation.activeCount} projet(s) planifié(s)</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {achatsCouteuxAllocation.items.map((item: any, idx: number) => (
+                  <div 
+                    key={item.id || idx}
+                    className="p-4 bg-neutral-950/90 border border-neutral-800/80 hover:border-indigo-500/40 rounded-xl space-y-3 transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-xs font-black text-white truncate max-w-[160px]" title={item.itemName}>
+                          {item.itemName || "Projet sans nom"}
+                        </span>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full font-mono shrink-0 ${
+                          item.status === "Acheté" 
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            : item.status === "Économise"
+                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                              : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                        }`}>
+                          {item.status}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs font-mono text-neutral-400 mt-1">
+                        <span>Coût Estimé Total :</span>
+                        <span className="font-bold text-white">
+                          {item.price.toLocaleString("fr-FR")} {currencySymbol}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs font-mono text-neutral-400 mt-1">
+                        <span>Échéance Cible :</span>
+                        <span className="text-indigo-300 font-medium">
+                          {item.timeText}
+                        </span>
+                      </div>
+                    </div>
+
+                    {item.status !== "Acheté" && (
+                      <div className="pt-2.5 border-t border-neutral-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-neutral-300 font-mono">Allocation Mensuelle :</span>
+                          <span className="text-xs font-extrabold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            {item.monthlyAllocation.toLocaleString("fr-FR")} {currencySymbol}/mois
+                          </span>
+                        </div>
+
+                        {onTransfer && (
+                          <button
+                            onClick={() => onTransfer(item)}
+                            className="w-full mt-1.5 py-1.5 px-3 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <PiggyBank className="w-3.5 h-3.5 text-indigo-300" />
+                            <span>{transferLabel || "Convertir en Objectif Épargne"}</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Sélecteur de Plage de Dates au-dessus de la table */}
       <DateRangeSelector
         value={dateRange}
@@ -1294,9 +1621,9 @@ export default function InteractiveModuleTable({
                             <span className="font-mono text-[10px] text-neutral-500">{value}%</span>
                           </div>
                         ) : col.type === "date" ? (
-                          <span className="text-neutral-500 font-mono">{value}</span>
+                          <span className="text-neutral-800 font-mono font-medium">{value}</span>
                         ) : (
-                          <span className="truncate max-w-xl block text-neutral-800 dark:text-neutral-200">
+                          <span className="truncate max-w-xl block text-neutral-900 font-semibold">
                             {typeof value === "string" && (value.startsWith("http://") || value.startsWith("https://")) ? (
                               <a 
                                 href={value} 

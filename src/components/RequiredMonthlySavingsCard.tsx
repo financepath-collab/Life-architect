@@ -128,7 +128,7 @@ export default function RequiredMonthlySavingsCard({
 
   // Compute current estimated monthly net savings surplus for comparison
   const monthlyCapacityStats = useMemo(() => {
-    const currentMonthKey = "2026-07";
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     let salaryAmount = 35000;
     const salariesInMonth = salaires.filter(s => s.date && s.date.startsWith(currentMonthKey));
     if (salariesInMonth.length > 0) {

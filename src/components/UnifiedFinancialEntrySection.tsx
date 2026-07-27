@@ -447,7 +447,42 @@ export default function UnifiedFinancialEntrySection({
       note
     };
 
-    // 1. Master Transactions State Update
+    // 1. Revert previous transaction impacts if editing
+    if (editingTx) {
+      if (editingTx.account) {
+        const oldWasRevenue = editingTx.type === "Revenue" || editingTx.category === "Salaire & Revenus";
+        const oldDelta = oldWasRevenue ? editingTx.amount : -editingTx.amount;
+        setAccounts(prev => prev.map(acc => {
+          if (acc.name.toLowerCase() === editingTx.account.toLowerCase() || acc.id === editingTx.account) {
+            return { ...acc, balance: Math.max(0, acc.balance - oldDelta) };
+          }
+          return acc;
+        }));
+      }
+
+      if (editingTx.type === "Dépense" || editingTx.category === "Dépenses Courantes & Achats" || editingTx.category === "Charges Fixes & Abonnements") {
+        setBudgets(prev => prev.map(b => {
+          const isMatch = b.category.toLowerCase().includes(editingTx.category.toLowerCase()) || 
+                          b.category.toLowerCase().includes((editingTx.subCategory || "").toLowerCase()) ||
+                          editingTx.category.toLowerCase().includes(b.category.toLowerCase());
+          if (isMatch) {
+            return { ...b, spentAmount: Math.max(0, b.spentAmount - editingTx.amount) };
+          }
+          return b;
+        }));
+      }
+
+      if (editingTx.type === "Épargne" || editingTx.category === "Épargne & Projets Futurs") {
+        setEpargnes(prev => prev.map(ep => {
+          if (editingTx.subCategory && ep.name.toLowerCase().includes(editingTx.subCategory.toLowerCase())) {
+            return { ...ep, currentAmount: Math.max(0, ep.currentAmount - editingTx.amount) };
+          }
+          return ep;
+        }));
+      }
+    }
+
+    // 2. Master Transactions State Update
     if (editingTx) {
       setTransactions(prev => prev.map(t => t.id === editingTx.id ? updatedTx : t));
     } else {
@@ -456,7 +491,7 @@ export default function UnifiedFinancialEntrySection({
 
     let dispatchLog: string[] = ["Transaction enregistrée dans le journal maître"];
 
-    // 2. DISPATCH TO SALAIRES & REVENUS
+    // 3. DISPATCH TO SALAIRES & REVENUS
     if (category === "Salaire & Revenus" || type === "Revenue") {
       const salEntry: FinanceSalaire = {
         id: "sal_" + Date.now(),
@@ -471,7 +506,7 @@ export default function UnifiedFinancialEntrySection({
       dispatchLog.push(`Déversé dans 'Salaires & Revenus' (Jour de paie : ${jourPaiement || 28})`);
     }
 
-    // 3. DISPATCH TO ABONNEMENTS & CHARGES
+    // 4. DISPATCH TO ABONNEMENTS & CHARGES
     if (category === "Charges Fixes & Abonnements" || isRecurring || finalRecurrence !== "Ponctuel") {
       const subEntry: Abonnement = {
         id: "sub_" + Date.now(),
@@ -491,7 +526,7 @@ export default function UnifiedFinancialEntrySection({
       dispatchLog.push("Synchronisé avec 'Abonnements & Charges'");
     }
 
-    // 4. DISPATCH TO ACHATS MENSUELS
+    // 5. DISPATCH TO ACHATS MENSUELS
     if (category === "Dépenses Courantes & Achats") {
       const achEntry: AchatMensuel = {
         id: "ach_" + Date.now(),
@@ -507,20 +542,32 @@ export default function UnifiedFinancialEntrySection({
       dispatchLog.push("Ajouté aux 'Achats Mensuels'");
     }
 
-    // 5. DISPATCH TO ACCOUNTS
+    // 6. DISPATCH TO ACCOUNTS (BANK ACCOUNTS & TREASURY)
     if (account && accounts.length > 0) {
       const isRevenue = type === "Revenue" || category === "Salaire & Revenus";
       const delta = isRevenue ? parsedAmount : -parsedAmount;
-      setAccounts(prev => prev.map(acc => {
-        if (acc.name.toLowerCase() === account.toLowerCase()) {
-          return { ...acc, balance: Math.max(0, acc.balance + delta) };
+      setAccounts(prev => {
+        const targetExists = prev.some(acc => acc.name.toLowerCase() === account.toLowerCase() || acc.id === account);
+        if (targetExists) {
+          return prev.map(acc => {
+            if (acc.name.toLowerCase() === account.toLowerCase() || acc.id === account) {
+              return { ...acc, balance: Math.max(0, acc.balance + delta) };
+            }
+            return acc;
+          });
+        } else {
+          return prev.map((acc, idx) => {
+            if (idx === 0) {
+              return { ...acc, balance: Math.max(0, acc.balance + delta) };
+            }
+            return acc;
+          });
         }
-        return acc;
-      }));
-      dispatchLog.push(`Solde ajusté sur le compte '${account}'`);
+      });
+      dispatchLog.push(`Solde du compte '${account}' mis à jour (${isRevenue ? '+' : '-'}${parsedAmount.toLocaleString('fr-FR')} MAD)`);
     }
 
-    // 6. DISPATCH TO BUDGETS
+    // 7. DISPATCH TO BUDGETS
     if (type === "Dépense" || category === "Dépenses Courantes & Achats" || category === "Charges Fixes & Abonnements") {
       setBudgets(prev => prev.map(b => {
         const isMatch = b.category.toLowerCase().includes(category.toLowerCase()) || 
@@ -534,7 +581,7 @@ export default function UnifiedFinancialEntrySection({
       dispatchLog.push("Enveloppes budgétaires actualisées");
     }
 
-    // 7. DISPATCH TO EPARGNES
+    // 8. DISPATCH TO EPARGNES
     if (type === "Épargne" || category === "Épargne & Projets Futurs") {
       setEpargnes(prev => prev.map(ep => {
         if (subCategory && ep.name.toLowerCase().includes(subCategory.toLowerCase())) {
@@ -552,10 +599,49 @@ export default function UnifiedFinancialEntrySection({
     setIsModalOpen(false);
   };
 
-  // Delete transaction
+  // Delete transaction with balance & modules reversal
   const handleDeleteTx = (id: string) => {
+    const txToDelete = transactions.find(t => t.id === id);
+    if (txToDelete) {
+      if (txToDelete.account && accounts.length > 0) {
+        const wasRevenue = txToDelete.type === "Revenue" || txToDelete.category === "Salaire & Revenus";
+        const oldDelta = wasRevenue ? txToDelete.amount : -txToDelete.amount;
+        setAccounts(prev => prev.map(acc => {
+          if (acc.name.toLowerCase() === txToDelete.account.toLowerCase() || acc.id === txToDelete.account) {
+            return { ...acc, balance: Math.max(0, acc.balance - oldDelta) };
+          }
+          return acc;
+        }));
+      }
+
+      if (txToDelete.type === "Épargne" || txToDelete.category === "Épargne & Projets Futurs") {
+        setEpargnes(prev => prev.map(ep => {
+          if (txToDelete.subCategory && ep.name.toLowerCase().includes(txToDelete.subCategory.toLowerCase())) {
+            return { ...ep, currentAmount: Math.max(0, ep.currentAmount - txToDelete.amount) };
+          }
+          return ep;
+        }));
+      }
+
+      if (txToDelete.type === "Dépense" || txToDelete.category === "Dépenses Courantes & Achats" || txToDelete.category === "Charges Fixes & Abonnements") {
+        setBudgets(prev => prev.map(b => {
+          const isMatch = b.category.toLowerCase().includes(txToDelete.category.toLowerCase()) || 
+                          b.category.toLowerCase().includes((txToDelete.subCategory || "").toLowerCase()) ||
+                          txToDelete.category.toLowerCase().includes(b.category.toLowerCase());
+          if (isMatch) {
+            return { ...b, spentAmount: Math.max(0, b.spentAmount - txToDelete.amount) };
+          }
+          return b;
+        }));
+      }
+
+      if (txToDelete.type === "Revenue" || txToDelete.category === "Salaire & Revenus") {
+        setSalaires(prev => prev.filter(s => s.grossAmount !== txToDelete.amount || s.date !== txToDelete.date));
+      }
+    }
+
     setTransactions(prev => prev.filter(t => t.id !== id));
-    if (triggerToast) triggerToast("Transaction supprimée du journal.", "info");
+    if (triggerToast) triggerToast("Transaction supprimée et soldes réajustés.", "info");
   };
 
   // KPI Calculations

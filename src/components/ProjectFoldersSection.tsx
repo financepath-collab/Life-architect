@@ -59,9 +59,133 @@ import {
   Activity,
   Layers3,
   PlusCircle,
-  Minus
+  Minus,
+  TrendingDown,
+  ArrowUpRight,
+  ArrowRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+
+/**
+ * Calculates average objective completion percentage and performance status for a project folder
+ */
+export function getFolderCompletionStats(f: ProjectFolder, formationsList: Formation[] = []) {
+  const pcts: number[] = [];
+  let completedCount = 0;
+  let totalCount = 0;
+
+  // 1. Structured objectives (objectives field)
+  if (f.objectives && f.objectives.length > 0) {
+    f.objectives.forEach(obj => {
+      totalCount++;
+      const tgt = obj.targetValue || 1;
+      const curr = obj.currentValue || 0;
+      const pct = Math.min(100, Math.max(0, Math.round((curr / tgt) * 100)));
+      pcts.push(pct);
+      if (pct >= 100) completedCount++;
+    });
+  }
+
+  // 2. Custom checklist objectives
+  if (f.customObjectives && f.customObjectives.length > 0) {
+    f.customObjectives.forEach(co => {
+      totalCount++;
+      pcts.push(co.completed ? 100 : 0);
+      if (co.completed) completedCount++;
+    });
+  }
+
+  // 3. Business KPIs
+  if (f.businessKPIs) {
+    if ((f.businessKPIs.targetPayingSubscribers || 0) > 0) {
+      totalCount++;
+      const pct = Math.min(100, Math.round(((f.businessKPIs.currentPayingSubscribers || 0) / f.businessKPIs.targetPayingSubscribers!) * 100));
+      pcts.push(pct);
+      if (pct >= 100) completedCount++;
+    }
+    if ((f.businessKPIs.targetProductsSold || 0) > 0) {
+      totalCount++;
+      const pct = Math.min(100, Math.round(((f.businessKPIs.currentProductsSold || 0) / f.businessKPIs.targetProductsSold!) * 100));
+      pcts.push(pct);
+      if (pct >= 100) completedCount++;
+    }
+    if ((f.businessKPIs.targetFormationsSold || 0) > 0) {
+      totalCount++;
+      const pct = Math.min(100, Math.round(((f.businessKPIs.currentFormationsSold || 0) / f.businessKPIs.targetFormationsSold!) * 100));
+      pcts.push(pct);
+      if (pct >= 100) completedCount++;
+    }
+    if ((f.businessKPIs.targetCoachingSold || 0) > 0) {
+      totalCount++;
+      const pct = Math.min(100, Math.round(((f.businessKPIs.currentCoachingSold || 0) / f.businessKPIs.targetCoachingSold!) * 100));
+      pcts.push(pct);
+      if (pct >= 100) completedCount++;
+    }
+    if ((f.businessKPIs.targetCustomRevenue || 0) > 0) {
+      totalCount++;
+      const pct = Math.min(100, Math.round(((f.businessKPIs.currentCustomRevenue || 0) / f.businessKPIs.targetCustomRevenue!) * 100));
+      pcts.push(pct);
+      if (pct >= 100) completedCount++;
+    }
+  }
+
+  // 4. Formations linked
+  if (f.associatedFormationIds && f.associatedFormationIds.length > 0 && formationsList.length > 0) {
+    const linked = formationsList.filter(fm => f.associatedFormationIds.includes(fm.id));
+    linked.forEach(fm => {
+      totalCount++;
+      const pct = fm.progressPercent || (fm.status === "Terminé" ? 100 : 0);
+      pcts.push(pct);
+      if (pct >= 100) completedCount++;
+    });
+  }
+
+  if (pcts.length === 0) {
+    return {
+      avgPct: 0,
+      totalCount: 0,
+      completedCount: 0,
+      statusLabel: "Nouveau",
+      badgeClass: "bg-neutral-100 text-neutral-600 border-neutral-200",
+      barClass: "bg-neutral-300",
+      trendType: "none" as const
+    };
+  }
+
+  const avgPct = Math.min(100, Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length));
+
+  if (avgPct >= 80) {
+    return {
+      avgPct,
+      totalCount,
+      completedCount,
+      statusLabel: "Excellente",
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      barClass: "bg-emerald-500",
+      trendType: "up" as const
+    };
+  } else if (avgPct >= 40) {
+    return {
+      avgPct,
+      totalCount,
+      completedCount,
+      statusLabel: "En progrès",
+      badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
+      barClass: "bg-amber-500",
+      trendType: "mid" as const
+    };
+  } else {
+    return {
+      avgPct,
+      totalCount,
+      completedCount,
+      statusLabel: "À booster",
+      badgeClass: "bg-rose-50 text-rose-700 border-rose-200",
+      barClass: "bg-rose-500",
+      trendType: "down" as const
+    };
+  }
+}
 
 interface ProjectFoldersSectionProps {
   folders: ProjectFolder[];
@@ -1215,6 +1339,40 @@ export default function ProjectFoldersSection({
                           </div>
                         </div>
 
+                        {/* Mini-Dashboard Objectifs & Performance */}
+                        {(() => {
+                          const stats = getFolderCompletionStats(f, formations);
+                          return (
+                            <div className="mt-3 p-2.5 bg-neutral-50/90 rounded-xl border border-neutral-200/70 space-y-2 font-sans">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  {stats.trendType === "up" && <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                                  {stats.trendType === "mid" && <ArrowUpRight className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+                                  {stats.trendType === "down" && <TrendingDown className="w-3.5 h-3.5 text-rose-500 shrink-0" />}
+                                  {stats.trendType === "none" && <Minus className="w-3.5 h-3.5 text-neutral-400 shrink-0" />}
+                                  <span className="text-xs font-black font-mono text-neutral-900">{stats.avgPct}%</span>
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase">complété</span>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${stats.badgeClass}`}>
+                                  {stats.statusLabel}
+                                </span>
+                              </div>
+
+                              <div className="h-1.5 w-full bg-neutral-200/80 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${stats.barClass}`}
+                                  style={{ width: `${stats.avgPct}%` }}
+                                />
+                              </div>
+
+                              <div className="flex justify-between items-center text-[9.5px] font-semibold text-neutral-500">
+                                <span>{stats.completedCount}/{stats.totalCount} objectifs validés</span>
+                                <span className="font-mono text-neutral-400 text-[9px]">{stats.totalCount} mesure(s)</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         <div className="mt-3 flex items-center justify-between pt-2 border-t border-neutral-100 text-[10px] text-neutral-400 font-bold uppercase tracking-wider font-sans">
                           <span>{totalItems} Éléments reliés</span>
                           <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1337,43 +1495,63 @@ export default function ProjectFoldersSection({
                     </p>
                   </div>
 
-                  {/* Circular completion metric */}
-                  <div className="flex items-center gap-3 bg-neutral-50 border border-neutral-100 p-2.5 rounded-xl self-end md:self-auto">
-                    <div className="relative w-12 h-12 flex items-center justify-center shrink-0">
-                      <svg className="w-full h-full transform -rotate-90">
-                        <circle
-                          cx="24"
-                          cy="24"
-                          r="20"
-                          className="text-neutral-100"
-                          strokeWidth="4"
-                          stroke="currentColor"
-                          fill="transparent"
-                        />
-                        <circle
-                          cx="24"
-                          cy="24"
-                          r="20"
-                          className="text-indigo-600 transition-all duration-300"
-                          strokeWidth="4"
-                          strokeDasharray={2 * Math.PI * 20}
-                          strokeDashoffset={2 * Math.PI * 20 * (1 - projectStats.progress / 100)}
-                          strokeLinecap="round"
-                          stroke="currentColor"
-                          fill="transparent"
-                        />
-                      </svg>
-                      <span className="absolute text-[10px] font-black font-mono text-neutral-950">
-                        {projectStats.progress}%
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] font-bold text-neutral-400 block uppercase tracking-wider">Avancement Global</span>
-                      <span className="text-xs font-black text-neutral-900 block font-mono">
-                        {projectStats.completedFormations}/{projectStats.totalFormations} cours • {projectStats.completedObjectives}/{projectStats.totalObjectives} jalons
-                      </span>
-                    </div>
-                  </div>
+                  {/* Mini-Dashboard Header Widget */}
+                  {(() => {
+                    const activeStats = getFolderCompletionStats(selectedFolder, formations);
+                    return (
+                      <div className="flex items-center gap-3 bg-gradient-to-br from-neutral-50 to-neutral-100/80 border border-neutral-200/80 p-3 rounded-2xl self-start md:self-auto shadow-2xs">
+                        <div className="relative w-13 h-13 flex items-center justify-center shrink-0">
+                          <svg className="w-full h-full transform -rotate-90">
+                            <circle
+                              cx="26"
+                              cy="26"
+                              r="21"
+                              className="text-neutral-200/80"
+                              strokeWidth="4.5"
+                              stroke="currentColor"
+                              fill="transparent"
+                            />
+                            <circle
+                              cx="26"
+                              cy="26"
+                              r="21"
+                              className={`${activeStats.trendType === "up" ? "text-emerald-500" : activeStats.trendType === "mid" ? "text-amber-500" : "text-rose-500"} transition-all duration-500`}
+                              strokeWidth="4.5"
+                              strokeDasharray={2 * Math.PI * 21}
+                              strokeDashoffset={2 * Math.PI * 21 * (1 - activeStats.avgPct / 100)}
+                              strokeLinecap="round"
+                              stroke="currentColor"
+                              fill="transparent"
+                            />
+                          </svg>
+                          <span className="absolute text-[11px] font-black font-mono text-neutral-900">
+                            {activeStats.avgPct}%
+                          </span>
+                        </div>
+
+                        <div className="space-y-0.5 font-sans">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block">Performances</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-extrabold uppercase border flex items-center gap-1 ${activeStats.badgeClass}`}>
+                              {activeStats.trendType === "up" && <TrendingUp className="w-3 h-3 text-emerald-600" />}
+                              {activeStats.trendType === "mid" && <ArrowUpRight className="w-3 h-3 text-amber-600" />}
+                              {activeStats.trendType === "down" && <TrendingDown className="w-3 h-3 text-rose-500" />}
+                              {activeStats.trendType === "none" && <Minus className="w-3 h-3 text-neutral-400" />}
+                              <span>{activeStats.statusLabel}</span>
+                            </span>
+                          </div>
+
+                          <div className="text-xs font-black text-neutral-900 font-mono">
+                            {activeStats.completedCount}/{activeStats.totalCount} Objectifs atteints
+                          </div>
+
+                          <div className="text-[9.5px] text-neutral-500 font-medium">
+                            {projectStats.completedFormations}/{projectStats.totalFormations} cours terminés
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Sub tabs navigation */}

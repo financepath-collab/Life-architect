@@ -3854,10 +3854,10 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-800 flex flex-col font-sans antialiased overflow-x-hidden w-full max-w-full">
+    <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] flex flex-col font-sans antialiased overflow-x-hidden w-full max-w-full">
       
       {/* UNIFIED STICKY TOP NAVIGATION BAR */}
-      <header className="sticky top-0 z-50 w-full bg-white border-b border-neutral-200/80 shadow-xs">
+      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-neutral-200/80 dark:border-zinc-800 shadow-xs">
         <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 xl:gap-4">
           
           {/* Logo & Brand (Left) */}
@@ -3865,12 +3865,12 @@ export default function App() {
             onClick={() => handleMenuClick("dashboard")}
             className="flex items-center gap-2.5 cursor-pointer shrink-0 select-none"
           >
-            <div className="w-9 h-9 bg-neutral-900 rounded-xl flex items-center justify-center shadow-sm shrink-0 border border-neutral-800">
+            <div className="w-9 h-9 bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-900 rounded-xl flex items-center justify-center shadow-md shadow-indigo-600/20 shrink-0 border border-indigo-400/30">
               <Logo className="w-5 h-5 text-white" />
             </div>
             <div className="hidden min-[1650px]:block">
-              <span className="text-[8px] font-bold text-neutral-400 block tracking-widest uppercase font-mono leading-none">SYSTEM INTEGRATION</span>
-              <span className="text-xs font-black text-neutral-900 block leading-tight mt-0.5">LIFE ARCHITECT</span>
+              <span className="text-[8px] font-bold text-indigo-600 dark:text-indigo-400 block tracking-widest uppercase font-mono leading-none">SYSTEM INTEGRATION</span>
+              <span className="text-xs font-black text-neutral-900 dark:text-white block leading-tight mt-0.5">LIFE ARCHITECT</span>
             </div>
           </div>
 
@@ -3880,10 +3880,10 @@ export default function App() {
             {/* Dashboard Link */}
             <button
               onClick={() => handleMenuClick("dashboard")}
-              className={`flex items-center gap-1 xl:gap-1.5 px-1.5 xl:px-2 py-1.5 rounded-lg text-[9.5px] xl:text-[10px] 2xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
+              className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-xl text-[9.5px] xl:text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
                 activeMenu === "dashboard"
-                  ? "bg-neutral-900 text-white shadow-xs"
-                  : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
+                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 font-black"
+                  : "text-neutral-600 hover:text-indigo-600 hover:bg-indigo-50/70 dark:text-neutral-300 dark:hover:text-white dark:hover:bg-indigo-950/40"
               }`}
             >
               <LayoutDashboard className={`w-3.5 h-3.5 shrink-0 ${activeMenu === "dashboard" ? "text-white" : "text-neutral-400"}`} />
@@ -3894,10 +3894,10 @@ export default function App() {
             {/* Central Calendar Link */}
             <button
               onClick={() => handleMenuClick("central_calendar")}
-              className={`flex items-center gap-1 xl:gap-1.5 px-1.5 xl:px-2 py-1.5 rounded-lg text-[9.5px] xl:text-[10px] 2xl:text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
+              className={`flex items-center gap-1 xl:gap-1.5 px-2 xl:px-2.5 py-1.5 rounded-xl text-[9.5px] xl:text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer select-none whitespace-nowrap shrink-0 ${
                 activeMenu === "central_calendar"
-                  ? "bg-neutral-900 text-white shadow-xs"
-                  : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
+                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 font-black"
+                  : "text-neutral-600 hover:text-indigo-600 hover:bg-indigo-50/70 dark:text-neutral-300 dark:hover:text-white dark:hover:bg-indigo-950/40"
               }`}
             >
               <Calendar className={`w-3.5 h-3.5 shrink-0 ${activeMenu === "central_calendar" ? "text-white" : "text-neutral-400"}`} />
@@ -4060,6 +4060,16 @@ export default function App() {
               )}
             </button>
 
+
+            {/* Theme Selector Palette Button */}
+            <button
+              onClick={() => setIsThemeModalOpen(true)}
+              className="p-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-600 dark:text-indigo-400 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-all cursor-pointer shrink-0 flex items-center gap-1.5 px-2.5"
+              title="Changer la palette de couleurs du site (Émeraude, Indigo, Ambre, Violet, Corail...)"
+            >
+              <Palette className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wider">Thème</span>
+            </button>
 
             {/* Theme Toggle Button */}
             <button
@@ -5010,10 +5020,10 @@ export default function App() {
               >
                 
                 {/* Back button and navigation breadcrumb */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white border border-neutral-200 p-4 rounded-2xl gap-3 shadow-3xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-zinc-900 border border-neutral-200/90 dark:border-zinc-800 p-4 rounded-2xl gap-3 shadow-3xs">
                   <button
                     onClick={() => handleMenuClick("dashboard")}
-                    className="flex items-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer w-fit"
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-extrabold transition-all shadow-sm shadow-indigo-600/20 cursor-pointer w-fit"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>Retour au Tableau de Bord</span>
@@ -5024,7 +5034,7 @@ export default function App() {
                     <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
                     <span className="text-neutral-500 uppercase">{activeCategoryObj.label}</span>
                     <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
-                    <span className="text-neutral-950">
+                    <span className="text-neutral-900 dark:text-neutral-100 font-black">
                       {activeMenu === "charts" 
                         ? "GRAPHIQUES & ANALYSE" 
                         : activeMenu === "sport" 
@@ -5035,9 +5045,9 @@ export default function App() {
                 </div>
 
                 {/* Category Header and Description */}
-                <div className="bg-white border border-neutral-200/85 rounded-3xl p-6 shadow-2xs space-y-2">
+                <div className="bg-white dark:bg-zinc-900 border border-neutral-200/85 dark:border-zinc-800 rounded-3xl p-6 shadow-2xs space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="bg-neutral-900 text-white text-[10px] font-bold font-mono px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    <span className="bg-indigo-600 text-white text-[10px] font-extrabold font-mono px-3 py-1 rounded-full uppercase tracking-wider shadow-xs">
                       Espace {activeCategoryObj.label}
                     </span>
                   </div>
@@ -5317,6 +5327,9 @@ export default function App() {
                             placeholderText={`Rechercher dans ${config.title.toLowerCase()}...`}
                             onTransfer={onTransfer}
                             transferLabel={transferLabel}
+                            salaires={salaires}
+                            transactions={transactions}
+                            abonnements={abonnements}
                           />
                         );
                       })()}
