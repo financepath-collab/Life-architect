@@ -404,11 +404,20 @@ export interface ProjectBusinessKPIs {
   customKPIs?: { id: string; label: string; target: string; current: string; unit?: string }[];
 }
 
+export interface ObjectiveHistoryEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  value: number;
+  note?: string;
+}
+
 export interface ProjectObjective {
+  id?: string;
   title: string;
   targetValue: number;
   currentValue: number;
   unit: string;
+  history?: ObjectiveHistoryEntry[];
 }
 
 export interface ProjectFolder {

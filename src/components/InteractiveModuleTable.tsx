@@ -33,7 +33,13 @@ import {
   Hourglass,
   PiggyBank,
   Coins,
-  Target
+  Target,
+  Clock,
+  Sliders,
+  Zap,
+  TrendingUp,
+  Calendar,
+  ShieldCheck
 } from "lucide-react";
 import DateRangeSelector, { DateRange } from "./DateRangeSelector";
 import { autoCategorizeTransaction, bulkAutoCategorizeTransactions } from "../utils/transactionCategorizer";
@@ -122,6 +128,11 @@ export default function InteractiveModuleTable({
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [csvInput, setCsvInput] = useState("");
   const [importError, setImportError] = useState("");
+
+  // Simulation states for Achats Coûteux Calculator
+  const [simAllocationPct, setSimAllocationPct] = useState<number>(30); // 30% default allocation
+  const [simSelectedItemId, setSimSelectedItemId] = useState<string>("custom");
+  const [simCustomAmount, setSimCustomAmount] = useState<number>(15000);
 
   // Populate form with default empty values when adding
   const openAddModal = () => {
@@ -530,6 +541,53 @@ export default function InteractiveModuleTable({
     const isSustainable = resteAVivre >= 0;
     const impactOnIncomePct = totalRevenues > 0 ? Math.round((totalMonthlyRequired / totalRevenues) * 100) : 0;
 
+    // Calculs du Calculateur d'Échéance & Allocation Optimale
+    let selectedSimPrice = simCustomAmount;
+    if (simSelectedItemId !== "custom") {
+      const matched = items.find((i: any) => (i.id && String(i.id) === String(simSelectedItemId)) || (i.itemName && i.itemName === simSelectedItemId));
+      if (matched) {
+        selectedSimPrice = matched.price;
+      }
+    }
+
+    const simMonthlyAllocation = Math.max(100, Math.round(netCapacity * (simAllocationPct / 100)));
+    const simMonthsNeeded = Math.max(1, Math.ceil(selectedSimPrice / Math.max(1, simMonthlyAllocation)));
+
+    const targetDate = new Date();
+    targetDate.setMonth(targetDate.getMonth() + simMonthsNeeded);
+    const simEstimatedDateText = targetDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+
+    const profiles = [
+      {
+        id: "prudent",
+        label: "Prudent (15%)",
+        pct: 15,
+        monthly: Math.round(netCapacity * 0.15),
+        months: Math.max(1, Math.ceil(selectedSimPrice / Math.max(1, netCapacity * 0.15)))
+      },
+      {
+        id: "equilibre",
+        label: "Équilibré (30%)",
+        pct: 30,
+        monthly: Math.round(netCapacity * 0.30),
+        months: Math.max(1, Math.ceil(selectedSimPrice / Math.max(1, netCapacity * 0.30)))
+      },
+      {
+        id: "accelere",
+        label: "Accéléré (50%)",
+        pct: 50,
+        monthly: Math.round(netCapacity * 0.50),
+        months: Math.max(1, Math.ceil(selectedSimPrice / Math.max(1, netCapacity * 0.50)))
+      },
+      {
+        id: "intensif",
+        label: "Intensif (80%)",
+        pct: 80,
+        monthly: Math.round(netCapacity * 0.80),
+        months: Math.max(1, Math.ceil(selectedSimPrice / Math.max(1, netCapacity * 0.80)))
+      }
+    ];
+
     return {
       items,
       totalBudget,
@@ -540,9 +598,14 @@ export default function InteractiveModuleTable({
       netCapacity,
       resteAVivre,
       isSustainable,
-      impactOnIncomePct
+      impactOnIncomePct,
+      selectedSimPrice,
+      simMonthlyAllocation,
+      simMonthsNeeded,
+      simEstimatedDateText,
+      profiles
     };
-  }, [data, title, salaires, transactions, abonnements]);
+  }, [data, title, salaires, transactions, abonnements, simAllocationPct, simSelectedItemId, simCustomAmount]);
 
   // Real-time Category Breakdown calculation for Pie Chart
   const categoryPieData = useMemo(() => {
@@ -1196,6 +1259,167 @@ export default function InteractiveModuleTable({
             </span>
           </div>
 
+          {/* Calculateur d'Échéance & Allocation Optimale */}
+          <div className="p-4 bg-slate-900/90 border border-indigo-500/30 rounded-xl space-y-4 shadow-inner">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg">
+                  <Clock className="w-5 h-5" />
+                </span>
+                <div>
+                  <h4 className="text-sm font-black uppercase text-white font-mono tracking-wide flex items-center gap-2">
+                    Calculateur de Mois Nécessaires & Allocation Optimale
+                  </h4>
+                  <p className="text-[11px] text-neutral-300">
+                    Estimez précisément le temps d'épargne requis selon vos revenus nets ({achatsCouteuxAllocation.totalRevenues.toLocaleString("fr-FR")} {currencySymbol}) et vos charges fixes ({achatsCouteuxAllocation.totalExpenses.toLocaleString("fr-FR")} {currencySymbol}).
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[11px] font-mono font-bold rounded-lg shrink-0">
+                Capacité Nette : {achatsCouteuxAllocation.netCapacity.toLocaleString("fr-FR")} {currencySymbol}/mois
+              </span>
+            </div>
+
+            {/* Form Inputs for Simulator */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Target Project or Custom Price selection */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-neutral-300 uppercase font-mono block">
+                  Projet d'Achat / Montant Cible
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={simSelectedItemId}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSimSelectedItemId(val);
+                      if (val !== "custom") {
+                        const matched = achatsCouteuxAllocation.items.find((i: any) => (i.id && String(i.id) === val) || (i.itemName && i.itemName === val));
+                        if (matched) setSimCustomAmount(matched.price);
+                      }
+                    }}
+                    className="flex-1 bg-neutral-950 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 font-mono focus:border-indigo-500 focus:outline-none"
+                  >
+                    <option value="custom">-- Montant Personnalisé --</option>
+                    {achatsCouteuxAllocation.items.map((it: any, i: number) => (
+                      <option key={it.id || i} value={it.id || it.itemName}>
+                        {it.itemName || `Projet #${i+1}`} ({it.price.toLocaleString("fr-FR")} {currencySymbol})
+                      </option>
+                    ))}
+                  </select>
+
+                  {simSelectedItemId === "custom" && (
+                    <div className="relative w-36">
+                      <input
+                        type="number"
+                        min="1"
+                        value={simCustomAmount}
+                        onChange={(e) => setSimCustomAmount(Math.max(1, Number(e.target.value)))}
+                        className="w-full bg-neutral-950 border border-neutral-700 text-white text-xs rounded-lg px-3 py-2 font-mono focus:border-indigo-500 focus:outline-none pr-8"
+                        placeholder="Ex: 15000"
+                      />
+                      <span className="absolute right-2.5 top-2 text-[10px] text-neutral-400 font-mono">
+                        {currencySymbol}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Slider for Allocation Percentage */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="font-bold text-neutral-300 uppercase">Allocation Mensuelle ({simAllocationPct}%) :</span>
+                  <span className="font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    +{achatsCouteuxAllocation.simMonthlyAllocation.toLocaleString("fr-FR")} {currencySymbol}/mois
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="100"
+                  step="5"
+                  value={simAllocationPct}
+                  onChange={(e) => setSimAllocationPct(Number(e.target.value))}
+                  className="w-full accent-indigo-500 cursor-pointer"
+                />
+                <div className="flex justify-between items-center text-[10px] text-neutral-400 font-mono">
+                  <span>Prudent (10%)</span>
+                  <span>Recommandé (30%)</span>
+                  <span>Accéléré (50%)</span>
+                  <span>Max (100%)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Results Highlight Banner */}
+            <div className="bg-gradient-to-r from-indigo-900/60 via-purple-900/40 to-slate-900 border border-indigo-500/40 p-4 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="p-3 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-500/30 font-black text-lg">
+                  🎯
+                </span>
+                <div>
+                  <span className="text-[10px] uppercase font-mono font-bold text-neutral-400 block">
+                    Délai Estimé pour {achatsCouteuxAllocation.selectedSimPrice.toLocaleString("fr-FR")} {currencySymbol}
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-2xl font-black font-mono text-emerald-400">
+                      {achatsCouteuxAllocation.simMonthsNeeded} Mois
+                    </span>
+                    <span className="text-xs text-indigo-200 font-medium font-mono">
+                      (Concrétisation prévue : <strong className="text-white uppercase">{achatsCouteuxAllocation.simEstimatedDateText}</strong>)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-neutral-300 font-mono text-right hidden sm:block">
+                  Effort / Capacité :
+                </span>
+                <span className="px-3 py-1.5 bg-indigo-950/80 border border-indigo-500/40 rounded-lg text-xs font-mono font-bold text-indigo-200">
+                  {Math.round((achatsCouteuxAllocation.simMonthlyAllocation / (achatsCouteuxAllocation.netCapacity || 1)) * 100)}% de votre capacité
+                </span>
+              </div>
+            </div>
+
+            {/* Comparison of 4 Allocation Profiles */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider font-mono block">
+                Comparez les profils d'allocation d'épargne optimale :
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {achatsCouteuxAllocation.profiles.map((prof: any) => {
+                  const isActive = simAllocationPct === prof.pct;
+                  return (
+                    <button
+                      key={prof.id}
+                      onClick={() => setSimAllocationPct(prof.pct)}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        isActive
+                          ? "bg-indigo-600/30 border-indigo-400 text-white shadow-md ring-1 ring-indigo-400"
+                          : "bg-neutral-950/60 border-neutral-800 text-neutral-300 hover:border-neutral-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className="text-[11px] font-extrabold truncate">{prof.label}</span>
+                        {isActive && <Check className="w-3.5 h-3.5 text-indigo-300 shrink-0" />}
+                      </div>
+                      <div>
+                        <div className="text-xs font-mono font-black text-emerald-400">
+                          +{prof.monthly.toLocaleString("fr-FR")} {currencySymbol}/m
+                        </div>
+                        <div className="text-[10px] font-mono text-neutral-400 mt-0.5">
+                          Délai : <strong className="text-white">{prof.months} mois</strong>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           {/* Detailed item list allocation */}
           {achatsCouteuxAllocation.items.length === 0 ? (
             <div className="text-xs text-neutral-400 italic text-center py-4 bg-neutral-950/40 rounded-xl border border-dashed border-neutral-800">
@@ -1209,64 +1433,92 @@ export default function InteractiveModuleTable({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {achatsCouteuxAllocation.items.map((item: any, idx: number) => (
-                  <div 
-                    key={item.id || idx}
-                    className="p-4 bg-neutral-950/90 border border-neutral-800/80 hover:border-indigo-500/40 rounded-xl space-y-3 transition-all flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-xs font-black text-white truncate max-w-[160px]" title={item.itemName}>
-                          {item.itemName || "Projet sans nom"}
-                        </span>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full font-mono shrink-0 ${
-                          item.status === "Acheté" 
-                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                            : item.status === "Économise"
-                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                              : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-                        }`}>
-                          {item.status}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs font-mono text-neutral-400 mt-1">
-                        <span>Coût Estimé Total :</span>
-                        <span className="font-bold text-white">
-                          {item.price.toLocaleString("fr-FR")} {currencySymbol}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs font-mono text-neutral-400 mt-1">
-                        <span>Échéance Cible :</span>
-                        <span className="text-indigo-300 font-medium">
-                          {item.timeText}
-                        </span>
-                      </div>
-                    </div>
-
-                    {item.status !== "Acheté" && (
-                      <div className="pt-2.5 border-t border-neutral-800 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-neutral-300 font-mono">Allocation Mensuelle :</span>
-                          <span className="text-xs font-extrabold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                            {item.monthlyAllocation.toLocaleString("fr-FR")} {currencySymbol}/mois
+                {achatsCouteuxAllocation.items.map((item: any, idx: number) => {
+                  const itemSimMonths = Math.max(1, Math.ceil(item.price / Math.max(1, achatsCouteuxAllocation.simMonthlyAllocation)));
+                  return (
+                    <div 
+                      key={item.id || idx}
+                      className="p-4 bg-neutral-950/90 border border-neutral-800/80 hover:border-indigo-500/40 rounded-xl space-y-3 transition-all flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="text-xs font-black text-white truncate max-w-[160px]" title={item.itemName}>
+                            {item.itemName || "Projet sans nom"}
+                          </span>
+                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full font-mono shrink-0 ${
+                            item.status === "Acheté" 
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                              : item.status === "Économise"
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                : "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                          }`}>
+                            {item.status}
                           </span>
                         </div>
 
-                        {onTransfer && (
-                          <button
-                            onClick={() => onTransfer(item)}
-                            className="w-full mt-1.5 py-1.5 px-3 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <PiggyBank className="w-3.5 h-3.5 text-indigo-300" />
-                            <span>{transferLabel || "Convertir en Objectif Épargne"}</span>
-                          </button>
+                        <div className="flex items-center justify-between text-xs font-mono text-neutral-400 mt-1">
+                          <span>Coût Estimé Total :</span>
+                          <span className="font-bold text-white">
+                            {item.price.toLocaleString("fr-FR")} {currencySymbol}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-mono text-neutral-400 mt-1">
+                          <span>Échéance Cible :</span>
+                          <span className="text-indigo-300 font-medium">
+                            {item.timeText}
+                          </span>
+                        </div>
+
+                        {/* Délai estimé selon la capacité nette */}
+                        {item.status !== "Acheté" && (
+                          <div className="p-2 bg-indigo-950/40 border border-indigo-500/20 rounded-lg flex items-center justify-between text-[11px] font-mono mt-2">
+                            <span className="text-neutral-300 flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-amber-400" /> Délai Optimal :
+                            </span>
+                            <span className="font-extrabold text-amber-300">
+                              ~{itemSimMonths} mois
+                            </span>
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                ))}
+
+                      {item.status !== "Acheté" && (
+                        <div className="pt-2.5 border-t border-neutral-800 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] text-neutral-300 font-mono">Allocation Recommandée :</span>
+                            <span className="text-xs font-extrabold font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                              {item.monthlyAllocation.toLocaleString("fr-FR")} {currencySymbol}/mois
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-1.5 pt-1">
+                            <button
+                              onClick={() => {
+                                setSimSelectedItemId(String(item.id || item.itemName));
+                                setSimCustomAmount(item.price);
+                              }}
+                              className="py-1.5 px-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 border border-neutral-700 rounded-lg text-[10px] font-bold font-mono transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <Sliders className="w-3 h-3 text-indigo-400" />
+                              <span>Simuler</span>
+                            </button>
+
+                            {onTransfer && (
+                              <button
+                                onClick={() => onTransfer(item)}
+                                className="py-1.5 px-2 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer truncate"
+                              >
+                                <PiggyBank className="w-3 h-3 text-indigo-300 shrink-0" />
+                                <span className="truncate">{transferLabel || "Épargne"}</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

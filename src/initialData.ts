@@ -555,10 +555,60 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
       ]
     },
     objectives: [
-      { title: "Abonnés YouTube", targetValue: 10000, currentValue: 3450, unit: "abonnés" },
-      { title: "Ventes Modèles Excel & Bourse", targetValue: 120, currentValue: 32, unit: "ventes" },
-      { title: "Revenus Publicitaires AdSense", targetValue: 12000, currentValue: 3850, unit: "MAD" },
-      { title: "Inscriptions Formations M&A", targetValue: 50, currentValue: 18, unit: "inscrits" }
+      { 
+        id: "obj_yt_1",
+        title: "Abonnés YouTube", 
+        targetValue: 10000, 
+        currentValue: 3450, 
+        unit: "abonnés",
+        history: [
+          { id: "h1", date: "2026-06-15", value: 2400, note: "Lancement campagne d'été" },
+          { id: "h2", date: "2026-06-22", value: 2650, note: "Vidéo Modélisation LBO (+250 abonnés)" },
+          { id: "h3", date: "2026-06-29", value: 2890, note: "Reel viral Instagram/Shorts" },
+          { id: "h4", date: "2026-07-06", value: 3120, note: "Sponsoring Bourse" },
+          { id: "h5", date: "2026-07-13", value: 3300, note: "Partenariat M&A" },
+          { id: "h6", date: "2026-07-20", value: 3450, note: "Semaine passée" }
+        ]
+      },
+      { 
+        id: "obj_yt_2",
+        title: "Ventes Modèles Excel & Bourse", 
+        targetValue: 120, 
+        currentValue: 32, 
+        unit: "ventes",
+        history: [
+          { id: "h2_1", date: "2026-06-15", value: 12, note: "Ouverture catalogue" },
+          { id: "h2_2", date: "2026-06-29", value: 20, note: "Promo pack Excel" },
+          { id: "h2_3", date: "2026-07-13", value: 28, note: "Relance newsletter" },
+          { id: "h2_4", date: "2026-07-20", value: 32, note: "Dernier relevé" }
+        ]
+      },
+      { 
+        id: "obj_yt_3",
+        title: "Revenus Publicitaires AdSense", 
+        targetValue: 12000, 
+        currentValue: 3850, 
+        unit: "MAD",
+        history: [
+          { id: "h3_1", date: "2026-06-15", value: 1200 },
+          { id: "h3_2", date: "2026-06-29", value: 2450 },
+          { id: "h3_3", date: "2026-07-13", value: 3100 },
+          { id: "h3_4", date: "2026-07-20", value: 3850 }
+        ]
+      },
+      { 
+        id: "obj_yt_4",
+        title: "Inscriptions Formations M&A", 
+        targetValue: 50, 
+        currentValue: 18, 
+        unit: "inscrits",
+        history: [
+          { id: "h4_1", date: "2026-06-15", value: 5 },
+          { id: "h4_2", date: "2026-06-29", value: 10 },
+          { id: "h4_3", date: "2026-07-13", value: 14 },
+          { id: "h4_4", date: "2026-07-20", value: 18 }
+        ]
+      }
     ],
     associatedFormationIds: ["f1", "f2"],
     associatedLinkIds: [],

@@ -1,5 +1,15 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent, TopicToCover, ProjectBusinessKPIs, ProjectObjective } from "../types";
+import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent, TopicToCover, ProjectBusinessKPIs, ProjectObjective, ObjectiveHistoryEntry } from "../types";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ReferenceLine
+} from "recharts";
 import { 
   Folder, 
   FolderOpen, 
@@ -316,6 +326,12 @@ export default function ProjectFoldersSection({
   const [newObjCurrent, setNewObjCurrent] = useState("");
   const [newObjUnit, setNewObjUnit] = useState("");
 
+  // Objective History & Trend Chart Modal states
+  const [selectedObjHistoryIdx, setSelectedObjHistoryIdx] = useState<number | null>(null);
+  const [histLogDate, setHistLogDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
+  const [histLogValue, setHistLogValue] = useState<string>("");
+  const [histLogNote, setHistLogNote] = useState<string>("");
+
   const [isEditingStrategy, setIsEditingStrategy] = useState(false);
 
   // Topics to cover (Sujets à traiter) states
@@ -474,11 +490,23 @@ export default function ProjectFoldersSection({
   const handleAddObjectiveItem = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newObjTitle.trim() || !selectedFolder) return;
+    const initialVal = parseFloat(newObjCurrent) || 0;
+    const today = new Date().toISOString().split("T")[0];
+    
     const newObj: ProjectObjective = {
+      id: `obj_${Date.now()}`,
       title: newObjTitle.trim(),
       targetValue: parseFloat(newObjTarget) || 0,
-      currentValue: parseFloat(newObjCurrent) || 0,
-      unit: newObjUnit.trim() || "unités"
+      currentValue: initialVal,
+      unit: newObjUnit.trim() || "unités",
+      history: [
+        {
+          id: `hist_${Date.now()}`,
+          date: today,
+          value: initialVal,
+          note: "Valeur initiale à la création"
+        }
+      ]
     };
     const currentObjs = selectedFolder.objectives || [];
     const updatedObjs = [...currentObjs, newObj];
@@ -496,15 +524,111 @@ export default function ProjectFoldersSection({
 
   const handleQuickUpdateObjCurrent = (idx: number, delta: number) => {
     if (!selectedFolder || !selectedFolder.objectives) return;
+    const today = new Date().toISOString().split("T")[0];
+
     const updatedObjs = selectedFolder.objectives.map((obj, i) => {
       if (i === idx) {
+        const newVal = Math.max(0, obj.currentValue + delta);
+        const currentHistory = obj.history || [];
+        const existingTodayIdx = currentHistory.findIndex(h => h.date === today);
+        let updatedHistory = [...currentHistory];
+
+        if (existingTodayIdx >= 0) {
+          updatedHistory[existingTodayIdx] = {
+            ...updatedHistory[existingTodayIdx],
+            value: newVal,
+            note: updatedHistory[existingTodayIdx].note || `Mise à jour rapide (${delta > 0 ? '+' : ''}${delta})`
+          };
+        } else {
+          updatedHistory.push({
+            id: `hist_${Date.now()}`,
+            date: today,
+            value: newVal,
+            note: `Ajustement rapide (${delta > 0 ? '+' : ''}${delta})`
+          });
+        }
+        updatedHistory.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
         return {
           ...obj,
-          currentValue: Math.max(0, obj.currentValue + delta)
+          currentValue: newVal,
+          history: updatedHistory
         };
       }
       return obj;
     });
+
+    setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
+      ...f,
+      objectives: updatedObjs
+    } : f));
+  };
+
+  const handleAddObjectiveHistoryPoint = (objIdx: number, val: number, dateStr?: string, noteStr?: string) => {
+    if (!selectedFolder || !selectedFolder.objectives || objIdx < 0 || objIdx >= selectedFolder.objectives.length) return;
+    const targetObj = selectedFolder.objectives[objIdx];
+    const dateToUse = dateStr || new Date().toISOString().split("T")[0];
+    const currentHistory = targetObj.history || [];
+
+    const existingIdx = currentHistory.findIndex(h => h.date === dateToUse);
+    let updatedHistory: ObjectiveHistoryEntry[] = [];
+
+    if (existingIdx >= 0) {
+      updatedHistory = currentHistory.map((h, idx) => idx === existingIdx ? { ...h, value: val, note: noteStr !== undefined ? noteStr : h.note } : h);
+    } else {
+      const newEntry: ObjectiveHistoryEntry = {
+        id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        date: dateToUse,
+        value: val,
+        note: noteStr || ""
+      };
+      updatedHistory = [...currentHistory, newEntry];
+    }
+
+    updatedHistory.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const updatedObjs = selectedFolder.objectives.map((obj, i) => {
+      if (i === objIdx) {
+        return {
+          ...obj,
+          currentValue: val,
+          history: updatedHistory
+        };
+      }
+      return obj;
+    });
+
+    setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
+      ...f,
+      objectives: updatedObjs
+    } : f));
+
+    setHistLogValue("");
+    setHistLogNote("");
+  };
+
+  const handleDeleteObjectiveHistoryPoint = (objIdx: number, histId: string) => {
+    if (!selectedFolder || !selectedFolder.objectives) return;
+    const targetObj = selectedFolder.objectives[objIdx];
+    const currentHistory = targetObj.history || [];
+    const updatedHistory = currentHistory.filter(h => h.id !== histId);
+
+    let newCurrent = targetObj.currentValue;
+    if (updatedHistory.length > 0) {
+      newCurrent = updatedHistory[updatedHistory.length - 1].value;
+    }
+
+    const updatedObjs = selectedFolder.objectives.map((obj, i) => {
+      if (i === objIdx) {
+        return {
+          ...obj,
+          currentValue: newCurrent,
+          history: updatedHistory
+        };
+      }
+      return obj;
+    });
+
     setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
       ...f,
       objectives: updatedObjs
@@ -2777,6 +2901,18 @@ export default function ProjectFoldersSection({
                                 </div>
                               </div>
                             </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedObjHistoryIdx(idx);
+                                setHistLogValue(String(curr));
+                              }}
+                              className="w-full mt-2 py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer font-mono"
+                            >
+                              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Historique & Graphique ({obj.history?.length || 0} relevés)</span>
+                            </button>
                           </div>
                         );
                       })}
@@ -3249,8 +3385,69 @@ export default function ProjectFoldersSection({
                   </form>
 
                   {/* Combined List of Objectives */}
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     
+                    {/* Structured Project Objectives with History & Trend Charts */}
+                    {selectedFolder.objectives && selectedFolder.objectives.length > 0 && (
+                      <div className="space-y-2.5 pb-3 border-b border-neutral-100">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest block font-sans">
+                            Objectifs KPIs Structurés & Suivi Hebdomadaire ({selectedFolder.objectives.length})
+                          </span>
+                          <span className="text-[10px] text-emerald-700 font-mono font-bold">
+                            Tendance & Relevés Hebdomadaires
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {selectedFolder.objectives.map((obj, idx) => {
+                            const tgt = obj.targetValue || 1;
+                            const curr = obj.currentValue || 0;
+                            const pct = Math.min(100, Math.round((curr / tgt) * 100));
+
+                            return (
+                              <div key={idx} className="bg-neutral-50/80 border border-neutral-200/90 p-3.5 rounded-2xl space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-xs font-extrabold text-neutral-900 truncate">{obj.title}</span>
+                                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold rounded-full">
+                                    {pct}%
+                                  </span>
+                                </div>
+
+                                <div className="flex justify-between items-baseline font-mono text-xs">
+                                  <div className="flex items-baseline gap-1">
+                                    <span className="text-base font-black text-emerald-700">{curr.toLocaleString()}</span>
+                                    <span className="text-xs font-bold text-neutral-500">{obj.unit}</span>
+                                  </div>
+                                  <div className="text-neutral-400 font-bold text-[10.5px]">
+                                    Cible : {tgt.toLocaleString()} {obj.unit}
+                                  </div>
+                                </div>
+
+                                <div className="h-1.5 w-full bg-neutral-200 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                                    style={{ width: `${pct}%` }}
+                                  />
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedObjHistoryIdx(idx);
+                                    setHistLogValue(String(curr));
+                                  }}
+                                  className="w-full mt-1.5 py-1.5 px-3 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer font-mono shadow-2xs"
+                                >
+                                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Historique & Tendance ({obj.history?.length || 0} relevés)</span>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Associated Monthly Goals */}
                     {associatedGoals.length > 0 && (
                       <div className="space-y-2">
@@ -4139,6 +4336,265 @@ export default function ProjectFoldersSection({
               </div>
             </form>
           </motion.div>
+        </div>
+      )}
+
+      {/* Objective Weekly History & Trend Chart Modal */}
+      {selectedObjHistoryIdx !== null && selectedFolder && selectedFolder.objectives && selectedFolder.objectives[selectedObjHistoryIdx] && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-neutral-200 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-5 sm:p-6 space-y-5 text-neutral-900 font-sans">
+            
+            {(() => {
+              const objIdx = selectedObjHistoryIdx;
+              const activeObj = selectedFolder.objectives[objIdx];
+              const historyList = [...(activeObj.history || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+              
+              const curr = activeObj.currentValue || 0;
+              const tgt = activeObj.targetValue || 1;
+              const pct = Math.min(100, Math.round((curr / tgt) * 100));
+
+              // Stats calculation
+              const firstVal = historyList.length > 0 ? historyList[0].value : curr;
+              const latestVal = curr;
+              const totalDelta = latestVal - firstVal;
+              const totalPctChange = firstVal > 0 ? Math.round(((latestVal - firstVal) / firstVal) * 100) : 0;
+              const weeksCount = Math.max(1, historyList.length);
+              const avgWeeklyVelocity = Math.round(totalDelta / weeksCount);
+              const remainingToTarget = Math.max(0, tgt - curr);
+              const estimatedWeeksRemaining = avgWeeklyVelocity > 0 ? Math.ceil(remainingToTarget / avgWeeklyVelocity) : null;
+
+              return (
+                <>
+                  <div className="flex items-start justify-between border-b border-neutral-100 pb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="p-3 bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-2xl font-bold">
+                        <TrendingUp className="w-5 h-5" />
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-black text-neutral-900">
+                            Historique de Progression : {activeObj.title}
+                          </h3>
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-mono font-bold rounded-full">
+                            {pct}% réalisé
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-500 mt-0.5">
+                          Projet : <strong className="text-neutral-800">{selectedFolder.name}</strong> • Cible : <strong className="text-emerald-700">{tgt.toLocaleString()} {activeObj.unit}</strong>
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedObjHistoryIdx(null)}
+                      className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-full hover:bg-neutral-100 transition-all cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* KPI Metrics Summary Bar */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-neutral-50 p-3.5 rounded-2xl border border-neutral-200/80 font-mono">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase block font-sans">Valeur Actuelle</span>
+                      <span className="text-lg font-black text-emerald-700">{curr.toLocaleString()} <span className="text-xs font-medium text-neutral-500">{activeObj.unit}</span></span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase block font-sans">Évolution Totale</span>
+                      <span className={`text-lg font-black ${totalDelta >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {totalDelta >= 0 ? "+" : ""}{totalDelta.toLocaleString()} ({totalPctChange >= 0 ? "+" : ""}{totalPctChange}%)
+                      </span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase block font-sans">Rythme Hebdo Moyen</span>
+                      <span className="text-lg font-black text-indigo-600">
+                        {avgWeeklyVelocity >= 0 ? "+" : ""}{avgWeeklyVelocity.toLocaleString()} <span className="text-[10px] text-neutral-400 font-sans">/sem</span>
+                      </span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-bold text-neutral-400 uppercase block font-sans">Temps Estimé</span>
+                      <span className="text-lg font-black text-amber-600">
+                        {curr >= tgt ? "Atteint 🎉" : estimatedWeeksRemaining ? `~${estimatedWeeksRemaining} sem` : "Indéterminé"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Trend Chart (Recharts AreaChart) */}
+                  <div className="space-y-2 bg-slate-900 p-4 rounded-2xl border border-slate-800 text-white">
+                    <div className="flex items-center justify-between text-xs font-mono text-slate-300">
+                      <span className="font-bold flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-emerald-400" />
+                        Graphique de Tendance Hebdomadaire
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        {historyList.length} relevé(s) enregistré(s)
+                      </span>
+                    </div>
+
+                    {historyList.length === 0 ? (
+                      <div className="h-40 flex items-center justify-center text-xs text-slate-400 italic">
+                        Aucun relevé d'historique. Enregistrez votre premier point ci-dessous !
+                      </div>
+                    ) : (
+                      <div className="h-52 w-full pt-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={historyList} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="colorObjVal" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                            <XAxis 
+                              dataKey="date" 
+                              stroke="#94a3b8" 
+                              fontSize={10} 
+                              tickFormatter={(val) => {
+                                const parts = val.split("-");
+                                return parts.length === 3 ? `${parts[2]}/${parts[1]}` : val;
+                              }} 
+                            />
+                            <YAxis stroke="#94a3b8" fontSize={10} />
+                            <Tooltip
+                              contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "12px", color: "#fff", fontSize: "11px" }}
+                              formatter={(value: any) => [`${value.toLocaleString()} ${activeObj.unit}`, "Valeur"]}
+                              labelFormatter={(label) => `Date: ${label}`}
+                            />
+                            <ReferenceLine 
+                              y={tgt} 
+                              stroke="#10b981" 
+                              strokeDasharray="4 4" 
+                              label={{ value: `Cible (${tgt.toLocaleString()})`, fill: "#34d399", fontSize: 10, position: "top" }} 
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="value" 
+                              stroke="#10b981" 
+                              strokeWidth={2.5} 
+                              fillOpacity={1} 
+                              fill="url(#colorObjVal)" 
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Weekly Log Form */}
+                  <div className="space-y-3 bg-emerald-50/60 p-4 rounded-2xl border border-emerald-200/80">
+                    <span className="text-xs font-black uppercase text-emerald-900 block font-mono">
+                      ➕ Enregistrer un Relevé Hebdomadaire
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                      <div className="sm:col-span-3">
+                        <label className="text-[10px] font-bold text-emerald-950 block mb-1">Date du Relevé</label>
+                        <input
+                          type="date"
+                          value={histLogDate}
+                          onChange={(e) => setHistLogDate(e.target.value)}
+                          className="w-full text-xs font-bold bg-white border border-neutral-200 rounded-xl p-2 text-neutral-800"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="text-[10px] font-bold text-emerald-950 block mb-1">Valeur Mesurée ({activeObj.unit})</label>
+                        <input
+                          type="number"
+                          value={histLogValue}
+                          onChange={(e) => setHistLogValue(e.target.value)}
+                          placeholder={`ex: ${curr}`}
+                          className="w-full text-xs font-bold bg-white border border-neutral-200 rounded-xl p-2 font-mono"
+                        />
+                      </div>
+                      <div className="sm:col-span-4">
+                        <label className="text-[10px] font-bold text-emerald-950 block mb-1">Note / Fait Marquant (Optionnel)</label>
+                        <input
+                          type="text"
+                          value={histLogNote}
+                          onChange={(e) => setHistLogNote(e.target.value)}
+                          placeholder="ex: Lancement vidéo LBO..."
+                          className="w-full text-xs bg-white border border-neutral-200 rounded-xl p-2 text-neutral-800"
+                        />
+                      </div>
+                      <div className="sm:col-span-2 flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const v = parseFloat(histLogValue);
+                            if (!isNaN(v)) {
+                              handleAddObjectiveHistoryPoint(objIdx, v, histLogDate, histLogNote);
+                            }
+                          }}
+                          className="w-full bg-emerald-700 hover:bg-emerald-800 text-white p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Ajouter</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* History Table / Records List */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-black uppercase text-neutral-700 block font-mono">
+                      📋 Tableau des Points Historiques Enregistrés ({historyList.length})
+                    </span>
+
+                    {historyList.length === 0 ? (
+                      <div className="text-xs text-neutral-400 italic text-center py-4 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
+                        Aucun point historique enregistré pour le moment.
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                        {[...historyList].reverse().map((entry, idx) => {
+                          const prevEntry = historyList[historyList.length - 2 - idx];
+                          const delta = prevEntry ? entry.value - prevEntry.value : 0;
+
+                          return (
+                            <div
+                              key={entry.id || idx}
+                              className="flex items-center justify-between p-2.5 bg-neutral-50 hover:bg-neutral-100/80 border border-neutral-200/80 rounded-xl text-xs font-mono transition-all"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="px-2 py-0.5 bg-white border border-neutral-200 rounded-lg text-[11px] font-bold text-neutral-700">
+                                  {entry.date}
+                                </span>
+                                <span className="font-extrabold text-emerald-800 text-sm">
+                                  {entry.value.toLocaleString()} {activeObj.unit}
+                                </span>
+                                {delta !== 0 && (
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${delta > 0 ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}>
+                                    {delta > 0 ? "+" : ""}{delta.toLocaleString()}
+                                  </span>
+                                )}
+                                {entry.note && (
+                                  <span className="text-[11px] text-neutral-500 font-sans italic truncate max-w-xs">
+                                    "{entry.note}"
+                                  </span>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteObjectiveHistoryPoint(objIdx, entry.id)}
+                                className="text-neutral-400 hover:text-rose-600 transition-colors p-1 rounded-lg hover:bg-white cursor-pointer"
+                                title="Supprimer ce point"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                </>
+              );
+            })()}
+
+          </div>
         </div>
       )}
 
