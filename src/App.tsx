@@ -87,7 +87,6 @@ import WeatherWidget from "./components/WeatherWidget";
 import DisciplineHeatmap from "./components/DisciplineHeatmap";
 import Actions30JoursSection from "./components/Actions30JoursSection";
 import FireCalculator from "./components/FireCalculator";
-import JournalSection from "./components/JournalSection";
 import ExcelSyncToolbar from "./components/ExcelSyncToolbar";
 import QuickCaptureInbox from "./components/QuickCaptureInbox";
 import CommandCenterModal from "./components/CommandCenterModal";
@@ -2778,8 +2777,7 @@ export default function App() {
         { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." },
         { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour vos projets pro et perso." },
         { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." },
-        { id: "monthly_goals", label: "Objectifs Mensuels", icon: Target, desc: "Cibles de progression mensuelle pour vos finances, projets et vie pro/perso." },
-        { id: "journal", label: "Journal de Bord", icon: BookOpen, desc: "Réflexions quotidiennes, pensées et notes de progrès." }
+        { id: "monthly_goals", label: "Objectifs Mensuels", icon: Target, desc: "Cibles de progression mensuelle pour vos finances, projets et vie pro/perso." }
       ]
     },
     {
@@ -5202,6 +5200,8 @@ export default function App() {
                       setLinks={setLinks}
                       monthlyGoals={monthlyGoals}
                       setMonthlyGoals={setMonthlyGoals}
+                      epargnes={epargnes}
+                      setEpargnes={setEpargnes}
                       events={editorialEvents}
                       setEvents={setEditorialEvents}
                     />
@@ -5255,8 +5255,6 @@ export default function App() {
                       actions30Jours={actions30Jours}
                       setActions30Jours={setActions30Jours}
                     />
-                  ) : activeMenu === "journal" ? (
-                    <JournalSection entries={journalEntries} setEntries={setJournalEntries} />
                   ) : activeMenu === "budgets" ? (
                     <div className="space-y-6">
                       <BudgetOptimizer

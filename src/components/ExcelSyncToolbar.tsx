@@ -200,17 +200,6 @@ export const MODULE_SCHEMAS: Record<string, { title: string; columns: ExcelColum
       { key: "progress", label: "Progression (%)", type: "number", defaultValue: 0 }
     ]
   },
-  journal: {
-    title: "Journal de Bord",
-    columns: [
-      { key: "id", label: "ID", type: "text" },
-      { key: "date", label: "Date (AAAA-MM-JJ)", type: "date", required: true },
-      { key: "title", label: "Titre", type: "text", required: true },
-      { key: "content", label: "Contenu de la Réflexion", type: "text", required: true },
-      { key: "mood", label: "Humeur (Excellent/Bon/Neutre/Fatigué/Stressé)", type: "text", defaultValue: "Bon" },
-      { key: "tags", label: "Tags / Sujets", type: "text", defaultValue: "" }
-    ]
-  },
   skin: {
     title: "Skin Care Tracker",
     columns: [

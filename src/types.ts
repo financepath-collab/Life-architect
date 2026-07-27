@@ -453,6 +453,7 @@ export interface ProjectFolder {
   associatedFormationIds: string[];
   associatedLinkIds: string[];
   associatedGoalIds: string[];
+  associatedEpargneIds?: string[];
   customObjectives: { id: string; text: string; completed: boolean; dueDate?: string }[];
   topicsToCover?: TopicToCover[];
   customLinks: { id: string; title: string; url: string; category: string }[];

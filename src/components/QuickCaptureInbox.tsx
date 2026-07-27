@@ -166,17 +166,6 @@ export default function QuickCaptureInbox({
     onShowToast(`Converti en Transaction financière (${amount > 0 ? amount + " MAD" : "à configurer"}) !`, "success");
   };
 
-  // Dispatch captured item to today's journal note
-  const convertToJournal = (item: CapturedItem) => {
-    onAddJournalEntry(
-      `Idée Capturée du ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}`,
-      `Cette note a été capturée rapidement via mon Quick Capture Second Brain :\n\n"${item.text}"`,
-      "Neutre"
-    );
-    handleDelete(item.id);
-    onShowToast("Transféré dans votre Journal de Bord quotidien !", "success");
-  };
-
   return (
     <div id="quick-capture-inbox-section" className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-neutral-800 rounded-3xl p-6 shadow-2xs hover:shadow-xs transition-all duration-300">
       
@@ -295,18 +284,6 @@ export default function QuickCaptureInbox({
                       <Coins className="w-3.5 h-3.5 text-neutral-400 group-hover/btn:text-emerald-500" />
                       <span className="text-[10px] font-mono font-bold uppercase hidden md:inline text-neutral-500 group-hover/btn:text-emerald-600">Finances</span>
                     </button>
-
-                    {/* Convert to Journal */}
-                    <button
-                      onClick={() => convertToJournal(item)}
-                      className="p-2 bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-neutral-800 hover:border-indigo-400 hover:text-indigo-600 rounded-xl text-neutral-500 text-xs font-bold transition-all cursor-pointer flex items-center gap-1 group/btn"
-                      title="Déplacer vers Journal de Bord"
-                    >
-                      <BookOpen className="w-3.5 h-3.5 text-neutral-400 group-hover/btn:text-indigo-500" />
-                      <span className="text-[10px] font-mono font-bold uppercase hidden md:inline text-neutral-500 group-hover/btn:text-indigo-600">Note</span>
-                    </button>
-
-                    <div className="w-px h-5 bg-neutral-200 dark:bg-neutral-800 mx-1" />
 
                     {/* Delete Item */}
                     <button

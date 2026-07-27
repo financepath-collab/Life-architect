@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent, TopicToCover, ProjectBusinessKPIs, ProjectObjective, ObjectiveHistoryEntry } from "../types";
+import { Formation, ResourceLink, MonthlyGoal, ProjectFolder, EditorialEvent, TopicToCover, ProjectBusinessKPIs, ProjectObjective, ObjectiveHistoryEntry, FinanceEpargne } from "../types";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -79,7 +79,7 @@ import { motion, AnimatePresence } from "motion/react";
 /**
  * Calculates average objective completion percentage and performance status for a project folder
  */
-export function getFolderCompletionStats(f: ProjectFolder, formationsList: Formation[] = []) {
+export function getFolderCompletionStats(f: ProjectFolder, formationsList: Formation[] = [], epargnesList: FinanceEpargne[] = []) {
   const pcts: number[] = [];
   let completedCount = 0;
   let totalCount = 0;
@@ -150,6 +150,19 @@ export function getFolderCompletionStats(f: ProjectFolder, formationsList: Forma
     });
   }
 
+  // 5. Linked Savings Goals (Epargnes)
+  if (f.associatedEpargneIds && f.associatedEpargneIds.length > 0 && epargnesList.length > 0) {
+    const linkedEpargnes = epargnesList.filter(ep => f.associatedEpargneIds?.includes(ep.id));
+    linkedEpargnes.forEach(ep => {
+      totalCount++;
+      const tgt = ep.targetAmount || 1;
+      const curr = ep.currentAmount || 0;
+      const pct = Math.min(100, Math.max(0, Math.round((curr / tgt) * 100)));
+      pcts.push(pct);
+      if (pct >= 100 || ep.status === "Atteint") completedCount++;
+    });
+  }
+
   if (pcts.length === 0) {
     return {
       avgPct: 0,
@@ -206,6 +219,8 @@ interface ProjectFoldersSectionProps {
   setLinks: React.Dispatch<React.SetStateAction<ResourceLink[]>>;
   monthlyGoals: MonthlyGoal[];
   setMonthlyGoals: React.Dispatch<React.SetStateAction<MonthlyGoal[]>>;
+  epargnes?: FinanceEpargne[];
+  setEpargnes?: React.Dispatch<React.SetStateAction<FinanceEpargne[]>>;
   events: EditorialEvent[];
   setEvents: React.Dispatch<React.SetStateAction<EditorialEvent[]>>;
 }
@@ -219,6 +234,8 @@ export default function ProjectFoldersSection({
   setLinks,
   monthlyGoals = [],
   setMonthlyGoals,
+  epargnes = [],
+  setEpargnes,
   events = [],
   setEvents
 }: ProjectFoldersSectionProps) {
@@ -759,6 +776,7 @@ export default function ProjectFoldersSection({
   // Assoc association dropdown states
   const [showAssociateFormation, setShowAssociateFormation] = useState(false);
   const [showAssociateGoal, setShowAssociateGoal] = useState(false);
+  const [showAssociateEpargne, setShowAssociateEpargne] = useState(false);
   const [showAssociateLink, setShowAssociateLink] = useState(false);
   const [showAssociateEvent, setShowAssociateEvent] = useState(false);
 
@@ -1185,6 +1203,25 @@ export default function ProjectFoldersSection({
     setShowAssociateGoal(false);
   };
 
+  // Associate an existing global Savings Goal (Objectif d'Épargne)
+  const handleAssociateEpargne = (epargneId: string) => {
+    if (!selectedFolder) return;
+    setFolders(prev => prev.map(f => {
+      if (f.id === selectedFolder.id) {
+        const currentEpIds = f.associatedEpargneIds || [];
+        const alreadyLinked = currentEpIds.includes(epargneId);
+        return {
+          ...f,
+          associatedEpargneIds: alreadyLinked
+            ? currentEpIds.filter(id => id !== epargneId)
+            : [...currentEpIds, epargneId]
+        };
+      }
+      return f;
+    }));
+    setShowAssociateEpargne(false);
+  };
+
   // Associate/disassociate an existing calendar event
   const handleAssociateEvent = (eventId: string) => {
     if (!selectedFolder) return;
@@ -1236,6 +1273,12 @@ export default function ProjectFoldersSection({
     return monthlyGoals.filter(g => selectedFolder.associatedGoalIds.includes(g.id));
   }, [selectedFolder, monthlyGoals]);
 
+  const associatedEpargnes = useMemo(() => {
+    if (!selectedFolder) return [];
+    const currentEpIds = selectedFolder.associatedEpargneIds || [];
+    return epargnes.filter(e => currentEpIds.includes(e.id));
+  }, [selectedFolder, epargnes]);
+
   const associatedEvents = useMemo(() => {
     if (!selectedFolder) return [];
     return events.filter(e => e.projectId === selectedFolder.id);
@@ -1261,8 +1304,11 @@ export default function ProjectFoldersSection({
     const totalGoals = associatedGoals.length;
     const completedGoals = associatedGoals.filter(g => (g.currentRevenue || 0) >= (g.targetRevenue || 1)).length; // simplistic completion logic for monthly goals
 
-    const totalObjectives = totalCustom + totalGoals;
-    const completedObjectives = completedCustom + completedGoals;
+    const totalEpargnes = associatedEpargnes.length;
+    const completedEpargnes = associatedEpargnes.filter(e => (e.currentAmount || 0) >= (e.targetAmount || 1) || e.status === "Atteint").length;
+
+    const totalObjectives = totalCustom + totalGoals + totalEpargnes;
+    const completedObjectives = completedCustom + completedGoals + completedEpargnes;
 
     const objectivesProgress = totalObjectives > 0
       ? (completedObjectives / totalObjectives) * 100
@@ -1287,7 +1333,7 @@ export default function ProjectFoldersSection({
       completedObjectives,
       totalObjectives
     };
-  }, [selectedFolder, associatedFormations, associatedGoals]);
+  }, [selectedFolder, associatedFormations, associatedGoals, associatedEpargnes]);
 
   // Available lists for association dropdowns
   const unassociatedFormations = useMemo(() => {
@@ -1304,6 +1350,12 @@ export default function ProjectFoldersSection({
     if (!selectedFolder) return [];
     return monthlyGoals.filter(g => !selectedFolder.associatedGoalIds.includes(g.id));
   }, [selectedFolder, monthlyGoals]);
+
+  const unassociatedEpargnes = useMemo(() => {
+    if (!selectedFolder) return [];
+    const currentEpIds = selectedFolder.associatedEpargneIds || [];
+    return epargnes.filter(e => !currentEpIds.includes(e.id));
+  }, [selectedFolder, epargnes]);
 
   const unassociatedEvents = useMemo(() => {
     if (!selectedFolder) return [];
@@ -3313,10 +3365,52 @@ export default function ProjectFoldersSection({
                       <p className="text-[10.5px] text-neutral-400 mt-0.5">Suivi de vos jalons opérationnels spécifiques et objectifs mensuels reliés.</p>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {/* Associate existing savings goal button */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowAssociateEpargne(!showAssociateEpargne)}
+                          className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none"
+                        >
+                          <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Relier Objectif d'Épargne</span>
+                        </button>
+
+                        {showAssociateEpargne && (
+                          <div className="absolute right-0 mt-2 w-72 bg-white border border-neutral-200 rounded-xl shadow-xl z-30 p-2 max-h-60 overflow-y-auto font-sans">
+                            <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest block px-2 py-1.5 font-sans border-b border-neutral-100">
+                              Sélectionner un Objectif d'Épargne
+                            </span>
+                            {unassociatedEpargnes.length === 0 ? (
+                              <span className="text-[10px] text-neutral-400 italic block p-3 text-center">
+                                Aucun autre objectif d'épargne disponible.
+                              </span>
+                            ) : (
+                              <div className="space-y-1 mt-1">
+                                {unassociatedEpargnes.map(ep => (
+                                  <button
+                                    key={ep.id}
+                                    type="button"
+                                    onClick={() => handleAssociateEpargne(ep.id)}
+                                    className="w-full text-left p-2 rounded-lg text-xs hover:bg-emerald-50 flex flex-col gap-0.5 cursor-pointer"
+                                  >
+                                    <span className="font-bold text-neutral-900 block line-clamp-1">{ep.name}</span>
+                                    <span className="text-[10px] text-emerald-700 font-mono font-medium block">
+                                      {(ep.currentAmount || 0).toLocaleString("fr-FR")} / {(ep.targetAmount || 0).toLocaleString("fr-FR")} MAD • Échéance : {ep.deadline || "N/C"}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Associate existing monthly goal button */}
                       <div className="relative">
                         <button
+                          type="button"
                           onClick={() => setShowAssociateGoal(!showAssociateGoal)}
                           className="bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-800 px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none"
                         >
@@ -3337,6 +3431,7 @@ export default function ProjectFoldersSection({
                                 {unassociatedGoals.map(g => (
                                   <button
                                     key={g.id}
+                                    type="button"
                                     onClick={() => handleAssociateGoal(g.id)}
                                     className="w-full text-left p-2 rounded-lg text-xs hover:bg-neutral-50 flex flex-col gap-0.5"
                                   >

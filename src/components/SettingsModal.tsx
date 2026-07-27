@@ -1090,7 +1090,6 @@ export default function SettingsModal({
                           <option value="epargnes">Objectifs d'Épargne ({epargnes.length} enregistrements)</option>
                           <option value="abonnements">Abonnements Actifs ({abonnements.length} enregistrements)</option>
                           <option value="stocks">Portefeuille Actions ({stocks.length} enregistrements)</option>
-                          <option value="journalEntries">Journal de Bord ({journalEntries.length} enregistrements)</option>
                         </select>
                       </div>
 
