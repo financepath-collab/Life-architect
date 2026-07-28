@@ -136,6 +136,7 @@ import {
   Sparkles, 
   Flame, 
   Heart, 
+  Activity,
   Layers, 
   BookOpen, 
   ShoppingCart, 
@@ -2773,19 +2774,12 @@ export default function App() {
     },
     {
       id: "productivity",
-      label: "Productivité",
-      icon: CheckSquare,
+      label: "Productivité & Santé",
+      icon: Activity,
       items: [
         { id: "productivity_dash", label: "Dashboard Productivité", icon: LayoutDashboard, desc: "État de vos habitudes, sprints de combat et objectifs stratégiques." },
         { id: "central_calendar", label: "Calendrier Central", icon: Calendar, desc: "Planning mensuel unifié des tâches, habitudes et rappels financiers." },
-        { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." }
-      ]
-    },
-    {
-      id: "health",
-      label: "Santé & Soins",
-      icon: Heart,
-      items: [
+        { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." },
         { id: "health_dash", label: "Dashboard Santé & Soins", icon: LayoutDashboard, desc: "Planificateur de repas, routine beauté et sport." },
         { id: "skin", label: "Skin Tracker", icon: Sparkles, desc: "Consistance beauté, SPF et routine cutanée journalière." },
         { id: "meal", label: "Meal Planner", icon: Layers, desc: "Planification des menus, calories et dîners de demain." },
@@ -3915,15 +3909,10 @@ export default function App() {
                     <span className="hidden min-[1650px]:inline">Banque</span>
                     <span className="min-[1650px]:hidden">Banque</span>
                   </>
-                ) : cat.label === "Santé & Soins" ? (
+                ) : cat.label === "Productivité & Santé" ? (
                   <>
-                    <span className="hidden min-[1650px]:inline">Santé & Soins</span>
-                    <span className="min-[1650px]:hidden">Santé</span>
-                  </>
-                ) : cat.label === "Productivité" ? (
-                  <>
-                    <span className="hidden min-[1650px]:inline">Productivité</span>
-                    <span className="min-[1650px]:hidden">Prod.</span>
+                    <span className="hidden min-[1650px]:inline">Productivité & Santé</span>
+                    <span className="min-[1650px]:hidden">Prod & Santé</span>
                   </>
                 ) : (
                   cat.label
