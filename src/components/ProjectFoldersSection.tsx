@@ -3663,17 +3663,27 @@ export default function ProjectFoldersSection({
                                     : "bg-white border-neutral-200/80 text-neutral-800 shadow-2xs hover:border-neutral-300"
                                 }`}
                               >
-                                <div
-                                  onClick={() => handleToggleCustomObjective(o.id)}
-                                  className="flex items-center gap-3 cursor-pointer flex-1 select-none min-w-0"
-                                >
-                                  {o.completed ? (
-                                    <CheckSquare className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
-                                  ) : (
-                                    <Square className="w-4.5 h-4.5 text-neutral-400 shrink-0" />
-                                  )}
-                                  <span className={`text-xs font-semibold leading-tight ${o.completed ? "line-through text-neutral-400" : "text-neutral-900"}`}>
-                                    {o.text}
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleCustomObjective(o.id)}
+                                    className="cursor-pointer shrink-0"
+                                    title={o.completed ? "Marquer comme non accompli" : "Marquer comme accompli"}
+                                  >
+                                    {o.completed ? (
+                                      <CheckSquare className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
+                                    ) : (
+                                      <Square className="w-4.5 h-4.5 text-neutral-400 shrink-0" />
+                                    )}
+                                  </button>
+
+                                  <span 
+                                    onClick={() => handleStartEditObjective(o)}
+                                    title="Cliquer pour modifier directement le titre"
+                                    className={`text-xs font-semibold leading-tight cursor-pointer hover:text-indigo-600 hover:bg-indigo-50/80 px-2 py-1 rounded-lg -ml-1 transition-all group/title ${o.completed ? "line-through text-neutral-400" : "text-neutral-900"}`}
+                                  >
+                                    <span>{o.text}</span>
+                                    <Pencil className="w-3 h-3 inline-block ml-1.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 transition-opacity" />
                                   </span>
                                 </div>
 

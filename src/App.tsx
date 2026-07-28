@@ -2777,10 +2777,9 @@ export default function App() {
       label: "Productivité & Santé",
       icon: Activity,
       items: [
-        { id: "productivity_dash", label: "Dashboard Productivité", icon: LayoutDashboard, desc: "État de vos habitudes, sprints de combat et objectifs stratégiques." },
+        { id: "productivity_dash", label: "Dashboard Productivité & Santé", icon: LayoutDashboard, desc: "Vue d'ensemble unifiée de vos habitudes, objectifs, soins et nutrition." },
         { id: "central_calendar", label: "Calendrier Central", icon: Calendar, desc: "Planning mensuel unifié des tâches, habitudes et rappels financiers." },
         { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." },
-        { id: "health_dash", label: "Dashboard Santé & Soins", icon: LayoutDashboard, desc: "Planificateur de repas, routine beauté et sport." },
         { id: "skin", label: "Skin Tracker", icon: Sparkles, desc: "Consistance beauté, SPF et routine cutanée journalière." },
         { id: "meal", label: "Meal Planner", icon: Layers, desc: "Planification des menus, calories et dîners de demain." },
         { id: "sport", label: "Focus Sport", icon: Dumbbell, desc: "Minuterie de 30 min, exercices de sport et playlist d'entraînement." }
@@ -5115,7 +5114,7 @@ export default function App() {
                       initialTab={activeMenu === "charts" ? "charts" : "overview"}
                       triggerToast={triggerToast}
                     />
-                  ) : activeMenu === "productivity_dash" ? (
+                  ) : activeMenu === "productivity_dash" || activeMenu === "health_dash" ? (
                     <ProductivitySectionDashboard
                       dailyHabits={dailyHabits}
                       actions30Jours={actions30Jours}
@@ -5136,12 +5135,8 @@ export default function App() {
                       notificationPermission={notificationPermission}
                       requestNotificationPermission={requestNotificationPermission}
                       habitHistory={habitHistory}
-                    />
-                  ) : activeMenu === "health_dash" ? (
-                    <HealthSectionDashboard
                       skinTrackers={skinTrackers}
                       mealPlanners={mealPlanners}
-                      onNavigate={handleMenuClick}
                     />
                   ) : activeMenu === "formation_dash" ? (
                     <LecturesSectionDashboard

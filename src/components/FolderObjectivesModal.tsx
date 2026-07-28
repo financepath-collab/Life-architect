@@ -44,6 +44,14 @@ export default function FolderObjectivesModal({
   const [editText, setEditText] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
 
+  // Quick click-to-edit inline title state
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [editingTitleValue, setEditingTitleValue] = useState("");
+
+  // Quick click-to-edit KPI title state
+  const [editingKpiTitleId, setEditingKpiTitleId] = useState<string | null>(null);
+  const [editingKpiTitleValue, setEditingKpiTitleValue] = useState("");
+
   // Core Goal state
   const [isEditingCoreGoal, setIsEditingCoreGoal] = useState(false);
   const [coreGoalText, setCoreGoalText] = useState(folder.coreGoal || "");
@@ -98,6 +106,29 @@ export default function FolderObjectivesModal({
     );
     onUpdateFolder({ ...folder, customObjectives: updated });
     setEditingObjId(null);
+  };
+
+  const handleQuickSaveTitle = (id: string, newTitle: string) => {
+    const trimmed = newTitle.trim();
+    if (trimmed) {
+      const updated = customObjs.map(o => 
+        o.id === id ? { ...o, text: trimmed } : o
+      );
+      onUpdateFolder({ ...folder, customObjectives: updated });
+    }
+    setEditingTitleId(null);
+  };
+
+  const handleQuickSaveKpiTitle = (kpiId: string | undefined, newTitle: string) => {
+    if (!kpiId) return;
+    const trimmed = newTitle.trim();
+    if (trimmed) {
+      const updated = (folder.objectives || []).map(k => 
+        k.id === kpiId ? { ...k, title: trimmed } : k
+      );
+      onUpdateFolder({ ...folder, objectives: updated });
+    }
+    setEditingKpiTitleId(null);
   };
 
   const handleDeleteCustomObj = (id: string) => {
@@ -393,6 +424,8 @@ export default function FolderObjectivesModal({
                       );
                     }
 
+                    const isEditingTitle = editingTitleId === o.id;
+
                     return (
                       <div
                         key={o.id}
@@ -406,6 +439,7 @@ export default function FolderObjectivesModal({
                           <button
                             onClick={() => handleToggleCustomObj(o.id)}
                             className="cursor-pointer shrink-0"
+                            title={o.completed ? "Marquer comme non accompli" : "Marquer comme accompli"}
                           >
                             {o.completed ? (
                               <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -414,27 +448,71 @@ export default function FolderObjectivesModal({
                             )}
                           </button>
 
-                          <div className="min-w-0 flex-1">
-                            <span className={`text-xs font-extrabold block line-clamp-2 ${
-                              o.completed ? "line-through text-neutral-400 dark:text-neutral-500" : ""
-                            }`}>
-                              {o.text}
-                            </span>
-
-                            {o.dueDate && (
-                              <span className="text-[10px] font-mono font-bold text-neutral-400 dark:text-neutral-500 flex items-center gap-1 mt-0.5">
-                                <CalendarDays className="w-3 h-3 text-indigo-500" />
-                                <span>Date cible : {o.dueDate}</span>
+                          {isEditingTitle ? (
+                            <div className="min-w-0 flex-1 flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                              <input
+                                type="text"
+                                autoFocus
+                                value={editingTitleValue}
+                                onChange={e => setEditingTitleValue(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleQuickSaveTitle(o.id, editingTitleValue);
+                                  } else if (e.key === "Escape") {
+                                    setEditingTitleId(null);
+                                  }
+                                }}
+                                onBlur={() => handleQuickSaveTitle(o.id, editingTitleValue)}
+                                className="w-full bg-white dark:bg-zinc-800 border-2 border-indigo-500 rounded-xl px-2.5 py-1 text-xs font-extrabold text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-2xs"
+                              />
+                              <button
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  handleQuickSaveTitle(o.id, editingTitleValue);
+                                }}
+                                className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl cursor-pointer shrink-0"
+                                title="Valider"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="min-w-0 flex-1">
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingTitleId(o.id);
+                                  setEditingTitleValue(o.text);
+                                }}
+                                title="Cliquer pour modifier rapidement l'intitulé"
+                                className={`text-xs font-extrabold inline-block max-w-full cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/80 dark:hover:bg-zinc-800/80 px-2 py-0.5 rounded-lg -ml-2 transition-all group/title ${
+                                  o.completed ? "line-through text-neutral-400 dark:text-neutral-500" : ""
+                                }`}
+                              >
+                                <span>{o.text}</span>
+                                <Pencil className="w-3 h-3 inline-block ml-1.5 opacity-0 group-hover/title:opacity-100 text-indigo-500 transition-opacity" />
                               </span>
-                            )}
-                          </div>
+
+                              {o.dueDate && (
+                                <span className="text-[10px] font-mono font-bold text-neutral-400 dark:text-neutral-500 flex items-center gap-1 mt-0.5">
+                                  <CalendarDays className="w-3 h-3 text-indigo-500" />
+                                  <span>Date cible : {o.dueDate}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-1 shrink-0">
                           <button
-                            onClick={() => handleStartEditObj(o)}
+                            onClick={() => {
+                              setEditingTitleId(o.id);
+                              setEditingTitleValue(o.text);
+                            }}
                             className="p-1.5 text-neutral-400 hover:text-indigo-600 hover:bg-neutral-100 dark:hover:bg-zinc-800 rounded-xl cursor-pointer transition-all"
-                            title="Modifier cet objectif"
+                            title="Édition rapide de l'intitulé"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
@@ -573,13 +651,59 @@ export default function FolderObjectivesModal({
                 <div className="space-y-3">
                   {folder.objectives.map((kpi, idx) => {
                     const pct = Math.min(100, Math.round(((kpi.currentValue || 0) / (kpi.targetValue || 1)) * 100));
+                    const isEditingKpiTitle = kpi.id && editingKpiTitleId === kpi.id;
 
                     return (
                       <div key={kpi.id || idx} className="p-4 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-2xl space-y-3 shadow-2xs">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-black text-neutral-900 dark:text-neutral-100">
-                            {kpi.title}
-                          </span>
+                        <div className="flex items-center justify-between gap-3">
+                          {isEditingKpiTitle ? (
+                            <div className="flex-1 flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                              <input
+                                type="text"
+                                autoFocus
+                                value={editingKpiTitleValue}
+                                onChange={e => setEditingKpiTitleValue(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleQuickSaveKpiTitle(kpi.id, editingKpiTitleValue);
+                                  } else if (e.key === "Escape") {
+                                    setEditingKpiTitleId(null);
+                                  }
+                                }}
+                                onBlur={() => handleQuickSaveKpiTitle(kpi.id, editingKpiTitleValue)}
+                                className="w-full bg-white dark:bg-zinc-800 border-2 border-indigo-500 rounded-xl px-2.5 py-1 text-xs font-black text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-2xs"
+                              />
+                              <button
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  handleQuickSaveKpiTitle(kpi.id, editingKpiTitleValue);
+                                }}
+                                className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl cursor-pointer shrink-0"
+                                title="Valider"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex-1 min-w-0">
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (kpi.id) {
+                                    setEditingKpiTitleId(kpi.id);
+                                    setEditingKpiTitleValue(kpi.title);
+                                  }
+                                }}
+                                title="Cliquer pour modifier rapidement le titre du KPI"
+                                className="text-xs font-black text-neutral-900 dark:text-neutral-100 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50/80 dark:hover:bg-zinc-800/80 px-2 py-0.5 rounded-lg -ml-2 transition-all inline-block group/kpi"
+                              >
+                                <span>{kpi.title}</span>
+                                <Pencil className="w-3 h-3 inline-block ml-1.5 opacity-0 group-hover/kpi:opacity-100 text-indigo-500 transition-opacity" />
+                              </span>
+                            </div>
+                          )}
 
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-mono font-black text-indigo-600 dark:text-indigo-400">

@@ -1372,12 +1372,15 @@ interface ProductivityDashProps {
   notificationPermission: string;
   requestNotificationPermission: () => void;
   habitHistory: Record<string, string[]>;
+  skinTrackers?: SkinTracker[];
+  mealPlanners?: MealPlanner[];
 }
 
 export function ProductivitySectionDashboard({ 
   dailyHabits, actions30Jours, weeklyObjectives, profilAmeliorations, possibilitesGoals, journalEntries, streakCount, onNavigate, onToggleHabit,
   morningReminderEnabled, setMorningReminderEnabled, morningReminderTime, setMorningReminderTime, morningReminderText, setMorningReminderText,
-  onTriggerImmediateCheck, notificationPermission, requestNotificationPermission, habitHistory
+  onTriggerImmediateCheck, notificationPermission, requestNotificationPermission, habitHistory,
+  skinTrackers = [], mealPlanners = []
 }: ProductivityDashProps) {
   const [habitFreqFilter, setHabitFreqFilter] = React.useState<"Tous" | "Quotidien" | "Hebdomadaire" | "Mensuel">("Tous");
 
@@ -1465,11 +1468,11 @@ export function ProductivitySectionDashboard({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200/60 pb-4">
         <div>
           <h2 className="text-lg font-black text-neutral-900 uppercase tracking-tight flex items-center gap-2">
-            <CheckSquare className="w-5 h-5 text-neutral-800" />
-            <span>Tableau de bord de Productivité & Alignement</span>
+            <Activity className="w-5 h-5 text-indigo-600" />
+            <span>Tableau de bord de Productivité & Santé</span>
           </h2>
           <p className="text-xs text-neutral-500">
-            Série d'assiduité d'élite, sprints de combat et suivi d'objectifs professionnels de long terme.
+            Assiduité d'élite, habitudes, sprints de combat, soins du corps et suivi nutritionnel unifiés.
           </p>
         </div>
       </div>
@@ -1890,6 +1893,11 @@ export function ProductivitySectionDashboard({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Merged Health & Soins Dashboard Section */}
+      <div className="pt-6 border-t border-neutral-200/80">
+        <HealthSectionDashboard skinTrackers={skinTrackers} mealPlanners={mealPlanners} onNavigate={onNavigate} />
       </div>
     </div>
   );
