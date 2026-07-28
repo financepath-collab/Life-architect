@@ -189,17 +189,6 @@ export const MODULE_SCHEMAS: Record<string, { title: string; columns: ExcelColum
       { key: "achieved", label: "Atteint (true/false)", type: "boolean", defaultValue: false }
     ]
   },
-  monthly_goals: {
-    title: "Objectifs Mensuels",
-    columns: [
-      { key: "id", label: "ID", type: "text" },
-      { key: "month", label: "Mois (ex: Juillet 2026)", type: "text", required: true },
-      { key: "goalText", label: "Objectif", type: "text", required: true },
-      { key: "category", label: "Catégorie", type: "text", defaultValue: "Pro" },
-      { key: "isCompleted", label: "Complété (true/false)", type: "boolean", defaultValue: false },
-      { key: "progress", label: "Progression (%)", type: "number", defaultValue: 0 }
-    ]
-  },
   skin: {
     title: "Skin Care Tracker",
     columns: [

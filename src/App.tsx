@@ -2425,9 +2425,13 @@ export default function App() {
         setDriveAccessTokenState(result.accessToken);
         triggerToast("✅ Google Drive connecté avec succès !", "success");
       }
-    } catch (error) {
-      console.error("Failed to connect Drive:", error);
-      triggerToast("❌ Échec de la connexion à Google Drive. Veuillez ouvrir l'application dans un nouvel onglet si vous êtes dans un iframe.", "error");
+    } catch (error: any) {
+      if (error?.code === "auth/popup-closed-by-user" || error?.code === "auth/popup-blocked" || error?.code === "auth/cancelled-popup-request") {
+        triggerToast("ℹ️ Connexion Google Drive annulée.", "info");
+      } else {
+        console.error("Failed to connect Drive:", error);
+        triggerToast("❌ Échec de la connexion à Google Drive. Veuillez ouvrir l'application dans un nouvel onglet si vous êtes dans un iframe.", "error");
+      }
     } finally {
       setIsDriveLoading(false);
     }
@@ -2776,8 +2780,7 @@ export default function App() {
         { id: "central_calendar", label: "Calendrier Central", icon: Calendar, desc: "Planning mensuel unifié des tâches, habitudes et rappels financiers." },
         { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." },
         { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour vos projets pro et perso." },
-        { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." },
-        { id: "monthly_goals", label: "Objectifs Mensuels", icon: Target, desc: "Cibles de progression mensuelle pour vos finances, projets et vie pro/perso." }
+        { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." }
       ]
     },
     {
@@ -3714,15 +3717,22 @@ export default function App() {
         triggerToast("✅ Connecté avec succès via Google & Google Drive !", "success");
       }
     } catch (err: any) {
-      console.error("Lockscreen Google login failed:", err);
       const errCode = err?.code || "";
       const errMessage = err?.message || "";
       const isIframe = typeof window !== "undefined" && window.self !== window.top;
       
-      if (isIframe) {
+      if (errCode !== "auth/popup-closed-by-user" && errCode !== "auth/popup-blocked" && errCode !== "auth/cancelled-popup-request") {
+        console.error("Lockscreen Google login failed:", err);
+      }
+      
+      if (errCode === "auth/popup-closed-by-user" || errCode === "auth/popup-blocked" || errCode === "auth/cancelled-popup-request") {
+        if (isIframe) {
+          setLoginError("La fenêtre de connexion Google a été fermée ou bloquée par l'iframe. Ouvrez l'application dans un nouvel onglet.");
+        } else {
+          setLoginError("Connexion annulée par l'utilisateur.");
+        }
+      } else if (isIframe) {
         setLoginError("Les cadres de prévisualisation (iframe) peuvent bloquer la fenêtre de connexion Google. Veuillez ouvrir l'application dans un nouvel onglet.");
-      } else if (errCode === "auth/popup-closed-by-user") {
-        setLoginError("Connexion annulée par l'utilisateur.");
       } else {
         setLoginError("Échec de la connexion Google : " + (errMessage || err));
       }
@@ -5211,14 +5221,6 @@ export default function App() {
                     <MediaAndAcademySection
                       channels={channels}
                       setChannels={setChannels}
-                    />
-                  ) : activeMenu === "monthly_goals" ? (
-                    <MonthlyGoalsSection 
-                      goals={monthlyGoals} 
-                      setGoals={setMonthlyGoals} 
-                      folders={folders}
-                      setFolders={setFolders}
-                      availableChannels={channels.map(c => c.name)}
                     />
                   ) : activeMenu === "central_calendar" ? (
                     <CentralCalendar

@@ -44,7 +44,9 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     setSharedGoogleAccessToken(credential.accessToken);
     return { user: result.user, accessToken: credential.accessToken };
   } catch (error: any) {
-    console.error("Error signing in to Google Calendar:", error);
+    if (error?.code !== "auth/popup-closed-by-user" && error?.code !== "auth/popup-blocked" && error?.code !== "auth/cancelled-popup-request") {
+      console.error("Error signing in to Google Calendar:", error);
+    }
     throw error;
   } finally {
     isSigningIn = false;
