@@ -2778,8 +2778,7 @@ export default function App() {
       items: [
         { id: "productivity_dash", label: "Dashboard Productivité", icon: LayoutDashboard, desc: "État de vos habitudes, sprints de combat et objectifs stratégiques." },
         { id: "central_calendar", label: "Calendrier Central", icon: Calendar, desc: "Planning mensuel unifié des tâches, habitudes et rappels financiers." },
-        { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." },
-        { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." }
+        { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." }
       ]
     },
     {
@@ -3021,23 +3020,6 @@ export default function App() {
             { key: "taskDescription", label: "Tâche de Combat", type: "text", required: true },
             { key: "completed", label: "Terminé", type: "boolean" },
             { key: "note", label: "Livrable / Note", type: "text" }
-          ] as TableColumn[]
-        };
-
-      case "profil":
-        return {
-          title: "Profil & Améliorations de Compétences",
-          description: "Formez-vous de façon structurée sur vos points de friction.",
-          data: profilAmeliorations,
-          onAdd: (item: any) => setProfilAmeliorations(prev => [...prev, item]),
-          onEdit: (id: string, updated: any) => setProfilAmeliorations(prev => prev.map(x => x.id === id ? updated : x)),
-          onDelete: (id: string) => setProfilAmeliorations(prev => prev.filter(x => x.id !== id)),
-          onImport: (items: any[]) => setProfilAmeliorations(prev => [...prev, ...items]),
-          columns: [
-            { key: "focusArea", label: "Compétence Visée", type: "text", required: true },
-            { key: "status", label: "Statut Actuel", type: "select", options: ["À travailler", "En cours", "Maîtrisé"] },
-            { key: "targetDate", label: "Date de Maîtrise", type: "date" },
-            { key: "actionPlan", label: "Plan d'Action / Exercices", type: "text" }
           ] as TableColumn[]
         };
 
@@ -5220,6 +5202,8 @@ export default function App() {
                     <MediaAndAcademySection
                       channels={channels}
                       setChannels={setChannels}
+                      folders={folders}
+                      setFolders={setFolders}
                     />
                   ) : activeMenu === "central_calendar" ? (
                     <CentralCalendar

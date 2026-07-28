@@ -156,17 +156,7 @@ export const MODULE_SCHEMAS: Record<string, { title: string; columns: ExcelColum
       { key: "dueTime", label: "Heure Limite (HH:MM)", type: "text", defaultValue: "20:00" }
     ]
   },
-  profil: {
-    title: "Profil & Compétences",
-    columns: [
-      { key: "id", label: "ID", type: "text" },
-      { key: "skillName", label: "Compétence", type: "text", required: true },
-      { key: "currentLevel", label: "Niveau Actuel (%)", type: "number", defaultValue: 20 },
-      { key: "targetLevel", label: "Niveau Cible (%)", type: "number", defaultValue: 80 },
-      { key: "frictionArea", label: "Zone de Friction", type: "text", defaultValue: "" },
-      { key: "actionPlan", label: "Plan d'Action", type: "text", defaultValue: "" }
-    ]
-  },
+
   goals: {
     title: "Possibilités & Goals de Vie",
     columns: [

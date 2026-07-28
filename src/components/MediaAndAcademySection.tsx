@@ -13,22 +13,34 @@ import {
   X,
   Edit3,
   Globe,
-  Users
+  Users,
+  Folder,
+  Target,
+  CheckCircle2,
+  Sparkles
 } from "lucide-react";
 import MediaProjectDetailsModal from "./MediaProjectDetailsModal";
-import { ChannelInfo } from "../types";
+import FolderObjectivesModal from "./FolderObjectivesModal";
+import { ChannelInfo, ProjectFolder } from "../types";
 import { getProjectFrequencyConfig } from "../utils/projectFrequencyUtils";
 
 interface MediaProjectsSectionProps {
   channels: ChannelInfo[];
   setChannels: React.Dispatch<React.SetStateAction<ChannelInfo[]>>;
+  folders?: ProjectFolder[];
+  setFolders?: React.Dispatch<React.SetStateAction<ProjectFolder[]>>;
 }
 
 export default function MediaProjectsSection({
   channels,
-  setChannels
+  setChannels,
+  folders = [],
+  setFolders
 }: MediaProjectsSectionProps) {
   const [selectedChannel, setSelectedChannel] = useState<ChannelInfo | null>(null);
+  const [selectedFolderForObjectives, setSelectedFolderForObjectives] = useState<ProjectFolder | null>(null);
+  const [activeTab, setActiveTab] = useState<"channels" | "folders">("channels");
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -96,10 +108,25 @@ export default function MediaProjectsSection({
     setSelectedChannel(updatedChannel);
   };
 
+  const handleUpdateFolder = (updatedFolder: ProjectFolder) => {
+    if (setFolders) {
+      setFolders(prev => prev.map(f => f.id === updatedFolder.id ? updatedFolder : f));
+    }
+    setSelectedFolderForObjectives(updatedFolder);
+  };
+
   const filteredChannels = channels.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.niche.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.platform.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredFolders = folders.filter(f => 
+    !f.isArchived && (
+      f.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (f.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (f.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   const totalAudience = channels.reduce((sum, c) => sum + (c.subscriberCount || 0), 0);
@@ -117,11 +144,11 @@ export default function MediaProjectsSection({
               Projets Digitaux & Médias
             </h2>
             <span className="text-[10px] font-bold px-2.5 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-full">
-              {channels.length} Projets
+              {channels.length} Médias • {folders.length} Dossiers
             </span>
           </div>
           <p className="text-xs text-neutral-500 mt-1 max-w-2xl">
-            Gérez tous vos projets digitaux (cours Udemy, produits digitaux, chaînes médias, sites web). Cliquez sur une carte pour ouvrir sa fenêtre dédiée (Identifiants, Sujets, Liens, Deadlines).
+            Gérez tous vos projets digitaux et dossiers média. Cliquez sur un dossier de projet pour ouvrir la modale dédiée d'édition des objectifs personnalisés sans changer de page.
           </p>
         </div>
 
@@ -131,7 +158,7 @@ export default function MediaProjectsSection({
             className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs border border-indigo-400/30"
           >
             <Plus className="w-4 h-4" />
-            <span>Ajouter un Projet</span>
+            <span>Ajouter un Projet Média</span>
           </button>
 
           <div className="bg-neutral-900 text-white border border-neutral-800 rounded-2xl px-4 py-2 text-right shrink-0">
@@ -143,139 +170,273 @@ export default function MediaProjectsSection({
         </div>
       </div>
 
-      {/* Filter / Search bar */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+      {/* View Switcher Tabs */}
+      <div className="flex items-center justify-between flex-wrap gap-4 border-b border-neutral-200/80 pb-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab("channels")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+              activeTab === "channels"
+                ? "bg-neutral-900 text-white shadow-xs"
+                : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+            }`}
+          >
+            <Tv className="w-4 h-4 text-indigo-400" />
+            <span>Plateformes & Chaînes Médias ({channels.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("folders")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+              activeTab === "folders"
+                ? "bg-neutral-900 text-white shadow-xs"
+                : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+            }`}
+          >
+            <Folder className="w-4 h-4 text-amber-400" />
+            <span>Dossiers de Projet ({folders.length})</span>
+          </button>
+        </div>
+
+        {/* Search bar */}
+        <div className="relative flex-1 max-w-xs">
           <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Rechercher un projet par nom, niche ou plateforme..."
+            placeholder="Rechercher..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full bg-white border border-neutral-200 rounded-2xl pl-10 pr-4 py-2.5 text-xs focus:ring-2 focus:ring-indigo-500 outline-hidden shadow-3xs"
+            className="w-full bg-white border border-neutral-200 rounded-2xl pl-10 pr-4 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-hidden shadow-3xs"
           />
         </div>
-
-        <span className="text-xs font-bold text-neutral-500 font-mono">
-          Affichage : {filteredChannels.length} / {channels.length} projet(s)
-        </span>
       </div>
 
-      {/* Grid of Interactive Project Cards */}
-      {filteredChannels.length === 0 ? (
-        <div className="text-center py-12 bg-white border border-dashed border-neutral-200 rounded-3xl p-6">
-          <Tv className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
-          <h3 className="text-sm font-bold text-neutral-800">Aucun projet digital trouvé</h3>
-          <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
-            Créez votre premier projet média ou ajustez votre recherche.
-          </p>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold cursor-pointer inline-flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Créer un Projet</span>
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredChannels.map(chan => {
-            const credCount = (chan.credentials?.length || 0) + (chan.email ? 1 : 0);
-            const ideaCount = chan.ideas?.length || 0;
-            const linkCount = chan.usefulLinks?.length || 0;
-            const deadlineCount = chan.deadlines?.length || 0;
-
-            return (
-              <motion.div
-                key={chan.id}
-                whileHover={{ y: -3 }}
-                transition={{ duration: 0.15 }}
-                onClick={() => setSelectedChannel(chan)}
-                className="bg-white border border-neutral-200 hover:border-indigo-400/80 rounded-3xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group relative overflow-hidden"
+      {/* VIEW 1: CHANNELS & MEDIA PROJECTS */}
+      {activeTab === "channels" && (
+        <>
+          {filteredChannels.length === 0 ? (
+            <div className="text-center py-12 bg-white border border-dashed border-neutral-200 rounded-3xl p-6">
+              <Tv className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+              <h3 className="text-sm font-bold text-neutral-800">Aucun projet digital trouvé</h3>
+              <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
+                Créez votre premier projet média ou ajustez votre recherche.
+              </p>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold cursor-pointer inline-flex items-center gap-1.5"
               >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
-                        {chan.name.charAt(0)}
+                <Plus className="w-4 h-4" />
+                <span>Créer un Projet</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredChannels.map(chan => {
+                const credCount = (chan.credentials?.length || 0) + (chan.email ? 1 : 0);
+                const ideaCount = chan.ideas?.length || 0;
+                const linkCount = chan.usefulLinks?.length || 0;
+                const deadlineCount = chan.deadlines?.length || 0;
+
+                return (
+                  <motion.div
+                    key={chan.id}
+                    whileHover={{ y: -3 }}
+                    transition={{ duration: 0.15 }}
+                    onClick={() => setSelectedChannel(chan)}
+                    className="bg-white border border-neutral-200 hover:border-indigo-400/80 rounded-3xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group relative overflow-hidden"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-2xs">
+                            {chan.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black text-neutral-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
+                              {chan.name}
+                            </h3>
+                            <span className="text-[10px] font-bold font-mono px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded-md">
+                              {chan.platform}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Voulez-vous vraiment supprimer le projet "${chan.name}" ?`)) {
+                                handleDeleteChannel(chan.id);
+                              }
+                            }}
+                            className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                            title="Supprimer ce projet"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+
+                          <div className="p-1.5 rounded-xl bg-neutral-100 text-neutral-500 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-sm font-black text-neutral-900 group-hover:text-indigo-600 transition-colors line-clamp-1">
-                          {chan.name}
-                        </h3>
-                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded-md">
-                          {chan.platform}
-                        </span>
+
+                      <p className="text-xs text-neutral-500 line-clamp-2 min-h-[32px]">
+                        {chan.niche || "Projet digital & diffusion média"}
+                      </p>
+
+                      <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-xs font-mono font-bold">
+                        <span className="text-neutral-400 text-[11px]">Audience / Abonnés :</span>
+                        <span className="text-emerald-600 font-extrabold">{(chan.subscriberCount || 0).toLocaleString("fr-FR")}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`Voulez-vous vraiment supprimer le projet "${chan.name}" ?`)) {
-                            handleDeleteChannel(chan.id);
-                          }
-                        }}
-                        className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
-                        title="Supprimer ce projet"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-
-                      <div className="p-1.5 rounded-xl bg-neutral-100 text-neutral-500 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                        <ChevronRight className="w-4 h-4" />
+                    {/* Quick Summary Badges */}
+                    <div className="grid grid-cols-4 gap-1.5 bg-neutral-50 border border-neutral-100 p-2 rounded-2xl text-[10px] font-mono text-center">
+                      <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Identifiants & Mots de passe">
+                        <Key className="w-3.5 h-3.5 text-amber-600 mx-auto mb-0.5" />
+                        <span className="font-bold text-neutral-800">{credCount}</span>
+                      </div>
+                      <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Idées de sujets">
+                        <Lightbulb className="w-3.5 h-3.5 text-indigo-600 mx-auto mb-0.5" />
+                        <span className="font-bold text-neutral-800">{ideaCount}</span>
+                      </div>
+                      <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Liens utiles">
+                        <Link2 className="w-3.5 h-3.5 text-cyan-600 mx-auto mb-0.5" />
+                        <span className="font-bold text-neutral-800">{linkCount}</span>
+                      </div>
+                      <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Deadlines & tâches">
+                        <Calendar className="w-3.5 h-3.5 text-rose-600 mx-auto mb-0.5" />
+                        <span className="font-bold text-neutral-800">{deadlineCount}</span>
                       </div>
                     </div>
-                  </div>
 
-                  <p className="text-xs text-neutral-500 line-clamp-2 min-h-[32px]">
-                    {chan.niche || "Projet digital & diffusion média"}
-                  </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedChannel(chan);
+                      }}
+                      className="w-full py-2.5 px-3 bg-neutral-900 group-hover:bg-indigo-600 text-white rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-3xs"
+                    >
+                      <span>Ouvrir la fenêtre du projet</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
 
-                  <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-xs font-mono font-bold">
-                    <span className="text-neutral-400 text-[11px]">Audience / Abonnés :</span>
-                    <span className="text-emerald-600 font-extrabold">{(chan.subscriberCount || 0).toLocaleString("fr-FR")}</span>
-                  </div>
-                </div>
+      {/* VIEW 2: PROJECT FOLDERS & OBJECTIVES */}
+      {activeTab === "folders" && (
+        <div className="space-y-4">
+          <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2.5">
+              <Folder className="w-5 h-5 text-amber-600 shrink-0" />
+              <div>
+                <h4 className="text-xs font-black text-amber-950">
+                  Dossiers de Projets Médias & Digitaux
+                </h4>
+                <p className="text-[11px] text-amber-800">
+                  Cliquez sur n'importe quel dossier pour ouvrir immédiatement la modale d'affichage et d'édition des objectifs personnalisés.
+                </p>
+              </div>
+            </div>
+          </div>
 
-                {/* Quick Summary Badges */}
-                <div className="grid grid-cols-4 gap-1.5 bg-neutral-50 border border-neutral-100 p-2 rounded-2xl text-[10px] font-mono text-center">
-                  <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Identifiants & Mots de passe">
-                    <Key className="w-3.5 h-3.5 text-amber-600 mx-auto mb-0.5" />
-                    <span className="font-bold text-neutral-800">{credCount}</span>
-                  </div>
-                  <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Idées de sujets">
-                    <Lightbulb className="w-3.5 h-3.5 text-indigo-600 mx-auto mb-0.5" />
-                    <span className="font-bold text-neutral-800">{ideaCount}</span>
-                  </div>
-                  <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Liens utiles">
-                    <Link2 className="w-3.5 h-3.5 text-cyan-600 mx-auto mb-0.5" />
-                    <span className="font-bold text-neutral-800">{linkCount}</span>
-                  </div>
-                  <div className="p-1 bg-white rounded-xl border border-neutral-200/80" title="Deadlines & tâches">
-                    <Calendar className="w-3.5 h-3.5 text-rose-600 mx-auto mb-0.5" />
-                    <span className="font-bold text-neutral-800">{deadlineCount}</span>
-                  </div>
-                </div>
+          {filteredFolders.length === 0 ? (
+            <div className="text-center py-12 bg-white border border-dashed border-neutral-200 rounded-3xl p-6">
+              <Folder className="w-10 h-10 text-neutral-300 mx-auto mb-3" />
+              <h3 className="text-sm font-bold text-neutral-800">Aucun dossier de projet trouvé</h3>
+              <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
+                Vos dossiers de projet apparaîtront ici.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredFolders.map(folder => {
+                const customObjs = folder.customObjectives || [];
+                const completedObjs = customObjs.filter(o => o.completed).length;
+                const totalObjs = customObjs.length;
+                const pct = totalObjs > 0 ? Math.round((completedObjs / totalObjs) * 100) : 0;
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedChannel(chan);
-                  }}
-                  className="w-full py-2.5 px-3 bg-neutral-900 group-hover:bg-indigo-600 text-white rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-3xs"
-                >
-                  <span>Ouvrir la fenêtre du projet</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </motion.div>
-            );
-          })}
+                return (
+                  <motion.div
+                    key={folder.id}
+                    whileHover={{ y: -3 }}
+                    transition={{ duration: 0.15 }}
+                    onClick={() => setSelectedFolderForObjectives(folder)}
+                    className="bg-white border border-neutral-200 hover:border-amber-400 rounded-3xl p-5 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group relative overflow-hidden"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-300 text-amber-700 flex items-center justify-center font-bold shrink-0">
+                            <Folder className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black text-neutral-900 group-hover:text-amber-700 transition-colors line-clamp-1">
+                              {folder.name}
+                            </h3>
+                            <span className="text-[10px] font-bold font-mono px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded-md">
+                              {folder.category || "Projet"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {folder.statusPhase && (
+                          <span className="text-[9px] font-bold uppercase font-mono px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md shrink-0">
+                            {folder.statusPhase}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-neutral-500 line-clamp-2 min-h-[32px]">
+                        {folder.description || folder.coreGoal || "Dossier de projet média & digital."}
+                      </p>
+
+                      {/* Objectives Progress Bar */}
+                      <div className="space-y-1.5 pt-2 border-t border-neutral-100">
+                        <div className="flex items-center justify-between text-[11px] font-mono font-bold">
+                          <span className="text-neutral-500 flex items-center gap-1">
+                            <Target className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Objectifs Jalons :</span>
+                          </span>
+                          <span className="text-indigo-600 font-extrabold">
+                            {completedObjs} / {totalObjs} ({pct}%)
+                          </span>
+                        </div>
+
+                        <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className="bg-indigo-600 h-full rounded-full transition-all" 
+                            style={{ width: `${pct}%` }} 
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedFolderForObjectives(folder);
+                      }}
+                      className="w-full py-2.5 px-3 bg-neutral-900 group-hover:bg-amber-600 text-white rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-3xs"
+                    >
+                      <Target className="w-3.5 h-3.5" />
+                      <span>Afficher & Éditer les Objectifs</span>
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Modal for Adding a Project */}
+      {/* Modal for Adding a Channel */}
       <AnimatePresence>
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
@@ -455,7 +616,7 @@ export default function MediaProjectsSection({
         )}
       </AnimatePresence>
 
-      {/* Modal for Project Details */}
+      {/* Modal for Project Channel Details */}
       <AnimatePresence>
         {selectedChannel && (
           <MediaProjectDetailsModal
@@ -463,6 +624,17 @@ export default function MediaProjectsSection({
             onClose={() => setSelectedChannel(null)}
             onUpdateChannel={handleUpdateSelectedChannel}
             onDeleteChannel={handleDeleteChannel}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Modal for Project Folder Objectives */}
+      <AnimatePresence>
+        {selectedFolderForObjectives && (
+          <FolderObjectivesModal
+            folder={selectedFolderForObjectives}
+            onClose={() => setSelectedFolderForObjectives(null)}
+            onUpdateFolder={handleUpdateFolder}
           />
         )}
       </AnimatePresence>
