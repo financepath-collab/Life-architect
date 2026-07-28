@@ -13,7 +13,9 @@ import {
   CheckCircle,
   Square,
   BarChart3,
-  LineChart
+  LineChart,
+  Plus,
+  Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -60,13 +62,17 @@ interface DisciplineHeatmapProps {
   setHabitHistory: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   dailyHabitsList: DailyHabit[];
   streakCount: number;
+  onAddHabit?: (habit: DailyHabit) => void;
+  onDeleteHabit?: (id: string) => void;
 }
 
 export default function DisciplineHeatmap({
   habitHistory,
   setHabitHistory,
   dailyHabitsList,
-  streakCount
+  streakCount,
+  onAddHabit,
+  onDeleteHabit
 }: DisciplineHeatmapProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -422,15 +428,39 @@ export default function DisciplineHeatmap({
           </p>
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 px-3 py-1.5 rounded-xl text-[10px] text-neutral-500 font-bold">
-          <span>Moins</span>
-          <div className="w-3.5 h-3.5 rounded bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50" />
-          <div className="w-3.5 h-3.5 rounded bg-emerald-200 border border-emerald-300" />
-          <div className="w-3.5 h-3.5 rounded bg-emerald-500 border border-emerald-600" />
-          <div className="w-3.5 h-3.5 rounded bg-emerald-700 border border-emerald-800" />
-          <div className="w-3.5 h-3.5 rounded bg-amber-500 border border-amber-600 ring-1 ring-amber-300" title="Journée Parfaite !" />
-          <span>Plus</span>
+        {/* Legend & Action */}
+        <div className="flex flex-wrap items-center gap-3">
+          {onAddHabit && (
+            <button
+              onClick={() => {
+                const name = window.prompt("Saisissez le nom de la nouvelle habitude (ex: Lecture 20 min) :");
+                if (name && name.trim()) {
+                  onAddHabit({
+                    id: "h_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+                    name: name.trim(),
+                    category: "Health",
+                    frequency: "Quotidien",
+                    description: "",
+                    completed: false
+                  });
+                }
+              }}
+              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-3.5 py-1.5 rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Saisir une Habitude</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-800 px-3 py-1.5 rounded-xl text-[10px] text-neutral-500 font-bold">
+            <span>Moins</span>
+            <div className="w-3.5 h-3.5 rounded bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50" />
+            <div className="w-3.5 h-3.5 rounded bg-emerald-200 border border-emerald-300" />
+            <div className="w-3.5 h-3.5 rounded bg-emerald-500 border border-emerald-600" />
+            <div className="w-3.5 h-3.5 rounded bg-emerald-700 border border-emerald-800" />
+            <div className="w-3.5 h-3.5 rounded bg-amber-500 border border-amber-600 ring-1 ring-amber-300" title="Journée Parfaite !" />
+            <span>Plus</span>
+          </div>
         </div>
       </div>
 

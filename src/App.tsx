@@ -85,7 +85,7 @@ import DashboardUnifiedCalendar from "./components/DashboardUnifiedCalendar";
 import WeeklyCategoryStatsCard from "./components/WeeklyCategoryStatsCard";
 import WeatherWidget from "./components/WeatherWidget";
 import DisciplineHeatmap from "./components/DisciplineHeatmap";
-import Actions30JoursSection from "./components/Actions30JoursSection";
+import HabitsTrackerSection from "./components/HabitsTrackerSection";
 import FireCalculator from "./components/FireCalculator";
 import ExcelSyncToolbar from "./components/ExcelSyncToolbar";
 import QuickCaptureInbox from "./components/QuickCaptureInbox";
@@ -2779,7 +2779,6 @@ export default function App() {
         { id: "productivity_dash", label: "Dashboard Productivité", icon: LayoutDashboard, desc: "État de vos habitudes, sprints de combat et objectifs stratégiques." },
         { id: "central_calendar", label: "Calendrier Central", icon: Calendar, desc: "Planning mensuel unifié des tâches, habitudes et rappels financiers." },
         { id: "habits", label: "Habits Tracker", icon: Flame, desc: "Discipline de vie quotidienne et routines d'élite." },
-        { id: "actions30", label: "Actions 30 Jours", icon: Calendar, desc: "Sprint de combat de 30 jours pour vos projets pro et perso." },
         { id: "profil", label: "Profil & Compétences", icon: User, desc: "Montée en compétences ciblée pour vos friction areas." }
       ]
     },
@@ -5246,16 +5245,13 @@ export default function App() {
                       availableChannels={channels.map(c => c.name)}
                     />
                   ) : activeMenu === "habits" ? (
-                    <DisciplineHeatmap
+                    <HabitsTrackerSection
+                      dailyHabits={dailyHabits}
+                      setDailyHabits={setDailyHabits}
                       habitHistory={habitHistory}
                       setHabitHistory={setHabitHistory}
-                      dailyHabitsList={dailyHabits}
                       streakCount={streakCount}
-                    />
-                  ) : activeMenu === "actions30" ? (
-                    <Actions30JoursSection
-                      actions30Jours={actions30Jours}
-                      setActions30Jours={setActions30Jours}
+                      getModuleConfig={getModuleConfig}
                     />
                   ) : activeMenu === "budgets" ? (
                     <div className="space-y-6">

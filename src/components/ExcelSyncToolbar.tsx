@@ -156,17 +156,6 @@ export const MODULE_SCHEMAS: Record<string, { title: string; columns: ExcelColum
       { key: "dueTime", label: "Heure Limite (HH:MM)", type: "text", defaultValue: "20:00" }
     ]
   },
-  actions30: {
-    title: "Actions 30 Jours (Sprints)",
-    columns: [
-      { key: "id", label: "ID", type: "text" },
-      { key: "title", label: "Titre du Sprint", type: "text", required: true },
-      { key: "description", label: "Description", type: "text", defaultValue: "" },
-      { key: "category", label: "Catégorie (Pro/Perso)", type: "text", defaultValue: "Pro" },
-      { key: "status", label: "Statut", type: "text", defaultValue: "Pas Commencé" },
-      { key: "progress", label: "Progression (%)", type: "number", defaultValue: 0 }
-    ]
-  },
   profil: {
     title: "Profil & Compétences",
     columns: [
