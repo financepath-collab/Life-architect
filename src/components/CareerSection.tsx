@@ -47,7 +47,9 @@ import {
   ChevronRight,
   ArrowRight,
   LayoutGrid,
-  List
+  List,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 // --- MOBILITY DEFAULT DATA CONSTANTS (SERROU MOHAMMED - CARRIÈRE EPM FINANCE) ---
@@ -605,6 +607,7 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
   const [siteSearch, setSiteSearch] = useState("");
   const [siteCountryFilter, setSiteCountryFilter] = useState("Tous");
   const [siteViewMode, setSiteViewMode] = useState<"grid" | "table">("grid");
+  const [showVisitedToday, setShowVisitedToday] = useState(false);
 
   const [compName, setCompName] = useState("");
   const [compWebsite, setCompWebsite] = useState("");
@@ -2129,24 +2132,27 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
           last7Days.push({ dateStr, label: dayLabel, num: dayNum, isToday: dateStr === todayStr });
         }
 
+        const isVisitedOnDate = (site: RecruitmentSite, dateStr: string) => {
+          if (site.visitedDates?.includes(dateStr)) return true;
+          if (site.lastVisitedDate === dateStr) return true;
+          return false;
+        };
+
         const filteredSites = recruitmentSites.filter(site => {
           const matchesSearch = site.name.toLowerCase().includes(siteSearch.toLowerCase()) || 
                                 (site.notes || "").toLowerCase().includes(siteSearch.toLowerCase()) ||
                                 (site.keywords || []).some(kw => kw.toLowerCase().includes(siteSearch.toLowerCase()));
           const matchesCountry = siteCountryFilter === "Tous" || site.country === siteCountryFilter;
-          return matchesSearch && matchesCountry;
+          const visitedToday = isVisitedOnDate(site, todayStr);
+          const matchesVisited = showVisitedToday || !visitedToday;
+
+          return matchesSearch && matchesCountry && matchesVisited;
         });
 
-        const todayVisitedCount = recruitmentSites.filter(s => s.visitedDates?.includes(todayStr) || s.visited).length;
+        const todayVisitedCount = recruitmentSites.filter(s => isVisitedOnDate(s, todayStr)).length;
         const totalSites = recruitmentSites.length;
         const visitRate = totalSites > 0 ? Math.round((todayVisitedCount / totalSites) * 100) : 0;
         const uniqueCountries = Array.from(new Set(recruitmentSites.map(s => s.country).filter(Boolean)));
-
-        const isVisitedOnDate = (site: RecruitmentSite, dateStr: string) => {
-          if (site.visitedDates?.includes(dateStr)) return true;
-          if (dateStr === todayStr && site.visited) return true;
-          return false;
-        };
 
         const toggleVisitDate = (siteId: string, dateStr: string) => {
           setRecruitmentSites(prev => prev.map(s => {
@@ -2163,7 +2169,8 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
             return { 
               ...s, 
               visitedDates: newDates,
-              visited: isVisitedToday
+              visited: isVisitedToday,
+              lastVisitedDate: isVisitedToday ? todayStr : (s.lastVisitedDate === dateStr ? undefined : s.lastVisitedDate)
             };
           }));
         };
@@ -2388,42 +2395,93 @@ export default function CareerSection({ activeTab, onNavigate }: CareerSectionPr
                 </div>
               </div>
 
-              {/* Country Filter Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto w-full pb-1 scrollbar-none">
-                {["Tous", "Maroc", "France", "Canada", "Suisse", "Germany", "Worldwide"].map(countryKey => {
-                  const label = countryKey === "Worldwide" ? "International" : countryKey === "Germany" ? "Allemagne" : countryKey;
-                  const count = countryKey === "Tous" 
-                    ? recruitmentSites.length 
-                    : recruitmentSites.filter(s => s.country === countryKey).length;
-                  const isActive = siteCountryFilter === countryKey;
+              {/* Country Filter Pills & Visited Toggle */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 w-full pt-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto w-full pb-1 sm:pb-0 scrollbar-none flex-1">
+                  {["Tous", "Maroc", "France", "Canada", "Suisse", "Germany", "Worldwide"].map(countryKey => {
+                    const label = countryKey === "Worldwide" ? "International" : countryKey === "Germany" ? "Allemagne" : countryKey;
+                    const matchingSites = countryKey === "Tous" 
+                      ? recruitmentSites 
+                      : recruitmentSites.filter(s => s.country === countryKey);
+                    const totalCount = matchingSites.length;
+                    const unvisitedCount = matchingSites.filter(s => !isVisitedOnDate(s, todayStr)).length;
+                    const isActive = siteCountryFilter === countryKey;
 
-                  return (
-                    <button
-                      key={countryKey}
-                      onClick={() => setSiteCountryFilter(countryKey)}
-                      className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                        isActive
-                          ? "bg-neutral-950 text-white font-black shadow-xs"
-                          : "bg-neutral-100/80 hover:bg-neutral-200/80 text-neutral-600 border border-neutral-200/60"
-                      }`}
-                    >
-                      <span>{label}</span>
-                      <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full ${
-                        isActive ? "bg-neutral-700 text-white" : "bg-neutral-200 text-neutral-700"
-                      }`}>
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
+                    return (
+                      <button
+                        key={countryKey}
+                        onClick={() => setSiteCountryFilter(countryKey)}
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                          isActive
+                            ? "bg-neutral-950 text-white font-black shadow-xs"
+                            : "bg-neutral-100/80 hover:bg-neutral-200/80 text-neutral-600 border border-neutral-200/60"
+                        }`}
+                      >
+                        <span>{label}</span>
+                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full ${
+                          isActive ? "bg-neutral-700 text-white" : "bg-neutral-200 text-neutral-700"
+                        }`}>
+                          {showVisitedToday ? totalCount : unvisitedCount}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowVisitedToday(prev => !prev)}
+                  className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                    showVisitedToday
+                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold shadow-3xs"
+                      : "bg-neutral-100/80 hover:bg-neutral-200/80 text-neutral-600 border border-neutral-200/60"
+                  }`}
+                  title={showVisitedToday ? "Masquer les sites déjà visités aujourd'hui" : "Afficher les sites déjà visités aujourd'hui"}
+                >
+                  {showVisitedToday ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Masquer visités ({todayVisitedCount})</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5 text-neutral-500" />
+                      <span>Afficher visités ({todayVisitedCount})</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
             {/* 4. MEDIAHUB FORMATTED CONTENT DISPLAY (TABLE OR GRID) */}
             {filteredSites.length === 0 ? (
-              <div className="text-center py-16 text-neutral-400 italic bg-neutral-50/50 rounded-3xl border border-dashed border-neutral-200 font-medium text-xs">
-                Aucun portail de recrutement ne correspond à vos critères.
-              </div>
+              todayVisitedCount > 0 && !showVisitedToday ? (
+                <div className="text-center py-12 px-6 bg-gradient-to-br from-emerald-50/80 to-teal-50/30 rounded-3xl border border-emerald-200/80 space-y-3 font-sans shadow-3xs">
+                  <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto shadow-2xs">
+                    <CheckCircle className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-extrabold text-emerald-950">
+                      Tous les portails sélectionnés ({todayVisitedCount}) ont été visités aujourd'hui !
+                    </h4>
+                    <p className="text-xs text-emerald-700 font-medium max-w-md mx-auto">
+                      Ils ont été masqués de la liste et réapparaîtront automatiquement <strong>demain</strong> pour votre routine quotidienne.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowVisitedToday(true)}
+                    className="inline-flex items-center gap-1.5 bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-3xs cursor-pointer mt-2"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Afficher les sites visités aujourd'hui ({todayVisitedCount})</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-16 text-neutral-400 italic bg-neutral-50/50 rounded-3xl border border-dashed border-neutral-200 font-medium text-xs">
+                  Aucun portail de recrutement ne correspond à vos critères.
+                </div>
+              )
             ) : siteViewMode === "table" ? (
               /* TABLE VIEW (MEDIAMUB / BOOKS & MOVIES STYLE) */
               <div className="overflow-x-auto rounded-2xl border border-neutral-200/80 shadow-3xs bg-white">

@@ -62,6 +62,7 @@ export default function FolderObjectivesModal({
   const [kpiTarget, setKpiTarget] = useState<number | "">("");
   const [kpiCurrent, setKpiCurrent] = useState<number | "">("");
   const [kpiUnit, setKpiUnit] = useState("");
+  const [kpiDueDate, setKpiDueDate] = useState("");
 
   const customObjs = folder.customObjectives || [];
   const completedCount = customObjs.filter(o => o.completed).length;
@@ -132,6 +133,7 @@ export default function FolderObjectivesModal({
   };
 
   const handleDeleteCustomObj = (id: string) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet objectif personnalisé ?")) return;
     const updated = customObjs.filter(o => o.id !== id);
     onUpdateFolder({ ...folder, customObjectives: updated });
   };
@@ -152,7 +154,8 @@ export default function FolderObjectivesModal({
       title: kpiTitle.trim(),
       targetValue: Number(kpiTarget) || 0,
       currentValue: Number(kpiCurrent) || 0,
-      unit: kpiUnit.trim() || "unités"
+      unit: kpiUnit.trim() || "unités",
+      dueDate: kpiDueDate || undefined
     };
 
     const updatedKpis = [...(folder.objectives || []), newKpi];
@@ -161,7 +164,16 @@ export default function FolderObjectivesModal({
     setKpiTarget("");
     setKpiCurrent("");
     setKpiUnit("");
+    setKpiDueDate("");
     setShowAddKpi(false);
+  };
+
+  const handleUpdateKpiDueDate = (kpiId: string | undefined, newDueDate: string) => {
+    if (!kpiId) return;
+    const updated = (folder.objectives || []).map(k => 
+      k.id === kpiId ? { ...k, dueDate: newDueDate || undefined } : k
+    );
+    onUpdateFolder({ ...folder, objectives: updated });
   };
 
   const handleUpdateKpiCurrent = (kpiId: string | undefined, newVal: number) => {
@@ -174,6 +186,7 @@ export default function FolderObjectivesModal({
 
   const handleDeleteKpi = (kpiId: string | undefined) => {
     if (!kpiId) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet objectif / KPI ?")) return;
     const updated = (folder.objectives || []).filter(k => k.id !== kpiId);
     onUpdateFolder({ ...folder, objectives: updated });
   };
@@ -618,6 +631,18 @@ export default function FolderObjectivesModal({
                           className="w-full bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-hidden"
                         />
                       </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 block mb-1">
+                          Date d'Échéance / Cible
+                        </label>
+                        <input
+                          type="date"
+                          value={kpiDueDate}
+                          onChange={e => setKpiDueDate(e.target.value)}
+                          className="w-full bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-indigo-500 outline-hidden cursor-pointer"
+                        />
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-end gap-2 pt-1">
@@ -702,6 +727,17 @@ export default function FolderObjectivesModal({
                                 <span>{kpi.title}</span>
                                 <Pencil className="w-3 h-3 inline-block ml-1.5 opacity-0 group-hover/kpi:opacity-100 text-indigo-500 transition-opacity" />
                               </span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <CalendarDays className="w-3 h-3 text-indigo-500 shrink-0" />
+                                <span className="text-[10px] font-mono font-bold text-neutral-400 dark:text-neutral-500">Échéance :</span>
+                                <input
+                                  type="date"
+                                  value={kpi.dueDate || ""}
+                                  onChange={(e) => handleUpdateKpiDueDate(kpi.id, e.target.value)}
+                                  className="text-[10px] font-mono font-bold text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-zinc-800 border border-neutral-200 dark:border-zinc-700 rounded-md px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                  title="Changer la date d'échéance"
+                                />
+                              </div>
                             </div>
                           )}
 

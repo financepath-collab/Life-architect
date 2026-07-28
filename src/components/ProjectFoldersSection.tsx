@@ -75,6 +75,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import FolderObjectivesModal from "./FolderObjectivesModal";
 
 /**
  * Calculates average objective completion percentage and performance status for a project folder
@@ -266,6 +267,9 @@ export default function ProjectFoldersSection({
   // Tab control within selected folder
   const [activeTab, setActiveTab] = useState<"overview" | "credentials" | "strategy" | "topics" | "formations" | "objectives" | "links" | "calendar">("overview");
 
+  // Objective Modal State
+  const [modalObjectiveFolder, setModalObjectiveFolder] = useState<ProjectFolder | null>(null);
+
   // Form states for creating/editing projects
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectFolder | null>(null);
@@ -342,6 +346,7 @@ export default function ProjectFoldersSection({
   const [newObjTarget, setNewObjTarget] = useState("");
   const [newObjCurrent, setNewObjCurrent] = useState("");
   const [newObjUnit, setNewObjUnit] = useState("");
+  const [newObjDueDate, setNewObjDueDate] = useState("");
 
   // Objective History & Trend Chart Modal states
   const [selectedObjHistoryIdx, setSelectedObjHistoryIdx] = useState<number | null>(null);
@@ -491,6 +496,7 @@ export default function ProjectFoldersSection({
 
   const handleDeleteCustomKPI = (kpiId: string) => {
     if (!selectedFolder) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet indicateur KPI ?")) return;
     const updatedList = customKPIList.filter(k => k.id !== kpiId);
     setCustomKPIList(updatedList);
     const updatedKPIs = {
@@ -516,6 +522,7 @@ export default function ProjectFoldersSection({
       targetValue: parseFloat(newObjTarget) || 0,
       currentValue: initialVal,
       unit: newObjUnit.trim() || "unités",
+      dueDate: newObjDueDate || undefined,
       history: [
         {
           id: `hist_${Date.now()}`,
@@ -537,6 +544,24 @@ export default function ProjectFoldersSection({
     setNewObjTarget("");
     setNewObjCurrent("");
     setNewObjUnit("");
+    setNewObjDueDate("");
+  };
+
+  const handleUpdateObjDueDate = (idx: number, newDueDate: string) => {
+    if (!selectedFolder || !selectedFolder.objectives) return;
+    const updatedObjs = selectedFolder.objectives.map((obj, i) => {
+      if (i === idx) {
+        return {
+          ...obj,
+          dueDate: newDueDate || undefined
+        };
+      }
+      return obj;
+    });
+    setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
+      ...f,
+      objectives: updatedObjs
+    } : f));
   };
 
   const handleQuickUpdateObjCurrent = (idx: number, delta: number) => {
@@ -654,6 +679,7 @@ export default function ProjectFoldersSection({
 
   const handleDeleteObjectiveItem = (idx: number) => {
     if (!selectedFolder || !selectedFolder.objectives) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet objectif / KPI ?")) return;
     const updatedObjs = selectedFolder.objectives.filter((_, i) => i !== idx);
     setFolders(prev => prev.map(f => f.id === selectedFolder.id ? {
       ...f,
@@ -1093,6 +1119,7 @@ export default function ProjectFoldersSection({
   // Delete custom objective
   const handleDeleteCustomObjective = (objId: string) => {
     if (!selectedFolder) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet objectif personnalisé ?")) return;
     setFolders(prev => prev.map(f => {
       if (f.id === selectedFolder.id) {
         return {
@@ -1553,6 +1580,19 @@ export default function ProjectFoldersSection({
                           <span>{totalItems} Éléments reliés</span>
                           <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setModalObjectiveFolder(f);
+                              }}
+                              className="text-indigo-600 hover:text-indigo-800 transition-colors px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md text-[9px] font-black uppercase flex items-center gap-1 cursor-pointer"
+                              title="Ajouter ou gérer les objectifs de ce projet"
+                            >
+                              <Target className="w-3 h-3 text-indigo-600" />
+                              <span>+ Objectif</span>
+                            </button>
+
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleOpenEditModal(f);
@@ -1861,6 +1901,157 @@ export default function ProjectFoldersSection({
                     <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-medium">
                       <AlertCircle className="w-3.5 h-3.5 text-indigo-500" />
                       <span>Les modifications apportées au bloc-notes s'enregistrent automatiquement lorsque vous cliquez en dehors ou cliquez sur Enregistrer.</span>
+                    </div>
+
+                    {/* Direct Quick Add & Manage Objectives Section for Project Sheet */}
+                    <div className="bg-white border border-neutral-200/90 rounded-2xl p-4 space-y-3 font-sans shadow-2xs">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-neutral-100">
+                        <div className="flex items-center gap-2">
+                          <Target className="w-4 h-4 text-indigo-600" />
+                          <h4 className="text-xs font-black text-neutral-900 uppercase">
+                            Objectifs & Jalons du Projet ({selectedFolder.customObjectives.length})
+                          </h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setModalObjectiveFolder(selectedFolder)}
+                          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Gérer KPIs & Jalons Avancés</span>
+                        </button>
+                      </div>
+
+                      {/* Add new objective form right inside the Overview sheet */}
+                      <form onSubmit={handleAddCustomObjective} className="flex flex-col sm:flex-row gap-2 bg-neutral-50 p-2 rounded-xl border border-neutral-200/80">
+                        <input
+                          type="text"
+                          value={newCustomObjectiveText}
+                          onChange={(e) => setNewCustomObjectiveText(e.target.value)}
+                          placeholder="Ajouter un nouvel objectif à ce projet..."
+                          className="flex-1 text-xs font-medium bg-transparent border-0 focus:outline-none focus:ring-0 text-neutral-800 px-2 py-1"
+                        />
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-lg px-2 py-1 shadow-2xs">
+                            <CalendarDays className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                            <input
+                              type="date"
+                              value={newCustomObjectiveDueDate}
+                              onChange={(e) => setNewCustomObjectiveDueDate(e.target.value)}
+                              className="text-xs font-bold bg-transparent border-0 focus:outline-none text-neutral-800 cursor-pointer"
+                              title="Date cible"
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            className="bg-neutral-900 hover:bg-neutral-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Ajouter</span>
+                          </button>
+                        </div>
+                      </form>
+
+                      {/* List of current objectives */}
+                      {selectedFolder.customObjectives.length === 0 ? (
+                        <div className="text-center py-4 text-neutral-400 italic text-xs bg-neutral-50/50 rounded-xl border border-dashed border-neutral-200">
+                          Aucun objectif défini. Saisissez votre premier objectif ci-dessus pour le suivre.
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                          {selectedFolder.customObjectives.map(o => {
+                            const isEditing = editingObjectiveId === o.id;
+
+                            if (isEditing) {
+                              return (
+                                <div key={o.id} className="p-2.5 bg-indigo-50/60 border border-indigo-200 rounded-xl space-y-2">
+                                  <div className="flex flex-col sm:flex-row gap-2">
+                                    <input
+                                      type="text"
+                                      value={editObjectiveText}
+                                      onChange={(e) => setEditObjectiveText(e.target.value)}
+                                      className="flex-1 bg-white border border-neutral-200 rounded-lg px-2.5 py-1 text-xs font-bold text-neutral-800 focus:outline-none"
+                                    />
+                                    <input
+                                      type="date"
+                                      value={editObjectiveDueDate}
+                                      onChange={(e) => setEditObjectiveDueDate(e.target.value)}
+                                      className="text-xs font-bold bg-white border border-neutral-200 rounded-lg px-2 py-1 text-neutral-800 cursor-pointer"
+                                    />
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSaveEditObjective(o.id)}
+                                        className="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-xs font-bold"
+                                      >
+                                        <Check className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={handleCancelEditObjective}
+                                        className="bg-white border border-neutral-200 text-neutral-600 px-2.5 py-1 rounded-lg text-xs font-bold"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div
+                                key={o.id}
+                                className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all ${
+                                  o.completed
+                                    ? "bg-emerald-50/40 border-emerald-100 text-neutral-400"
+                                    : "bg-neutral-50 border-neutral-200/70 hover:border-neutral-300 text-neutral-800"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleCustomObjective(o.id)}
+                                    className="cursor-pointer shrink-0"
+                                  >
+                                    {o.completed ? (
+                                      <CheckSquare className="w-4 h-4 text-emerald-600" />
+                                    ) : (
+                                      <Square className="w-4 h-4 text-neutral-400 hover:text-neutral-600" />
+                                    )}
+                                  </button>
+                                  <span
+                                    onClick={() => handleStartEditObjective(o)}
+                                    className={`text-xs font-bold truncate cursor-pointer hover:text-indigo-600 transition-colors ${
+                                      o.completed ? "line-through text-neutral-400" : "text-neutral-900"
+                                    }`}
+                                    title="Cliquer pour modifier l'intitulé"
+                                  >
+                                    {o.text}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {o.dueDate && (
+                                    <span className="text-[10px] text-neutral-400 font-mono font-medium flex items-center gap-1">
+                                      <CalendarDays className="w-3 h-3 text-indigo-500" />
+                                      {o.dueDate}
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCustomObjective(o.id)}
+                                    className="text-neutral-400 hover:text-rose-600 p-1 cursor-pointer transition-colors"
+                                    title="Supprimer l'objectif"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -2838,7 +3029,7 @@ export default function ProjectFoldersSection({
 
                     {/* Add Objective Item Form */}
                     <form onSubmit={handleAddObjectiveItem} className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-emerald-50/40 p-3 rounded-xl border border-emerald-200/60">
-                      <div className="sm:col-span-4">
+                      <div className="sm:col-span-3">
                         <label className="text-[9px] font-bold text-emerald-900 uppercase block mb-1">Titre de l'Objectif / KPI</label>
                         <input
                           type="text"
@@ -2874,17 +3065,25 @@ export default function ProjectFoldersSection({
                           type="text"
                           value={newObjUnit}
                           onChange={(e) => setNewObjUnit(e.target.value)}
-                          placeholder="ex: abonnés, MAD..."
+                          placeholder="ex: abonnés..."
                           className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-2"
                         />
                       </div>
-                      <div className="sm:col-span-2 flex items-end">
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] font-bold text-emerald-900 uppercase block mb-1">Échéance</label>
+                        <input
+                          type="date"
+                          value={newObjDueDate}
+                          onChange={(e) => setNewObjDueDate(e.target.value)}
+                          className="w-full text-xs font-medium bg-white border border-neutral-200 rounded-lg p-1.5 font-mono cursor-pointer"
+                        />
+                      </div>
+                      <div className="sm:col-span-1 flex items-end">
                         <button
                           type="submit"
                           className="w-full bg-emerald-700 hover:bg-emerald-800 text-white p-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          <span>Ajouter</span>
                         </button>
                       </div>
                     </form>
@@ -2898,12 +3097,25 @@ export default function ProjectFoldersSection({
 
                         return (
                           <div key={idx} className="bg-white border border-neutral-200/90 p-3.5 rounded-2xl space-y-2.5 shadow-2xs">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-extrabold text-neutral-900 truncate">{obj.title}</span>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <span className="text-xs font-extrabold text-neutral-900 block truncate">{obj.title}</span>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <CalendarDays className="w-3 h-3 text-indigo-500 shrink-0" />
+                                  <span className="text-[10px] font-mono font-medium text-neutral-400">Échéance :</span>
+                                  <input
+                                    type="date"
+                                    value={obj.dueDate || ""}
+                                    onChange={(e) => handleUpdateObjDueDate(idx, e.target.value)}
+                                    className="text-[10px] font-mono font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-md px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                                    title="Modifier la date d'échéance"
+                                  />
+                                </div>
+                              </div>
                               <button
                                 onClick={() => handleDeleteObjectiveItem(idx)}
                                 title="Supprimer cet objectif"
-                                className="text-neutral-300 hover:text-rose-600 transition-colors p-1"
+                                className="text-neutral-300 hover:text-rose-600 transition-colors p-1 shrink-0"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -4701,6 +4913,18 @@ export default function ProjectFoldersSection({
 
           </div>
         </div>
+      )}
+
+      {/* Folder Objectives Modal */}
+      {modalObjectiveFolder && (
+        <FolderObjectivesModal
+          folder={modalObjectiveFolder}
+          onClose={() => setModalObjectiveFolder(null)}
+          onUpdateFolder={(updatedFolder) => {
+            setFolders(prev => prev.map(f => f.id === updatedFolder.id ? updatedFolder : f));
+            setModalObjectiveFolder(updatedFolder);
+          }}
+        />
       )}
 
     </div>

@@ -417,6 +417,7 @@ export interface ProjectObjective {
   targetValue: number;
   currentValue: number;
   unit: string;
+  dueDate?: string;
   history?: ObjectiveHistoryEntry[];
 }
 
@@ -557,6 +558,23 @@ export interface MobilityTargetMarket {
   salaryThreshold: string;
   difficulty: number;
 }
+
+export interface MediaProgressLog {
+  id: string;
+  date: string; // "YYYY-MM-DD"
+  mediaType: "Série" | "Film" | "Anime" | "Livre" | "Formation" | "Autre";
+  mediaId: string;
+  title: string;
+  advancedAmount: number; // e.g. 1 episode/lesson or 20 pages
+  unit: string; // "épisodes", "pages", "leçons", "%"
+  previousValue: number;
+  newValue: number;
+  totalValue?: number;
+  timestamp: string;
+  habitId?: string;
+  notes?: string;
+}
+
 
 
 

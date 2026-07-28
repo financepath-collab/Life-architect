@@ -26,8 +26,10 @@ import {
   MonthlyGoal,
   EditorialEvent,
   ProjectFolder,
-  JournalEntry
+  JournalEntry,
+  MediaProgressLog
 } from "./types";
+import { MediaProgressWidget } from "./components/MediaProgressWidget";
 
 
 
@@ -1113,6 +1115,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_SCREENMEDIA;
   });
 
+  const [mediaProgressLogs, setMediaProgressLogs] = useState<MediaProgressLog[]>(() => {
+    const saved = localStorage.getItem("mp_media_progress_logs_v1");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [accounts, setAccounts] = useState<Account[]>(() => {
     const saved = localStorage.getItem("mp_accounts_v2");
     return saved ? JSON.parse(saved) : INITIAL_ACCOUNTS;
@@ -1846,6 +1853,20 @@ export default function App() {
       dbStore.setItem("mp_screenmedia_v3", screenMedia);
     }
   }, [screenMedia, isDbLoaded]);
+
+  useEffect(() => {
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_media_progress_logs_v1", mediaProgressLogs);
+      localStorage.setItem("mp_media_progress_logs_v1", JSON.stringify(mediaProgressLogs));
+    }
+  }, [mediaProgressLogs, isDbLoaded]);
+
+  useEffect(() => {
+    if (isDbLoaded && !isInternalStateUpdateRef.current) {
+      dbStore.setItem("mp_media_progress_logs_v1", mediaProgressLogs);
+      localStorage.setItem("mp_media_progress_logs_v1", JSON.stringify(mediaProgressLogs));
+    }
+  }, [mediaProgressLogs, isDbLoaded]);
 
   useEffect(() => {
     if (isDbLoaded && !isInternalStateUpdateRef.current) {
@@ -4981,6 +5002,21 @@ export default function App() {
                 habitHistory={habitHistory} 
               />
 
+              {/* Media & Culture Progress & Habits Synchronization Widget */}
+              <MediaProgressWidget
+                books={books}
+                setBooks={setBooks}
+                screenMedia={screenMedia}
+                setScreenMedia={setScreenMedia}
+                formations={formations}
+                setFormations={setFormations}
+                dailyHabits={dailyHabits}
+                setDailyHabits={setDailyHabits}
+                mediaProgressLogs={mediaProgressLogs}
+                setMediaProgressLogs={setMediaProgressLogs}
+                triggerToast={triggerToast}
+              />
+
             </div>
           )}
 
@@ -5141,8 +5177,17 @@ export default function App() {
                   ) : activeMenu === "formation_dash" ? (
                     <LecturesSectionDashboard
                       books={books}
+                      setBooks={setBooks}
                       screenMedia={screenMedia}
+                      setScreenMedia={setScreenMedia}
+                      formations={formations}
+                      setFormations={setFormations}
+                      dailyHabits={dailyHabits}
+                      setDailyHabits={setDailyHabits}
+                      mediaProgressLogs={mediaProgressLogs}
+                      setMediaProgressLogs={setMediaProgressLogs}
                       onNavigate={handleMenuClick}
+                      triggerToast={triggerToast}
                     />
                   ) : activeMenu === "sport" ? (
                     <FocusSport 

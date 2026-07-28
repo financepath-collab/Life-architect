@@ -23,8 +23,9 @@ import {
   Account, FinanceBudget, FinanceEpargne, Abonnement, StockEntry, FinanceTransaction,
   DailyHabit, Action30Jours, WeeklyObjective, ProfilAmelioration, PossibiliteGoal, JournalEntry,
   SkinTracker, MealPlanner, ProjectFolder, EditorialEvent, BookItem, ScreenMediaItem, Formation,
-  FinanceSalaire
+  FinanceSalaire, MediaProgressLog
 } from "../types";
+import { MediaProgressWidget } from "./MediaProgressWidget";
 import { 
   ResponsiveContainer, 
   LineChart, 
@@ -2191,11 +2192,33 @@ export function ProjetsSectionDashboard({ folders, formations, onNavigate }: Pro
 // ==========================================
 interface LecturesDashProps {
   books: BookItem[];
+  setBooks?: React.Dispatch<React.SetStateAction<BookItem[]>>;
   screenMedia: ScreenMediaItem[];
+  setScreenMedia?: React.Dispatch<React.SetStateAction<ScreenMediaItem[]>>;
+  formations?: Formation[];
+  setFormations?: React.Dispatch<React.SetStateAction<Formation[]>>;
+  dailyHabits?: DailyHabit[];
+  setDailyHabits?: React.Dispatch<React.SetStateAction<DailyHabit[]>>;
+  mediaProgressLogs?: MediaProgressLog[];
+  setMediaProgressLogs?: React.Dispatch<React.SetStateAction<MediaProgressLog[]>>;
   onNavigate: (moduleId: string) => void;
+  triggerToast?: (title: string, message: string, type?: "success" | "warning" | "info") => void;
 }
 
-export function LecturesSectionDashboard({ books, screenMedia, onNavigate }: LecturesDashProps) {
+export function LecturesSectionDashboard({ 
+  books, 
+  setBooks, 
+  screenMedia, 
+  setScreenMedia, 
+  formations = [], 
+  setFormations, 
+  dailyHabits = [], 
+  setDailyHabits, 
+  mediaProgressLogs = [], 
+  setMediaProgressLogs, 
+  onNavigate,
+  triggerToast
+}: LecturesDashProps) {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200/60 pb-4">
@@ -2209,6 +2232,23 @@ export function LecturesSectionDashboard({ books, screenMedia, onNavigate }: Lec
           </p>
         </div>
       </div>
+
+      {/* MEDIA & CULTURE PROGRESS WIDGET */}
+      {setBooks && setScreenMedia && setFormations && setDailyHabits && setMediaProgressLogs && (
+        <MediaProgressWidget
+          books={books}
+          setBooks={setBooks}
+          screenMedia={screenMedia}
+          setScreenMedia={setScreenMedia}
+          formations={formations}
+          setFormations={setFormations}
+          dailyHabits={dailyHabits}
+          setDailyHabits={setDailyHabits}
+          mediaProgressLogs={mediaProgressLogs}
+          setMediaProgressLogs={setMediaProgressLogs}
+          triggerToast={triggerToast}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
