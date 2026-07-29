@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { FinanceTransaction, Abonnement } from "../types";
 import { 
   TrendingDown, 
@@ -153,15 +153,19 @@ export default function MonthlyExpenseAnalysisCard({
   transactions = [], 
   abonnements = [] 
 }: MonthlyExpenseAnalysisCardProps) {
-  const [chartType, setChartType] = useState<"donut" | "bar">("donut");
+  const [chartType, setChartType] = useState<"donut" | "pie" | "bar">("pie");
+  const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null);
+  
+  // Selected period state for the pie chart ("month:2026-07", "quarter:2026-Q3", "all", etc.)
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("month:2026-07");
   
   // Find all unique months available in transactions
   const availableMonths = useMemo(() => {
     const monthsSet = new Set<string>();
-    // Default fallback months
     monthsSet.add("2026-07");
     monthsSet.add("2026-06");
     monthsSet.add("2026-05");
+    monthsSet.add("2026-04");
     
     transactions.forEach(t => {
       if (t.date && t.date.length >= 7) {
@@ -172,12 +176,69 @@ export default function MonthlyExpenseAnalysisCard({
     return Array.from(monthsSet).sort().reverse();
   }, [transactions]);
 
-  // Selected month state
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    return availableMonths[0] || "2026-07";
-  });
+  // Find all unique quarters available
+  const availableQuarters = useMemo(() => {
+    const qSet = new Set<string>();
+    qSet.add("2026-Q3");
+    qSet.add("2026-Q2");
+    qSet.add("2026-Q1");
+    
+    transactions.forEach(t => {
+      if (t.date && t.date.length >= 7) {
+        const year = t.date.substring(0, 4);
+        const m = parseInt(t.date.substring(5, 7), 10);
+        let q = 1;
+        if (m >= 4 && m <= 6) q = 2;
+        else if (m >= 7 && m <= 9) q = 3;
+        else if (m >= 10 && m <= 12) q = 4;
+        qSet.add(`${year}-Q${q}`);
+      }
+    });
 
-  // Calculate statistics for the selected month
+    return Array.from(qSet).sort().reverse();
+  }, [transactions]);
+
+  const matchesPeriod = useCallback((dateStr: string | undefined, periodKey: string) => {
+    if (!dateStr || dateStr.length < 7) return false;
+    if (periodKey === "all") return true;
+    if (periodKey.startsWith("month:")) {
+      const m = periodKey.replace("month:", "");
+      return dateStr.startsWith(m);
+    }
+    if (periodKey.startsWith("quarter:")) {
+      const [year, qStr] = periodKey.replace("quarter:", "").split("-Q");
+      const q = parseInt(qStr, 10);
+      const dateYear = dateStr.substring(0, 4);
+      const dateMonth = parseInt(dateStr.substring(5, 7), 10);
+      if (dateYear !== year) return false;
+      if (q === 1) return dateMonth >= 1 && dateMonth <= 3;
+      if (q === 2) return dateMonth >= 4 && dateMonth <= 6;
+      if (q === 3) return dateMonth >= 7 && dateMonth <= 9;
+      if (q === 4) return dateMonth >= 10 && dateMonth <= 12;
+    }
+    return dateStr.startsWith(periodKey);
+  }, []);
+
+  const formatMonthLabel = (monthStr: string) => {
+    const [year, month] = monthStr.split("-");
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    const label = date.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+
+  const formatQuarterLabel = (qKey: string) => {
+    const [year, qStr] = qKey.split("-Q");
+    const q = parseInt(qStr, 10);
+    const qMap: { [key: number]: string } = {
+      1: "T1 (Jan - Mars)",
+      2: "T2 (Avr - Juin)",
+      3: "T3 (Juil - Sept)",
+      4: "T4 (Oct - Déc)"
+    };
+    return `${qMap[q] || `Trimestre ${q}`} ${year}`;
+  };
+
+  // Calculate statistics for the selected period (Month / Quarter)
   const analysisData = useMemo(() => {
     const defaultBaselines: { [key: string]: { revenue: number; expense: number } } = {
       "2026-07": { revenue: 37700, expense: 4420 },
@@ -195,12 +256,12 @@ export default function MonthlyExpenseAnalysisCard({
       .filter(a => a.status === "Actif")
       .reduce((sum, a) => sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
 
-    const monthTransactions = transactions.filter(
-      t => t.type === "Dépense" && t.date && t.date.startsWith(selectedMonth)
+    const periodTransactions = transactions.filter(
+      t => t.type === "Dépense" && matchesPeriod(t.date, selectedPeriod)
     );
 
-    if (monthTransactions.length > 0) {
-      monthTransactions.forEach(t => {
+    if (periodTransactions.length > 0) {
+      periodTransactions.forEach(t => {
         const amt = t.amount || 0;
         const rawCat = t.category || "Autre";
         const cat = normalizeCategory(rawCat);
@@ -208,8 +269,9 @@ export default function MonthlyExpenseAnalysisCard({
         totalExpense += amt;
       });
     } else {
-      // Fallback to baseline default expenses if no real transactions are present
-      const baseline = defaultBaselines[selectedMonth] || { revenue: 25000, expense: 18000 };
+      // Fallback to baseline default expenses if no real transactions are present for month
+      const monthKey = selectedPeriod.startsWith("month:") ? selectedPeriod.replace("month:", "") : "2026-07";
+      const baseline = defaultBaselines[monthKey] || { revenue: 25000, expense: 18000 };
       const simulatedExpense = baseline.expense;
       totalExpense = simulatedExpense;
       
@@ -240,14 +302,7 @@ export default function MonthlyExpenseAnalysisCard({
       topCategory,
       averageExpense: sortedCategories.length > 0 ? totalExpense / sortedCategories.length : 0
     };
-  }, [selectedMonth, transactions, abonnements]);
-
-  const formatMonthLabel = (monthStr: string) => {
-    const [year, month] = monthStr.split("-");
-    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-    const label = date.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-    return label.charAt(0).toUpperCase() + label.slice(1);
-  };
+  }, [selectedPeriod, transactions, abonnements, matchesPeriod]);
 
   return (
     <div id="monthly-expense-category-analysis" className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-neutral-800 rounded-3xl p-6 shadow-2xs hover:shadow-sm transition-all duration-300 space-y-6">
@@ -270,30 +325,54 @@ export default function MonthlyExpenseAnalysisCard({
 
         {/* CONTROLS */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Month Dropdown */}
+          {/* Period Selector Dropdown (Month / Quarter / Global) */}
           <div className="flex items-center gap-1.5 bg-neutral-50 dark:bg-zinc-950/60 border border-neutral-200 dark:border-neutral-800 px-3 py-1.5 rounded-xl text-xs font-bold text-neutral-700 dark:text-neutral-300">
             <Calendar className="w-3.5 h-3.5 text-neutral-400" />
             <div className="relative">
               <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="appearance-none bg-transparent pr-6 focus:outline-none cursor-pointer"
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="appearance-none bg-transparent pr-6 focus:outline-none cursor-pointer font-bold"
               >
-                {availableMonths.map(m => (
-                  <option key={m} value={m} className="dark:bg-zinc-900">
-                    {formatMonthLabel(m)}
-                  </option>
-                ))}
+                <option value="all" className="dark:bg-zinc-900">🌐 Tout le cumul (Global)</option>
+                <optgroup label="📅 Filtrer par Mois" className="dark:bg-zinc-900">
+                  {availableMonths.map(m => (
+                    <option key={m} value={`month:${m}`} className="dark:bg-zinc-900">
+                      Mois : {formatMonthLabel(m)}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="📊 Filtrer par Trimestre" className="dark:bg-zinc-900">
+                  {availableQuarters.map(q => (
+                    <option key={q} value={`quarter:${q}`} className="dark:bg-zinc-900">
+                      Trimestre : {formatQuarterLabel(q)}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
               <ChevronDown className="w-3 h-3 text-neutral-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
 
-          {/* Toggle Donut / Bar Chart */}
-          <div className="flex bg-neutral-100 dark:bg-zinc-950 p-1 rounded-xl border border-neutral-200/50 dark:border-neutral-800/80">
+          {/* Toggle Pie / Donut / Bar Chart */}
+          <div className="flex bg-neutral-100 dark:bg-zinc-950 p-1 rounded-xl border border-neutral-200/50 dark:border-neutral-800/80 text-xs">
             <button
+              type="button"
+              onClick={() => setChartType("pie")}
+              className={`px-2 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 font-bold ${
+                chartType === "pie"
+                  ? "bg-white dark:bg-zinc-900 text-neutral-950 dark:text-neutral-50 shadow-3xs"
+                  : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+              }`}
+              title="Graphique circulaire / Camembert"
+            >
+              <PieIcon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Circulaire</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setChartType("donut")}
-              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-2 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 font-bold ${
                 chartType === "donut"
                   ? "bg-white dark:bg-zinc-900 text-neutral-950 dark:text-neutral-50 shadow-3xs"
                   : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
@@ -301,10 +380,12 @@ export default function MonthlyExpenseAnalysisCard({
               title="Graphique en anneau"
             >
               <PieIcon className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Anneau</span>
             </button>
             <button
+              type="button"
               onClick={() => setChartType("bar")}
-              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-2 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 font-bold ${
                 chartType === "bar"
                   ? "bg-white dark:bg-zinc-900 text-neutral-950 dark:text-neutral-50 shadow-3xs"
                   : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
@@ -312,6 +393,7 @@ export default function MonthlyExpenseAnalysisCard({
               title="Graphique en barres"
             >
               <BarChart3 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Barres</span>
             </button>
           </div>
         </div>
@@ -326,38 +408,57 @@ export default function MonthlyExpenseAnalysisCard({
             <div className="text-center text-xs text-neutral-400 py-10 italic">
               Aucune dépense sur ce mois.
             </div>
-          ) : chartType === "donut" ? (
-            <div className="relative w-full h-[200px] flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={200}>
+          ) : chartType === "pie" || chartType === "donut" ? (
+            <div className="relative w-full h-[210px] flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={210}>
                 <PieChart>
                   <Pie
                     data={analysisData.categories}
                     cx="50%"
                     cy="50%"
-                    innerRadius={58}
+                    innerRadius={chartType === "donut" ? 55 : 0}
                     outerRadius={78}
-                    paddingAngle={3}
+                    paddingAngle={chartType === "donut" ? 3 : 1.5}
                     dataKey="value"
+                    onClick={(entry) => {
+                      if (selectedCategoryName === entry.name) {
+                        setSelectedCategoryName(null);
+                      } else {
+                        setSelectedCategoryName(entry.name);
+                      }
+                    }}
+                    cursor="pointer"
                   >
-                    {analysisData.categories.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} 
-                      />
-                    ))}
+                    {analysisData.categories.map((entry, index) => {
+                      const isSelected = selectedCategoryName === entry.name;
+                      return (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} 
+                          stroke={isSelected ? "#ffffff" : "transparent"}
+                          strokeWidth={isSelected ? 3 : 0}
+                          style={{
+                            filter: selectedCategoryName && !isSelected ? "opacity(0.4)" : "opacity(1)",
+                            transition: "all 0.3s ease"
+                          }}
+                        />
+                      );
+                    })}
                   </Pie>
                   <Tooltip content={<CustomChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
               
-              {/* Central Totals Label */}
-              <div className="absolute flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[8px] text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-wider">Total Dépenses</span>
-                <span className="text-sm font-black font-mono text-neutral-900 dark:text-neutral-50 leading-none py-0.5">
-                  {analysisData.totalExpense.toLocaleString("fr-FR")}
-                </span>
-                <span className="text-[8px] text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-wider">MAD</span>
-              </div>
+              {/* Central Totals Label for Donut Mode */}
+              {chartType === "donut" && (
+                <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-[8px] text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-wider">Total Dépenses</span>
+                  <span className="text-sm font-black font-mono text-neutral-900 dark:text-neutral-50 leading-none py-0.5">
+                    {analysisData.totalExpense.toLocaleString("fr-FR")}
+                  </span>
+                  <span className="text-[8px] text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-wider">MAD</span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="w-full h-[200px] px-3">
@@ -401,9 +502,20 @@ export default function MonthlyExpenseAnalysisCard({
             <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
               Répartition par Poste de Coût
             </span>
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-mono font-bold">
-              {analysisData.categories.length} catégories actives
-            </span>
+            <div className="flex items-center gap-2">
+              {selectedCategoryName && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategoryName(null)}
+                  className="text-[9px] bg-neutral-100 hover:bg-neutral-200 text-neutral-700 px-2 py-0.5 rounded font-bold cursor-pointer transition-all"
+                >
+                  Réinitialiser la sélection
+                </button>
+              )}
+              <span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-mono font-bold">
+                {analysisData.categories.length} catégories actives
+              </span>
+            </div>
           </div>
 
           <div className="space-y-2.5 max-h-[200px] overflow-y-auto pr-1 scrollbar-thin">
@@ -411,16 +523,25 @@ export default function MonthlyExpenseAnalysisCard({
               const maxVal = analysisData.topCategory.value || 1;
               const ratio = (cat.value / maxVal) * 100;
               const color = CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+              const isSelected = selectedCategoryName === cat.name;
 
               return (
-                <div key={cat.name} className="space-y-1">
+                <div 
+                  key={cat.name} 
+                  onClick={() => setSelectedCategoryName(isSelected ? null : cat.name)}
+                  className={`space-y-1 p-1.5 rounded-xl transition-all cursor-pointer border ${
+                    isSelected 
+                      ? "bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 shadow-2xs" 
+                      : "border-transparent hover:bg-neutral-50 dark:hover:bg-zinc-800/40"
+                  }`}
+                >
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2 min-w-0">
                       <span 
                         className="w-2.5 h-2.5 rounded-xs shrink-0" 
                         style={{ backgroundColor: color }}
                       />
-                      <span className="text-neutral-700 dark:text-neutral-300 font-semibold truncate">
+                      <span className={`font-semibold truncate ${isSelected ? "text-indigo-900 dark:text-indigo-200 font-extrabold" : "text-neutral-700 dark:text-neutral-300"}`}>
                         {cat.name}
                       </span>
                     </div>
@@ -498,9 +619,9 @@ export default function MonthlyExpenseAnalysisCard({
 
         {/* 50/30/20 Calculation logic and UI */}
         {(() => {
-          // 1. Calculate Monthly Income for the selected month
+          // 1. Calculate Monthly Income for the selected period
           let income = transactions
-            .filter(t => t.type === "Revenue" && t.date && t.date.startsWith(selectedMonth))
+            .filter(t => t.type === "Revenue" && matchesPeriod(t.date, selectedPeriod))
             .reduce((sum, t) => sum + (t.amount || 0), 0);
           
           // Fallback if no revenue is logged
@@ -513,7 +634,8 @@ export default function MonthlyExpenseAnalysisCard({
               "2026-03": 28000,
               "2026-02": 24500
             };
-            income = defaultIncomes[selectedMonth] || 30000;
+            const currentMonthKey = selectedPeriod.startsWith("month:") ? selectedPeriod.replace("month:", "") : "2026-07";
+            income = defaultIncomes[currentMonthKey] || 30000;
           }
 
           let besoins = 0; // Needs (50%)
@@ -525,12 +647,12 @@ export default function MonthlyExpenseAnalysisCard({
             .filter(a => a.status === "Actif")
             .reduce((sum, a) => sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
 
-          const monthExpenses = transactions.filter(
-            t => t.type === "Dépense" && t.date && t.date.startsWith(selectedMonth)
+          const periodExpenses = transactions.filter(
+            t => t.type === "Dépense" && matchesPeriod(t.date, selectedPeriod)
           );
 
-          if (monthExpenses.length > 0) {
-            monthExpenses.forEach(t => {
+          if (periodExpenses.length > 0) {
+            periodExpenses.forEach(t => {
               const amt = t.amount || 0;
               const rawCat = t.category || "Autre";
               const cat = normalizeCategory(rawCat);
@@ -587,7 +709,8 @@ export default function MonthlyExpenseAnalysisCard({
               "2026-03": 19500,
               "2026-02": 16800
             };
-            const simulatedTotal = defaultExpenses[selectedMonth] || 15000;
+            const currentMonthKey = selectedPeriod.startsWith("month:") ? selectedPeriod.replace("month:", "") : "2026-07";
+            const simulatedTotal = defaultExpenses[currentMonthKey] || 15000;
             besoins = simulatedTotal * 0.55;
             envies = simulatedTotal * 0.30;
             epargne = simulatedTotal * 0.15;

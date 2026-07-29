@@ -23,7 +23,8 @@ import {
   Sparkles,
   Tag,
   AlertTriangle,
-  Gauge
+  Gauge,
+  Calendar
 } from "lucide-react";
 
 function getCategoryIcon(catName: string) {
@@ -224,16 +225,92 @@ export default function FinanceCharts({
       return sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12);
     }, 0);
 
+  // Selected period state for the pie chart ("all", "month:2026-07", "quarter:2026-Q3", etc.)
+  const [selectedPiePeriod, setSelectedPiePeriod] = useState<string>("all");
+
+  const availablePieMonths = React.useMemo(() => {
+    const monthsSet = new Set<string>();
+    monthsSet.add("2026-07");
+    monthsSet.add("2026-06");
+    monthsSet.add("2026-05");
+    monthsSet.add("2026-04");
+    transactions.forEach(t => {
+      if (t.date && t.date.length >= 7) {
+        monthsSet.add(t.date.substring(0, 7));
+      }
+    });
+    return Array.from(monthsSet).sort().reverse();
+  }, [transactions]);
+
+  const availablePieQuarters = React.useMemo(() => {
+    const qSet = new Set<string>();
+    qSet.add("2026-Q3");
+    qSet.add("2026-Q2");
+    qSet.add("2026-Q1");
+    transactions.forEach(t => {
+      if (t.date && t.date.length >= 7) {
+        const year = t.date.substring(0, 4);
+        const m = parseInt(t.date.substring(5, 7), 10);
+        let q = 1;
+        if (m >= 4 && m <= 6) q = 2;
+        else if (m >= 7 && m <= 9) q = 3;
+        else if (m >= 10 && m <= 12) q = 4;
+        qSet.add(`${year}-Q${q}`);
+      }
+    });
+    return Array.from(qSet).sort().reverse();
+  }, [transactions]);
+
+  const matchesPiePeriod = React.useCallback((dateStr: string | undefined, periodKey: string) => {
+    if (!dateStr || dateStr.length < 7) return false;
+    if (periodKey === "all") return true;
+    if (periodKey.startsWith("month:")) {
+      const m = periodKey.replace("month:", "");
+      return dateStr.startsWith(m);
+    }
+    if (periodKey.startsWith("quarter:")) {
+      const [year, qStr] = periodKey.replace("quarter:", "").split("-Q");
+      const q = parseInt(qStr, 10);
+      const dateYear = dateStr.substring(0, 4);
+      const dateMonth = parseInt(dateStr.substring(5, 7), 10);
+      if (dateYear !== year) return false;
+      if (q === 1) return dateMonth >= 1 && dateMonth <= 3;
+      if (q === 2) return dateMonth >= 4 && dateMonth <= 6;
+      if (q === 3) return dateMonth >= 7 && dateMonth <= 9;
+      if (q === 4) return dateMonth >= 10 && dateMonth <= 12;
+    }
+    return dateStr.startsWith(periodKey);
+  }, []);
+
+  const formatPieMonthLabel = (monthStr: string) => {
+    const [year, month] = monthStr.split("-");
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    const label = date.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+
+  const formatPieQuarterLabel = (qKey: string) => {
+    const [year, qStr] = qKey.split("-Q");
+    const q = parseInt(qStr, 10);
+    const qMap: { [key: number]: string } = {
+      1: "T1 (Jan - Mars)",
+      2: "T2 (Avr - Juin)",
+      3: "T3 (Juil - Sept)",
+      4: "T4 (Oct - Déc)"
+    };
+    return `${qMap[q] || `Trimestre ${q}`} ${year}`;
+  };
+
   // 2. Build Category Aggregations for expenditures
   const expensesByCategory = React.useMemo(() => {
     const map: { [key: string]: number } = {};
     transactions
-      .filter(t => t.type === "Dépense")
+      .filter(t => t.type === "Dépense" && matchesPiePeriod(t.date, selectedPiePeriod))
       .forEach(t => {
         map[t.category] = (map[t.category] || 0) + t.amount;
       });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [transactions]);
+  }, [transactions, selectedPiePeriod, matchesPiePeriod]);
 
   const pieChartData = React.useMemo(() => {
     return expensesByCategory.map(([category, amount]) => ({
@@ -246,6 +323,8 @@ export default function FinanceCharts({
 
   // 3. Build monthly budgets overview
   const [budgetCategoryFilter, setBudgetCategoryFilter] = useState<"all" | "warning">("all");
+  const [pieMode, setPieMode] = useState<"pie" | "donut">("pie");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const currentMonthKey = React.useMemo(() => {
     return `${referenceDate.getFullYear()}-${String(referenceDate.getMonth() + 1).padStart(2, "0")}`;
@@ -855,10 +934,62 @@ export default function FinanceCharts({
           
           {/* Expenditures by Category Chart */}
           <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-xs">
-            <h3 className="text-sm font-bold text-neutral-950 flex items-center gap-2">
-              <TrendingDown className="w-4 h-4 text-rose-500" />
-              <span>Dépenses par Catégorie</span>
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h3 className="text-sm font-bold text-neutral-950 flex items-center gap-2">
+                <TrendingDown className="w-4 h-4 text-rose-500" />
+                <span>Dépenses par Catégorie</span>
+              </h3>
+              
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Dropdown menu for filtering by Month or Quarter */}
+                <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-200/80 px-2.5 py-1 rounded-xl text-xs font-bold text-neutral-700 shadow-2xs">
+                  <Calendar className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                  <select
+                    value={selectedPiePeriod}
+                    onChange={(e) => setSelectedPiePeriod(e.target.value)}
+                    className="bg-transparent border-none text-xs font-bold text-neutral-800 focus:outline-none cursor-pointer pr-1"
+                  >
+                    <option value="all">🌐 Tout le cumul (Global)</option>
+                    <optgroup label="📅 Filtrer par Mois">
+                      {availablePieMonths.map(m => (
+                        <option key={m} value={`month:${m}`}>
+                          Mois : {formatPieMonthLabel(m)}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="📊 Filtrer par Trimestre">
+                      {availablePieQuarters.map(q => (
+                        <option key={q} value={`quarter:${q}`}>
+                          Trimestre : {formatPieQuarterLabel(q)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+
+                {/* Pie / Donut Toggle */}
+                <div className="flex bg-neutral-100 p-1 rounded-xl text-[10px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setPieMode("pie")}
+                    className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                      pieMode === "pie" ? "bg-white text-neutral-900 shadow-3xs" : "text-neutral-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    Circulaire
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPieMode("donut")}
+                    className={`px-2 py-0.5 rounded-lg transition-all cursor-pointer ${
+                      pieMode === "donut" ? "bg-white text-neutral-900 shadow-3xs" : "text-neutral-500 hover:text-neutral-900"
+                    }`}
+                  >
+                    Anneau
+                  </button>
+                </div>
+              </div>
+            </div>
 
             {expensesByCategory.length === 0 ? (
               <div className="text-xs text-neutral-400 italic text-center py-12">
@@ -875,17 +1006,30 @@ export default function FinanceCharts({
                         data={pieChartData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={65}
+                        innerRadius={pieMode === "donut" ? 60 : 0}
                         outerRadius={88}
-                        paddingAngle={2.5}
+                        paddingAngle={pieMode === "donut" ? 2.5 : 1}
                         dataKey="value"
+                        onClick={(entry) => {
+                          setSelectedCategory(selectedCategory === entry.name ? null : entry.name);
+                        }}
+                        cursor="pointer"
                       >
-                        {pieChartData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} 
-                          />
-                        ))}
+                        {pieChartData.map((entry, index) => {
+                          const isSelected = selectedCategory === entry.name;
+                          return (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} 
+                              stroke={isSelected ? "#ffffff" : "transparent"}
+                              strokeWidth={isSelected ? 3 : 0}
+                              style={{
+                                filter: selectedCategory && !isSelected ? "opacity(0.4)" : "opacity(1)",
+                                transition: "all 0.3s ease"
+                              }}
+                            />
+                          );
+                        })}
                       </Pie>
                       <Tooltip
                         formatter={(value: number) => [`${value.toLocaleString("fr-FR")} MAD`, "Dépenses"]}
@@ -901,32 +1045,55 @@ export default function FinanceCharts({
                     </RechartsPieChart>
                   </ResponsiveContainer>
                   
-                  {/* Center Totals Label */}
-                  <div className="absolute flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">Total</span>
-                    <span className="text-base font-black font-mono text-neutral-950 leading-none py-0.5">
-                      {totalOutflow.toLocaleString("fr-FR")}
-                    </span>
-                    <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">MAD</span>
-                  </div>
+                  {/* Center Totals Label for Donut Mode */}
+                  {pieMode === "donut" && (
+                    <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">Total</span>
+                      <span className="text-base font-black font-mono text-neutral-950 leading-none py-0.5">
+                        {totalOutflow.toLocaleString("fr-FR")}
+                      </span>
+                      <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider">MAD</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right side: Color-coded progress list */}
                 <div className="md:col-span-7 space-y-3">
+                  <div className="flex items-center justify-between pb-1">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                      Répartition par Poste
+                    </span>
+                    {selectedCategory && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCategory(null)}
+                        className="text-[9px] bg-neutral-100 hover:bg-neutral-200 text-neutral-700 px-2 py-0.5 rounded font-bold cursor-pointer transition-all"
+                      >
+                        Réinitialiser
+                      </button>
+                    )}
+                  </div>
                   {expensesByCategory.map(([cat, amount], index) => {
                     const percentage = totalOutflow > 0 ? (amount / totalOutflow) * 100 : 0;
                     const ratio = (amount / maxExpenseCategoryAmount) * 100;
                     const color = CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+                    const isSelected = selectedCategory === cat;
                     
                     return (
-                      <div key={cat} className="space-y-1">
+                      <div 
+                        key={cat} 
+                        onClick={() => setSelectedCategory(isSelected ? null : cat)}
+                        className={`space-y-1 p-1 rounded-xl transition-all cursor-pointer border ${
+                          isSelected ? "bg-indigo-50 border-indigo-200" : "border-transparent hover:bg-neutral-50"
+                        }`}
+                      >
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
                             <span 
                               className="w-2.5 h-2.5 rounded-xs shrink-0 transition-colors" 
                               style={{ backgroundColor: color }}
                             />
-                            <span className="text-neutral-700 font-semibold">{cat}</span>
+                            <span className={`font-semibold ${isSelected ? "text-indigo-900 font-extrabold" : "text-neutral-700"}`}>{cat}</span>
                           </div>
                           <div className="font-mono text-right">
                             <span className="text-neutral-950 font-bold">
