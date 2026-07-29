@@ -490,6 +490,7 @@ export interface RecruitmentSite {
   keywords?: string[];
   visited?: boolean;
   visitedDates?: string[];
+  lastVisitedDate?: string;
   discoveredOpportunities?: string;
   country?: string;
   identifiant?: string;

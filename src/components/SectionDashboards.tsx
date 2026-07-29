@@ -1342,7 +1342,15 @@ export function FinanceSectionDashboard({
         </div>
       ) : (
         <div className="animate-in fade-in duration-300">
-          <FireCalculator />
+          <FireCalculator
+            stocks={stocks}
+            epargnes={epargnes}
+            accounts={accounts}
+            salaires={salaires}
+            transactions={transactions}
+            budgets={budgets}
+            triggerToast={triggerToast}
+          />
         </div>
       )}
     </div>

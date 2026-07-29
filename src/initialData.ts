@@ -45,15 +45,7 @@ export const INITIAL_WEEKLY_OBJECTIVES: WeeklyObjective[] = [
   { id: "o3", text: "Finaliser un nouveau module de cours pour l'Académie (Udemy/Site)", completed: false },
 ];
 
-export const INITIAL_TRANSACTIONS: FinanceTransaction[] = [
-  { id: "t1", date: "2026-07-01", description: "Honoraires Consulting CFO Maroc", category: "Revenus Pro", type: "Revenue", amount: 18500, account: "Attijariwafa Pro" },
-  { id: "t2", date: "2026-07-03", description: "Achat Micro Shure MV7 + Trépied", category: "Équipement", type: "Dépense", amount: 2800, account: "Attijariwafa Pro" },
-  { id: "t3", date: "2026-07-05", description: "Sponsorship Vidéo Maroc Telecom", category: "Sponsor", type: "Revenue", amount: 15000, account: "Attijariwafa Pro" },
-  { id: "t4", date: "2026-07-06", description: "Café de networking - Casablanca Marina", category: "Repas", type: "Dépense", amount: 120, account: "Espèces Dirhams" },
-  { id: "t5", date: "2026-07-08", description: "Abonnement Canva Pro & Adobe Creative", category: "Logiciels", type: "Dépense", amount: 650, account: "Carte CIH" },
-  { id: "t6", date: "2026-07-10", description: "Rémunération Google AdSense YouTube", category: "AdSense", type: "Revenue", amount: 4200, account: "Carte CIH" },
-  { id: "t7", date: "2026-07-11", description: "Courses hebdomadaires Carrefour", category: "Alimentation", type: "Dépense", amount: 850, account: "Carte CIH" }
-];
+export const INITIAL_TRANSACTIONS: FinanceTransaction[] = [];
 
 export const INITIAL_STOCKS: StockEntry[] = [
   { id: "s1", symbol: "ATW", name: "Attijariwafa Bank", buyPrice: 505.0, currentPrice: 512.5, quantity: 20, lastUpdated: "2026-07-10" },
@@ -63,19 +55,15 @@ export const INITIAL_STOCKS: StockEntry[] = [
 ];
 
 export const INITIAL_BUDGETS: FinanceBudget[] = [
-  { id: "b1", category: "Alimentation", limitAmount: 3500, spentAmount: 1850, period: "Mensuel" },
-  { id: "b2", category: "Équipement & Matériel", limitAmount: 10000, spentAmount: 2800, period: "Mensuel" },
-  { id: "b3", category: "Logiciels & SaaS", limitAmount: 1500, spentAmount: 650, period: "Mensuel" },
-  { id: "b4", category: "Marketing & Publicité", limitAmount: 4000, spentAmount: 1200, period: "Mensuel" },
-  { id: "b5", category: "Transport & Carburant", limitAmount: 2000, spentAmount: 800, period: "Mensuel" },
-  { id: "b6", category: "Loisirs & Sorties", limitAmount: 1500, spentAmount: 420, period: "Mensuel" }
+  { id: "b1", category: "Alimentation", limitAmount: 3500, spentAmount: 0, period: "Mensuel" },
+  { id: "b2", category: "Équipement & Matériel", limitAmount: 10000, spentAmount: 0, period: "Mensuel" },
+  { id: "b3", category: "Logiciels & SaaS", limitAmount: 1500, spentAmount: 0, period: "Mensuel" },
+  { id: "b4", category: "Marketing & Publicité", limitAmount: 4000, spentAmount: 0, period: "Mensuel" },
+  { id: "b5", category: "Transport & Carburant", limitAmount: 2000, spentAmount: 0, period: "Mensuel" },
+  { id: "b6", category: "Loisirs & Sorties", limitAmount: 1500, spentAmount: 0, period: "Mensuel" }
 ];
 
-export const INITIAL_SALAIRES: FinanceSalaire[] = [
-  { id: "sa1", date: "2026-07-28", source: "Consulting Mensuel CFO Maroc", grossAmount: 20000, netAmount: 18500, status: "Reçu", jour_paiement: 28 },
-  { id: "sa2", date: "2026-07-28", source: "Sponsorship Vidéo Banque Populaire", grossAmount: 12000, netAmount: 12000, status: "En attente", jour_paiement: 28 },
-  { id: "sa3", date: "2026-07-30", source: "Dividendes Actions Portefeuille", grossAmount: 3500, netAmount: 3000, status: "En attente", jour_paiement: 30 }
-];
+export const INITIAL_SALAIRES: FinanceSalaire[] = [];
 
 export const INITIAL_EPARGNES: FinanceEpargne[] = [
   { id: "e1", name: "Fonds d'urgence (3 mois) - Sécurité", targetAmount: 42000, currentAmount: 42000, deadline: "2026-06-30", status: "Atteint" },

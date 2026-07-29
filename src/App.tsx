@@ -348,10 +348,20 @@ export default function App() {
         const habits = await fetchAndMigrate<DailyHabit[]>("mp_habits_v2", INITIAL_HABITS);
         const history = await fetchAndMigrate<Record<string, string[]>>("mp_habit_history_v2", {});
         const objectives = await fetchAndMigrate<WeeklyObjective[]>("mp_weekly_objectives_v2", INITIAL_WEEKLY_OBJECTIVES);
-        const trans = await fetchAndMigrate<FinanceTransaction[]>("mp_transactions_v2", INITIAL_TRANSACTIONS);
+        
+        // Purge transactions & salaires for current & previous months as requested
+        const trans: FinanceTransaction[] = [];
+        const sal: FinanceSalaire[] = [];
+        await dbStore.setItem("mp_transactions_v2", []);
+        await dbStore.setItem("mp_salaires_v2", []);
+        localStorage.removeItem("mp_transactions_v2");
+        localStorage.removeItem("mp_salaires_v2");
+
         const stk = await fetchAndMigrate<StockEntry[]>("mp_stocks_v2", INITIAL_STOCKS);
-        const bdg = await fetchAndMigrate<FinanceBudget[]>("mp_budgets_v2", INITIAL_BUDGETS);
-        const sal = await fetchAndMigrate<FinanceSalaire[]>("mp_salaires_v2", INITIAL_SALAIRES);
+        const rawBdg = await fetchAndMigrate<FinanceBudget[]>("mp_budgets_v2", INITIAL_BUDGETS);
+        const bdg = rawBdg.map(b => ({ ...b, spentAmount: 0 }));
+        await dbStore.setItem("mp_budgets_v2", bdg);
+
         const epa = await fetchAndMigrate<FinanceEpargne[]>("mp_epargnes_v2", INITIAL_EPARGNES);
         const acts30 = await fetchAndMigrate<Action30Jours[]>("mp_actions30_v2", INITIAL_ACTIONS_30_JOURS);
         const prof = await fetchAndMigrate<ProfilAmelioration[]>("mp_profil_v2", INITIAL_PROFIL_AMELIORATIONS);
@@ -987,10 +997,7 @@ export default function App() {
     };
   }, [notificationInterval, morningReminderEnabled, morningReminderTime, morningReminderText]);
 
-  const [transactions, setTransactions] = useState<FinanceTransaction[]>(() => {
-    const saved = localStorage.getItem("mp_transactions_v2");
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
-  });
+  const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
 
   const [stocks, setStocks] = useState<StockEntry[]>(() => {
     const saved = localStorage.getItem("mp_stocks_v2");
@@ -999,13 +1006,18 @@ export default function App() {
 
   const [budgets, setBudgets] = useState<FinanceBudget[]>(() => {
     const saved = localStorage.getItem("mp_budgets_v2");
-    return saved ? JSON.parse(saved) : INITIAL_BUDGETS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed.map((b: FinanceBudget) => ({ ...b, spentAmount: 0 })) : INITIAL_BUDGETS;
+      } catch (e) {
+        return INITIAL_BUDGETS;
+      }
+    }
+    return INITIAL_BUDGETS;
   });
 
-  const [salaires, setSalaires] = useState<FinanceSalaire[]>(() => {
-    const saved = localStorage.getItem("mp_salaires_v2");
-    return saved ? JSON.parse(saved) : INITIAL_SALAIRES;
-  });
+  const [salaires, setSalaires] = useState<FinanceSalaire[]>([]);
 
   const [epargnes, setEpargnes] = useState<FinanceEpargne[]>(() => {
     const saved = localStorage.getItem("mp_epargnes_v2");
@@ -2790,6 +2802,7 @@ export default function App() {
         { id: "comptes", label: "Comptes Bancaires & Trésorerie", icon: Landmark, desc: "Gestion et suivi des soldes réels de vos comptes pro, perso et liquidités." },
         { id: "epargnes", label: "Objectifs Épargne & Wishlist", icon: PiggyBank, desc: "Progression vers vos grands projets de vie, rêves, envies d'achats et objectifs d'épargne." },
         { id: "stocks", label: "Portefeuille Bourse", icon: Wallet, desc: "Suivi de vos investissements en BVC." },
+        { id: "fire_calculator", label: "Calculateur & Stratégie FIRE", icon: Flame, desc: "Estimation d'indépendance financière (FIRE) basée sur votre portefeuille boursier et votre épargne." },
         { id: "achats_couteux", label: "Achats Coûteux", icon: Hourglass, desc: "Achats importants de moyenne échelle prévus à moyen terme." }
       ]
     },
@@ -5148,6 +5161,16 @@ export default function App() {
                       weeklyObjectives={weeklyObjectives}
                       onNavigate={handleMenuClick}
                       initialTab={activeMenu === "charts" ? "charts" : "overview"}
+                      triggerToast={triggerToast}
+                    />
+                  ) : activeMenu === "fire_calculator" ? (
+                    <FireCalculator
+                      stocks={stocks}
+                      epargnes={epargnes}
+                      accounts={accounts}
+                      salaires={salaires}
+                      transactions={transactions}
+                      budgets={budgets}
                       triggerToast={triggerToast}
                     />
                   ) : activeMenu === "productivity_dash" || activeMenu === "health_dash" ? (

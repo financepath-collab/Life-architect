@@ -452,12 +452,32 @@ export default function UnifiedFinancialEntrySection({
       if (editingTx.account) {
         const oldWasRevenue = editingTx.type === "Revenue" || editingTx.category === "Salaire & Revenus";
         const oldDelta = oldWasRevenue ? editingTx.amount : -editingTx.amount;
-        setAccounts(prev => prev.map(acc => {
-          if (acc.name.toLowerCase() === editingTx.account.toLowerCase() || acc.id === editingTx.account) {
-            return { ...acc, balance: Math.max(0, acc.balance - oldDelta) };
-          }
-          return acc;
-        }));
+        
+        // Revert source account
+        setAccounts(prev => {
+          const srcIdx = prev.findIndex(a => a.name.toLowerCase() === editingTx.account.toLowerCase() || a.id === editingTx.account);
+          const oldTargetStr = (editingTx.recipient || editingTx.subCategory || "").toLowerCase().trim();
+          const targetIdx = prev.findIndex((a, idx) => {
+            if (idx === srcIdx) return false;
+            const aName = a.name.toLowerCase();
+            return (
+              (oldTargetStr.length > 2 && aName.includes(oldTargetStr)) ||
+              (aName.length > 2 && oldTargetStr.includes(aName)) ||
+              (oldTargetStr.includes("carnet") && (aName.includes("carnet") || aName.includes("épargne"))) ||
+              (oldTargetStr.includes("sécurité") && (aName.includes("épargne") || aName.includes("sécurité")))
+            );
+          });
+
+          return prev.map((acc, idx) => {
+            if (srcIdx >= 0 && idx === srcIdx) {
+              return { ...acc, balance: Math.max(0, acc.balance - oldDelta) };
+            }
+            if (targetIdx >= 0 && idx === targetIdx && (editingTx.type === "Épargne" || editingTx.category === "Épargne & Projets Futurs" || editingTx.type === "Investissement")) {
+              return { ...acc, balance: Math.max(0, acc.balance - editingTx.amount) };
+            }
+            return acc;
+          });
+        });
       }
 
       if (editingTx.type === "Dépense" || editingTx.category === "Dépenses Courantes & Achats" || editingTx.category === "Charges Fixes & Abonnements") {
@@ -474,7 +494,15 @@ export default function UnifiedFinancialEntrySection({
 
       if (editingTx.type === "Épargne" || editingTx.category === "Épargne & Projets Futurs") {
         setEpargnes(prev => prev.map(ep => {
-          if (editingTx.subCategory && ep.name.toLowerCase().includes(editingTx.subCategory.toLowerCase())) {
+          const matchStr = (editingTx.subCategory || editingTx.recipient || editingTx.description || "").toLowerCase();
+          const epName = ep.name.toLowerCase();
+          if (
+            (editingTx.subCategory && epName.includes(editingTx.subCategory.toLowerCase())) ||
+            (editingTx.recipient && epName.includes(editingTx.recipient.toLowerCase())) ||
+            (matchStr.includes("sécurité") && epName.includes("sécurité")) ||
+            (matchStr.includes("urgence") && epName.includes("urgence")) ||
+            (matchStr.includes("carnet") && epName.includes("sécurité"))
+          ) {
             return { ...ep, currentAmount: Math.max(0, ep.currentAmount - editingTx.amount) };
           }
           return ep;
@@ -545,26 +573,49 @@ export default function UnifiedFinancialEntrySection({
     // 6. DISPATCH TO ACCOUNTS (BANK ACCOUNTS & TREASURY)
     if (account && accounts.length > 0) {
       const isRevenue = type === "Revenue" || category === "Salaire & Revenus";
-      const delta = isRevenue ? parsedAmount : -parsedAmount;
+      const isEpargneOrTransfer = type === "Épargne" || category === "Épargne & Projets Futurs" || type === "Investissement";
+
       setAccounts(prev => {
-        const targetExists = prev.some(acc => acc.name.toLowerCase() === account.toLowerCase() || acc.id === account);
-        if (targetExists) {
-          return prev.map(acc => {
-            if (acc.name.toLowerCase() === account.toLowerCase() || acc.id === account) {
-              return { ...acc, balance: Math.max(0, acc.balance + delta) };
-            }
-            return acc;
-          });
-        } else {
-          return prev.map((acc, idx) => {
-            if (idx === 0) {
-              return { ...acc, balance: Math.max(0, acc.balance + delta) };
-            }
-            return acc;
-          });
-        }
+        const srcIdx = prev.findIndex(a => a.name.toLowerCase() === account.toLowerCase() || a.id === account);
+        const sourceIndexToUse = srcIdx >= 0 ? srcIdx : 0;
+
+        const targetSearchStr = (recipient || subCategory || description || "").toLowerCase().trim();
+        const targetIdx = prev.findIndex((a, idx) => {
+          if (idx === sourceIndexToUse) return false;
+          const aName = a.name.toLowerCase();
+          return (
+            (targetSearchStr.length > 2 && aName.includes(targetSearchStr)) ||
+            (aName.length > 2 && targetSearchStr.includes(aName)) ||
+            (targetSearchStr.includes("carnet") && (aName.includes("carnet") || aName.includes("épargne"))) ||
+            (targetSearchStr.includes("sécurité") && (aName.includes("épargne") || aName.includes("sécurité")))
+          );
+        });
+
+        return prev.map((acc, idx) => {
+          let updatedBalance = acc.balance;
+
+          // Impact source account
+          if (idx === sourceIndexToUse) {
+            const delta = isRevenue ? parsedAmount : -parsedAmount;
+            updatedBalance = Math.max(0, updatedBalance + delta);
+          }
+
+          // Impact target account on transfer/epargne
+          if (isEpargneOrTransfer && targetIdx >= 0 && idx === targetIdx) {
+            updatedBalance = updatedBalance + parsedAmount;
+          }
+
+          return { ...acc, balance: updatedBalance };
+        });
       });
-      dispatchLog.push(`Solde du compte '${account}' mis à jour (${isRevenue ? '+' : '-'}${parsedAmount.toLocaleString('fr-FR')} MAD)`);
+
+      if (isRevenue) {
+        dispatchLog.push(`Solde du compte '${account}' : +${parsedAmount.toLocaleString('fr-FR')} MAD`);
+      } else if (isEpargneOrTransfer) {
+        dispatchLog.push(`Virement : '${account}' (-${parsedAmount.toLocaleString('fr-FR')} MAD) ➔ Compte Épargne/Sécurité (+${parsedAmount.toLocaleString('fr-FR')} MAD)`);
+      } else {
+        dispatchLog.push(`Solde du compte '${account}' : -${parsedAmount.toLocaleString('fr-FR')} MAD`);
+      }
     }
 
     // 7. DISPATCH TO BUDGETS
@@ -581,10 +632,19 @@ export default function UnifiedFinancialEntrySection({
       dispatchLog.push("Enveloppes budgétaires actualisées");
     }
 
-    // 8. DISPATCH TO EPARGNES
+    // 8. DISPATCH TO EPARGNES (Savings goals)
     if (type === "Épargne" || category === "Épargne & Projets Futurs") {
       setEpargnes(prev => prev.map(ep => {
-        if (subCategory && ep.name.toLowerCase().includes(subCategory.toLowerCase())) {
+        const matchStr = (recipient || subCategory || description || "").toLowerCase();
+        const epName = ep.name.toLowerCase();
+        const isMatch = (
+          (subCategory && epName.includes(subCategory.toLowerCase())) ||
+          (recipient && epName.includes(recipient.toLowerCase())) ||
+          (matchStr.includes("sécurité") && epName.includes("sécurité")) ||
+          (matchStr.includes("urgence") && epName.includes("urgence")) ||
+          (matchStr.includes("carnet") && epName.includes("sécurité"))
+        );
+        if (isMatch) {
           return { ...ep, currentAmount: ep.currentAmount + parsedAmount };
         }
         return ep;
@@ -605,18 +665,46 @@ export default function UnifiedFinancialEntrySection({
     if (txToDelete) {
       if (txToDelete.account && accounts.length > 0) {
         const wasRevenue = txToDelete.type === "Revenue" || txToDelete.category === "Salaire & Revenus";
-        const oldDelta = wasRevenue ? txToDelete.amount : -txToDelete.amount;
-        setAccounts(prev => prev.map(acc => {
-          if (acc.name.toLowerCase() === txToDelete.account.toLowerCase() || acc.id === txToDelete.account) {
-            return { ...acc, balance: Math.max(0, acc.balance - oldDelta) };
-          }
-          return acc;
-        }));
+        const wasTransfer = txToDelete.type === "Épargne" || txToDelete.category === "Épargne & Projets Futurs" || txToDelete.type === "Investissement";
+
+        setAccounts(prev => {
+          const srcIdx = prev.findIndex(a => a.name.toLowerCase() === txToDelete.account.toLowerCase() || a.id === txToDelete.account);
+          const oldTargetStr = (txToDelete.recipient || txToDelete.subCategory || "").toLowerCase().trim();
+          const targetIdx = prev.findIndex((a, idx) => {
+            if (idx === srcIdx) return false;
+            const aName = a.name.toLowerCase();
+            return (
+              (oldTargetStr.length > 2 && aName.includes(oldTargetStr)) ||
+              (aName.length > 2 && oldTargetStr.includes(aName)) ||
+              (oldTargetStr.includes("carnet") && (aName.includes("carnet") || aName.includes("épargne"))) ||
+              (oldTargetStr.includes("sécurité") && (aName.includes("épargne") || aName.includes("sécurité")))
+            );
+          });
+
+          return prev.map((acc, idx) => {
+            if (srcIdx >= 0 && idx === srcIdx) {
+              const delta = wasRevenue ? txToDelete.amount : -txToDelete.amount;
+              return { ...acc, balance: Math.max(0, acc.balance - delta) };
+            }
+            if (wasTransfer && targetIdx >= 0 && idx === targetIdx) {
+              return { ...acc, balance: Math.max(0, acc.balance - txToDelete.amount) };
+            }
+            return acc;
+          });
+        });
       }
 
       if (txToDelete.type === "Épargne" || txToDelete.category === "Épargne & Projets Futurs") {
         setEpargnes(prev => prev.map(ep => {
-          if (txToDelete.subCategory && ep.name.toLowerCase().includes(txToDelete.subCategory.toLowerCase())) {
+          const matchStr = (txToDelete.subCategory || txToDelete.recipient || txToDelete.description || "").toLowerCase();
+          const epName = ep.name.toLowerCase();
+          if (
+            (txToDelete.subCategory && epName.includes(txToDelete.subCategory.toLowerCase())) ||
+            (txToDelete.recipient && epName.includes(txToDelete.recipient.toLowerCase())) ||
+            (matchStr.includes("sécurité") && epName.includes("sécurité")) ||
+            (matchStr.includes("urgence") && epName.includes("urgence")) ||
+            (matchStr.includes("carnet") && epName.includes("sécurité"))
+          ) {
             return { ...ep, currentAmount: Math.max(0, ep.currentAmount - txToDelete.amount) };
           }
           return ep;
@@ -695,6 +783,19 @@ export default function UnifiedFinancialEntrySection({
     });
   }, [transactions, searchTerm, selectedCategoryFilter, selectedTypeFilter, sortKey, sortDir]);
 
+  const handlePurgeAllFinancialData = () => {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer TOUTES les données financières (mois en cours et mois précédents) ? Cette action réinitialisera l'ensemble de vos transactions et salaires.")) {
+      setTransactions([]);
+      setSalaires([]);
+      setBudgets(prev => prev.map(b => ({ ...b, spentAmount: 0 })));
+      localStorage.setItem("mp_transactions_v2", JSON.stringify([]));
+      localStorage.setItem("mp_salaires_v2", JSON.stringify([]));
+      if (triggerToast) {
+        triggerToast("🗑️ Toutes les données financières du mois en cours et des mois précédents ont été supprimées avec succès !", "success");
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* TOP HEADER & ACTION BANNER */}
@@ -715,6 +816,14 @@ export default function UnifiedFinancialEntrySection({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 relative z-10">
+          <button
+            onClick={handlePurgeAllFinancialData}
+            className="px-4 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/40 rounded-2xl font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            title="Supprimer toutes les données financières (mois en cours & précédents)"
+          >
+            <Trash2 className="w-4 h-4 text-red-400" />
+            <span>Purger Données Financières</span>
+          </button>
           <button
             onClick={() => setIsTaxonomyModalOpen(true)}
             className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-2xl font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
@@ -1501,10 +1610,12 @@ export default function UnifiedFinancialEntrySection({
                   </div>
                 )}
 
-                {/* COMPTE BANCAIRE & DESTINATAIRE */}
+                {/* COMPTE BANCAIRE & DESTINATAIRE / TRANSFERT */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-neutral-700 font-bold mb-1">Compte Bancaire / Source</label>
+                    <label className="block text-neutral-700 font-bold mb-1">
+                      {type === "Épargne" || category === "Épargne & Projets Futurs" ? "Compte Source (Débit)" : "Compte Bancaire / Source"}
+                    </label>
                     <select
                       value={account}
                       onChange={e => setAccount(e.target.value)}
@@ -1523,14 +1634,44 @@ export default function UnifiedFinancialEntrySection({
                   </div>
 
                   <div>
-                    <label className="block text-neutral-700 font-bold mb-1">Destinataire / Tiers / Entité</label>
+                    <label className="block text-neutral-700 font-bold mb-1">
+                      {type === "Épargne" || category === "Épargne & Projets Futurs" 
+                        ? "Compte Cible / Fonds de Sécurité (Crédit)" 
+                        : "Destinataire / Tiers / Entité"}
+                    </label>
                     <input
                       type="text"
-                      placeholder="ex: Employeur, Marjane, Netflix, Lydec, IAM"
+                      placeholder={type === "Épargne" || category === "Épargne & Projets Futurs" 
+                        ? "ex: BMCE Épargne Or, Compte sur carnet, Fonds de sécurité..." 
+                        : "ex: Employeur, Marjane, Netflix, Lydec, IAM"}
                       value={recipient}
                       onChange={e => setRecipient(e.target.value)}
                       className="w-full px-3.5 py-2 bg-neutral-50 border border-neutral-300 rounded-xl font-medium text-neutral-800"
                     />
+
+                    {/* Quick Suggestions for Transfers & Savings */}
+                    {(type === "Épargne" || category === "Épargne & Projets Futurs") && (
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <span className="text-[10px] text-neutral-400 font-bold">Suggestions Cible :</span>
+                        {accounts.filter(a => a.name !== account).map(acc => (
+                          <button
+                            key={acc.id}
+                            type="button"
+                            onClick={() => setRecipient(acc.name)}
+                            className="text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer"
+                          >
+                            🏦 {acc.name.split('(')[0].trim()}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setRecipient("Fonds d'urgence (3 mois) - Sécurité")}
+                          className="text-[10px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer"
+                        >
+                          🛡️ Fonds de Sécurité
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
