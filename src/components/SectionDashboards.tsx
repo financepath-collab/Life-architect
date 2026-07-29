@@ -13,6 +13,8 @@ import MonthlyNetIncomeWidget from "./MonthlyNetIncomeWidget";
 import MonthlySavingsGaugeCard from "./MonthlySavingsGaugeCard";
 import MonthlyComparisonCard from "./MonthlyComparisonCard";
 import RequiredMonthlySavingsCard from "./RequiredMonthlySavingsCard";
+import Savings3MonthProjectionSimulationCard from "./Savings3MonthProjectionSimulationCard";
+import EmergencyFundSectionCard from "./EmergencyFundSectionCard";
 import FinanceCharts from "./FinanceCharts";
 import NetSavingsChart from "./NetSavingsChart";
 import SavingsTrendChart from "./SavingsTrendChart";
@@ -96,11 +98,15 @@ interface FinanceDashProps {
   onNavigate: (moduleId: string) => void;
   initialTab?: "overview" | "charts" | "correlations" | "fire" | "settings";
   triggerToast?: (message: string, type?: "success" | "info" | "warning" | "error") => void;
+  setAccounts?: React.Dispatch<React.SetStateAction<Account[]>>;
+  setEpargnes?: React.Dispatch<React.SetStateAction<FinanceEpargne[]>>;
+  setTransactions?: React.Dispatch<React.SetStateAction<FinanceTransaction[]>>;
 }
 
 export function FinanceSectionDashboard({ 
   accounts, budgets, epargnes, abonnements, stocks, transactions, salaires,
-  sportHistory = [], weeklyObjectives = [], onNavigate, initialTab = "overview", triggerToast
+  sportHistory = [], weeklyObjectives = [], onNavigate, initialTab = "overview", triggerToast,
+  setAccounts, setEpargnes, setTransactions
 }: FinanceDashProps) {
   const [activeDashTab, setActiveDashTab] = useState<"overview" | "charts" | "correlations" | "fire" | "settings">(initialTab);
 
@@ -510,6 +516,25 @@ export function FinanceSectionDashboard({
         transactions={transactions}
         abonnements={abonnements}
         salaires={salaires}
+      />
+
+      {/* 3-Month Savings Projection & Simulation Card */}
+      <Savings3MonthProjectionSimulationCard
+        transactions={transactions}
+        abonnements={abonnements}
+        salaires={salaires}
+        initialBalance={totalEpargneActuel}
+      />
+
+      {/* Emergency Fund Section Card with Quick Transfer */}
+      <EmergencyFundSectionCard
+        accounts={accounts}
+        epargnes={epargnes}
+        transactions={transactions}
+        setAccounts={setAccounts}
+        setEpargnes={setEpargnes}
+        setTransactions={setTransactions}
+        triggerToast={triggerToast}
       />
 
       {/* Required Monthly Savings Calculator Card to reach all ongoing epargnes goals by their deadlines */}

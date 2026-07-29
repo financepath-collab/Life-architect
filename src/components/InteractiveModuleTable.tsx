@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import CategoryDetailModal from "./CategoryDetailModal";
 import { motion } from "motion/react";
 import { 
   ResponsiveContainer, 
@@ -92,6 +93,7 @@ export default function InteractiveModuleTable({
   const [activeFilters, setActiveFilters] = useState<{ [key: string]: string }>({});
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [showPieChart, setShowPieChart] = useState(true);
+  const [modalCategory, setModalCategory] = useState<string | null>(null);
   const [isCompactView, setIsCompactView] = useState<boolean>(() => {
     return localStorage.getItem("la_table_compact") === "true";
   });
@@ -982,6 +984,8 @@ export default function InteractiveModuleTable({
                     outerRadius={95}
                     paddingAngle={3}
                     cornerRadius={6}
+                    onClick={(entry) => setModalCategory(entry.name)}
+                    cursor="pointer"
                   >
                     {categoryPieData.items.map((entry, index) => (
                       <Cell 
@@ -1014,7 +1018,9 @@ export default function InteractiveModuleTable({
               {categoryPieData.items.map((cat) => (
                 <div 
                   key={cat.name}
-                  className="p-3 bg-neutral-950/80 border border-neutral-800 rounded-xl space-y-2 hover:border-neutral-700 transition-all"
+                  onClick={() => setModalCategory(cat.name)}
+                  title="Cliquez pour afficher les transactions de cette catégorie"
+                  className="p-3 bg-neutral-950/80 border border-neutral-800 hover:border-indigo-500/50 rounded-xl space-y-2 cursor-pointer transition-all hover:bg-neutral-900/80"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
@@ -2198,6 +2204,16 @@ export default function InteractiveModuleTable({
           </div>
         </div>
       )}
+
+      {/* DETAILED CATEGORY TRANSACTIONS MODAL */}
+      <CategoryDetailModal
+        isOpen={!!modalCategory}
+        onClose={() => setModalCategory(null)}
+        categoryName={modalCategory}
+        periodKey="all"
+        transactions={transactions}
+        abonnements={abonnements}
+      />
 
     </div>
   );

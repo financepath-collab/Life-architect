@@ -6,6 +6,7 @@ import {
   FinanceEpargne, 
   Abonnement 
 } from "../types";
+import CategoryDetailModal from "./CategoryDetailModal";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -313,6 +314,7 @@ export default function FinanceCharts({
   const [budgetCategoryFilter, setBudgetCategoryFilter] = useState<"all" | "warning">("all");
   const [pieMode, setPieMode] = useState<"pie" | "donut">("pie");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [modalCategory, setModalCategory] = useState<string | null>(null);
 
   const currentMonthKey = React.useMemo(() => {
     return `${referenceDate.getFullYear()}-${String(referenceDate.getMonth() + 1).padStart(2, "0")}`;
@@ -999,7 +1001,8 @@ export default function FinanceCharts({
                         paddingAngle={pieMode === "donut" ? 2.5 : 1}
                         dataKey="value"
                         onClick={(entry) => {
-                          setSelectedCategory(selectedCategory === entry.name ? null : entry.name);
+                          setSelectedCategory(entry.name);
+                          setModalCategory(entry.name);
                         }}
                         cursor="pointer"
                       >
@@ -1070,7 +1073,11 @@ export default function FinanceCharts({
                     return (
                       <div 
                         key={cat} 
-                        onClick={() => setSelectedCategory(isSelected ? null : cat)}
+                        onClick={() => {
+                          setSelectedCategory(cat);
+                          setModalCategory(cat);
+                        }}
+                        title="Cliquez pour afficher le détail des transactions"
                         className={`space-y-1 p-1 rounded-xl transition-all cursor-pointer border ${
                           isSelected ? "bg-indigo-50 border-indigo-200" : "border-transparent hover:bg-neutral-50"
                         }`}
@@ -1141,6 +1148,16 @@ export default function FinanceCharts({
         </div>
 
       </div>
+
+      {/* DETAILED CATEGORY TRANSACTIONS MODAL */}
+      <CategoryDetailModal
+        isOpen={!!modalCategory}
+        onClose={() => setModalCategory(null)}
+        categoryName={modalCategory}
+        periodKey={selectedPiePeriod}
+        transactions={transactions}
+        abonnements={abonnements}
+      />
 
     </div>
   );

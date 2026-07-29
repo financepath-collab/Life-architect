@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { FinanceTransaction, Abonnement } from "../types";
+import CategoryDetailModal from "./CategoryDetailModal";
 import { 
   TrendingDown, 
   Calendar, 
@@ -155,6 +156,7 @@ export default function MonthlyExpenseAnalysisCard({
 }: MonthlyExpenseAnalysisCardProps) {
   const [chartType, setChartType] = useState<"donut" | "pie" | "bar">("pie");
   const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null);
+  const [modalCategory, setModalCategory] = useState<string | null>(null);
   
   // Selected period state for the pie chart ("month:2026-07", "quarter:2026-Q3", "all", etc.)
   const [selectedPeriod, setSelectedPeriod] = useState<string>("month:2026-07");
@@ -400,11 +402,8 @@ export default function MonthlyExpenseAnalysisCard({
                     paddingAngle={chartType === "donut" ? 3 : 1.5}
                     dataKey="value"
                     onClick={(entry) => {
-                      if (selectedCategoryName === entry.name) {
-                        setSelectedCategoryName(null);
-                      } else {
-                        setSelectedCategoryName(entry.name);
-                      }
+                      setSelectedCategoryName(entry.name);
+                      setModalCategory(entry.name);
                     }}
                     cursor="pointer"
                   >
@@ -464,6 +463,13 @@ export default function MonthlyExpenseAnalysisCard({
                     dataKey="value" 
                     radius={[4, 4, 0, 0]} 
                     maxBarSize={20}
+                    onClick={(entry: any) => {
+                      if (entry && entry.name) {
+                        setSelectedCategoryName(entry.name);
+                        setModalCategory(entry.name);
+                      }
+                    }}
+                    cursor="pointer"
                   >
                     {analysisData.categories.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
@@ -479,7 +485,7 @@ export default function MonthlyExpenseAnalysisCard({
         <div className="md:col-span-7 space-y-3.5">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-              Répartition par Poste de Coût
+              Répartition par Poste de Coût <span className="text-[9px] font-semibold text-purple-600 dark:text-purple-400 font-sans ml-1">(Cliquez pour détailler)</span>
             </span>
             <div className="flex items-center gap-2">
               {selectedCategoryName && (
@@ -507,7 +513,11 @@ export default function MonthlyExpenseAnalysisCard({
               return (
                 <div 
                   key={cat.name} 
-                  onClick={() => setSelectedCategoryName(isSelected ? null : cat.name)}
+                  onClick={() => {
+                    setSelectedCategoryName(cat.name);
+                    setModalCategory(cat.name);
+                  }}
+                  title="Cliquez pour ouvrir la liste détaillée des transactions de cette catégorie"
                   className={`space-y-1 p-1.5 rounded-xl transition-all cursor-pointer border ${
                     isSelected 
                       ? "bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 shadow-2xs" 
@@ -812,6 +822,17 @@ export default function MonthlyExpenseAnalysisCard({
           );
         })()}
       </div>
+
+      {/* DETAILED CATEGORY TRANSACTIONS MODAL */}
+      <CategoryDetailModal
+        isOpen={!!modalCategory}
+        onClose={() => setModalCategory(null)}
+        categoryName={modalCategory}
+        periodKey={selectedPeriod}
+        transactions={transactions}
+        abonnements={abonnements}
+        totalPeriodExpenses={analysisData.totalExpense}
+      />
 
     </div>
   );

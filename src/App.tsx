@@ -5162,6 +5162,9 @@ export default function App() {
                       onNavigate={handleMenuClick}
                       initialTab={activeMenu === "charts" ? "charts" : "overview"}
                       triggerToast={triggerToast}
+                      setAccounts={setAccounts}
+                      setEpargnes={setEpargnes}
+                      setTransactions={setTransactions}
                     />
                   ) : activeMenu === "fire_calculator" ? (
                     <FireCalculator
