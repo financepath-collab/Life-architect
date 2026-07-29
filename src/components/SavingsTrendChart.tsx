@@ -117,22 +117,6 @@ export default function SavingsTrendChart({ transactions = [], abonnements = [] 
 
   // Build the detailed chart data representing 12 months of trends
   const chartData = useMemo(() => {
-    // Beautiful, realistic baseline values for the last 12 months
-    const baselineDefaults: { [key: string]: { income: number; expenses: number } } = {
-      "2025-08": { income: 23000, expenses: 16500 },
-      "2025-09": { income: 24000, expenses: 17200 },
-      "2025-10": { income: 23500, expenses: 16800 },
-      "2025-11": { income: 25000, expenses: 18000 },
-      "2025-12": { income: 28500, expenses: 22000 },
-      "2026-01": { income: 24200, expenses: 16000 },
-      "2026-02": { income: 24500, expenses: 16800 },
-      "2026-03": { income: 28000, expenses: 19500 },
-      "2026-04": { income: 26200, expenses: 15400 },
-      "2026-05": { income: 31000, expenses: 21000 },
-      "2026-06": { income: 29500, expenses: 22800 },
-      "2026-07": { income: 0, expenses: 0 }
-    };
-
     const activeSubCost = abonnements
       .filter(a => a.status === "Actif")
       .reduce((sum, a) => sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
@@ -153,9 +137,8 @@ export default function SavingsTrendChart({ transactions = [], abonnements = [] 
         }
       });
 
-      const baseVal = baselineDefaults[key] || { income: 25000, expenses: 18000 };
-      const finalIncome = income > 0 ? income : baseVal.income;
-      let finalExpenses = expenses > 0 ? expenses : baseVal.expenses;
+      const finalIncome = income;
+      let finalExpenses = expenses;
       
       // Include active subscription charges
       if (activeSubCost > 0) {

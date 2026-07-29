@@ -452,7 +452,6 @@ export default function InteractiveModuleTable({
         salairesAmount = salaires.reduce((acc: number, s: any) => acc + Number(s.netAmount || s.amount || 0), 0);
       }
     }
-    if (salairesAmount === 0) salairesAmount = 37700;
 
     let txRevenues = 0;
     if (transactions && transactions.length > 0) {

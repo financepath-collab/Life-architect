@@ -66,10 +66,9 @@ export default function MonthlyPerformanceCard({ transactions = [], abonnements 
   // Find all unique months available in transactions
   const availableMonths = useMemo(() => {
     const monthsSet = new Set<string>();
-    // Default fallback months if no transactions
-    monthsSet.add("2026-07");
-    monthsSet.add("2026-06");
-    monthsSet.add("2026-05");
+    const now = new Date();
+    const currentM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    monthsSet.add(currentM);
     
     transactions.forEach(t => {
       if (t.date && t.date.length >= 7) {
@@ -80,23 +79,13 @@ export default function MonthlyPerformanceCard({ transactions = [], abonnements 
     return Array.from(monthsSet).sort().reverse();
   }, [transactions]);
 
-  // Selected month state (default to the latest available month, typically 2026-07)
+  // Selected month state
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     return availableMonths[0] || "2026-07";
   });
 
   // Calculate stats for the selected month
   const stats = useMemo(() => {
-    // Standard baseline default values in case user selects a month with no real transactions
-    const defaultBaselines: { [key: string]: { revenue: number; expense: number } } = {
-      "2026-07": { revenue: 37700, expense: 4420 }, // real template data total approx
-      "2026-06": { revenue: 29500, expense: 22800 },
-      "2026-05": { revenue: 31000, expense: 21000 },
-      "2026-04": { revenue: 26200, expense: 15400 },
-      "2026-03": { revenue: 28000, expense: 19500 },
-      "2026-02": { revenue: 24500, expense: 16800 }
-    };
-
     let totalRevenue = 0;
     let totalExpense = 0;
     const categoryBreakdown: { [cat: string]: { revenue: number; expense: number } } = {};
@@ -107,35 +96,21 @@ export default function MonthlyPerformanceCard({ transactions = [], abonnements 
 
     const monthTransactions = transactions.filter(t => t.date && t.date.startsWith(selectedMonth));
 
-    if (monthTransactions.length > 0) {
-      monthTransactions.forEach(t => {
-        const amt = t.amount || 0;
-        const cat = t.category || "Autre";
-        if (!categoryBreakdown[cat]) {
-          categoryBreakdown[cat] = { revenue: 0, expense: 0 };
-        }
+    monthTransactions.forEach(t => {
+      const amt = t.amount || 0;
+      const cat = t.category || "Autre";
+      if (!categoryBreakdown[cat]) {
+        categoryBreakdown[cat] = { revenue: 0, expense: 0 };
+      }
 
-        if (t.type === "Revenue") {
-          totalRevenue += amt;
-          categoryBreakdown[cat].revenue += amt;
-        } else if (t.type === "Dépense") {
-          totalExpense += amt;
-          categoryBreakdown[cat].expense += amt;
-        }
-      });
-    } else {
-      // Fallback to baseline defaults if no custom transactions for this month yet
-      const baseline = defaultBaselines[selectedMonth] || { revenue: 25000, expense: 18000 };
-      totalRevenue = baseline.revenue;
-      totalExpense = baseline.expense;
-      
-      // Simulate category breakdown for visual pleasure
-      categoryBreakdown["Activité Principale"] = { revenue: totalRevenue * 0.7, expense: 0 };
-      categoryBreakdown["AdSense / Digital"] = { revenue: totalRevenue * 0.3, expense: 0 };
-      categoryBreakdown["Logement & Serveurs"] = { revenue: 0, expense: totalExpense * 0.4 };
-      categoryBreakdown["Équipement"] = { revenue: 0, expense: totalExpense * 0.3 };
-      categoryBreakdown["Marketing & Loisirs"] = { revenue: 0, expense: totalExpense * 0.3 };
-    }
+      if (t.type === "Revenue") {
+        totalRevenue += amt;
+        categoryBreakdown[cat].revenue += amt;
+      } else if (t.type === "Dépense") {
+        totalExpense += amt;
+        categoryBreakdown[cat].expense += amt;
+      }
+    });
 
     if (activeSubCost > 0) {
       totalExpense += activeSubCost;
@@ -149,15 +124,21 @@ export default function MonthlyPerformanceCard({ transactions = [], abonnements 
     const savingsRate = totalRevenue > 0 ? (netSavings / totalRevenue) * 100 : 0;
     const isGrowth = netSavings >= 0;
 
-    // Estimate relative growth compared to previous month (mock/calculated)
+    // Calculate relative growth compared to previous month
     const prevMonthIndex = availableMonths.indexOf(selectedMonth) + 1;
-    let growthPercent = 8.4; // default visual growth
+    let growthPercent = 0;
     if (prevMonthIndex < availableMonths.length) {
       const prevMonth = availableMonths[prevMonthIndex];
-      const prevBaseline = defaultBaselines[prevMonth] || { revenue: 25000, expense: 18000 };
-      const prevNet = prevBaseline.revenue - prevBaseline.expense;
-      if (prevNet > 0) {
-        growthPercent = ((netSavings - prevNet) / prevNet) * 100;
+      const prevTx = transactions.filter(t => t.date && t.date.startsWith(prevMonth));
+      let prevRev = 0;
+      let prevExp = 0;
+      prevTx.forEach(t => {
+        if (t.type === "Revenue") prevRev += (t.amount || 0);
+        if (t.type === "Dépense") prevExp += (t.amount || 0);
+      });
+      const prevNet = prevRev - prevExp - activeSubCost;
+      if (prevNet !== 0) {
+        growthPercent = ((netSavings - prevNet) / Math.abs(prevNet)) * 100;
       }
     }
 

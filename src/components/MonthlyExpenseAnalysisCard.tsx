@@ -240,15 +240,6 @@ export default function MonthlyExpenseAnalysisCard({
 
   // Calculate statistics for the selected period (Month / Quarter)
   const analysisData = useMemo(() => {
-    const defaultBaselines: { [key: string]: { revenue: number; expense: number } } = {
-      "2026-07": { revenue: 37700, expense: 4420 },
-      "2026-06": { revenue: 29500, expense: 22800 },
-      "2026-05": { revenue: 31000, expense: 21000 },
-      "2026-04": { revenue: 26200, expense: 15400 },
-      "2026-03": { revenue: 28000, expense: 19500 },
-      "2026-02": { revenue: 24500, expense: 16800 }
-    };
-
     let totalExpense = 0;
     const categoryExpenses: { [cat: string]: number } = {};
 
@@ -260,25 +251,13 @@ export default function MonthlyExpenseAnalysisCard({
       t => t.type === "Dépense" && matchesPeriod(t.date, selectedPeriod)
     );
 
-    if (periodTransactions.length > 0) {
-      periodTransactions.forEach(t => {
-        const amt = t.amount || 0;
-        const rawCat = t.category || "Autre";
-        const cat = normalizeCategory(rawCat);
-        categoryExpenses[cat] = (categoryExpenses[cat] || 0) + amt;
-        totalExpense += amt;
-      });
-    } else {
-      // Fallback to baseline default expenses if no real transactions are present for month
-      const monthKey = selectedPeriod.startsWith("month:") ? selectedPeriod.replace("month:", "") : "2026-07";
-      const baseline = defaultBaselines[monthKey] || { revenue: 25000, expense: 18000 };
-      const simulatedExpense = baseline.expense;
-      totalExpense = simulatedExpense;
-      
-      categoryExpenses["Logement & Serveurs"] = simulatedExpense * 0.4;
-      categoryExpenses["Équipement"] = simulatedExpense * 0.3;
-      categoryExpenses["Marketing & Loisirs"] = simulatedExpense * 0.3;
-    }
+    periodTransactions.forEach(t => {
+      const amt = t.amount || 0;
+      const rawCat = t.category || "Autre";
+      const cat = normalizeCategory(rawCat);
+      categoryExpenses[cat] = (categoryExpenses[cat] || 0) + amt;
+      totalExpense += amt;
+    });
 
     if (activeSubCost > 0) {
       categoryExpenses["Abonnements & Charges"] = (categoryExpenses["Abonnements & Charges"] || 0) + activeSubCost;
@@ -620,23 +599,9 @@ export default function MonthlyExpenseAnalysisCard({
         {/* 50/30/20 Calculation logic and UI */}
         {(() => {
           // 1. Calculate Monthly Income for the selected period
-          let income = transactions
+          const income = transactions
             .filter(t => t.type === "Revenue" && matchesPeriod(t.date, selectedPeriod))
             .reduce((sum, t) => sum + (t.amount || 0), 0);
-          
-          // Fallback if no revenue is logged
-          if (income === 0) {
-            const defaultIncomes: { [key: string]: number } = {
-              "2026-07": 37700,
-              "2026-06": 29500,
-              "2026-05": 31000,
-              "2026-04": 26200,
-              "2026-03": 28000,
-              "2026-02": 24500
-            };
-            const currentMonthKey = selectedPeriod.startsWith("month:") ? selectedPeriod.replace("month:", "") : "2026-07";
-            income = defaultIncomes[currentMonthKey] || 30000;
-          }
 
           let besoins = 0; // Needs (50%)
           let envies = 0;  // Wants (30%)
@@ -651,70 +616,54 @@ export default function MonthlyExpenseAnalysisCard({
             t => t.type === "Dépense" && matchesPeriod(t.date, selectedPeriod)
           );
 
-          if (periodExpenses.length > 0) {
-            periodExpenses.forEach(t => {
-              const amt = t.amount || 0;
-              const rawCat = t.category || "Autre";
-              const cat = normalizeCategory(rawCat);
+          periodExpenses.forEach(t => {
+            const amt = t.amount || 0;
+            const rawCat = t.category || "Autre";
+            const cat = normalizeCategory(rawCat);
 
-              const catLower = cat.toLowerCase();
-              if (
-                catLower.includes("alimentation") ||
-                catLower.includes("transport") ||
-                catLower.includes("carburant") ||
-                catLower.includes("logiciel") ||
-                catLower.includes("saas") ||
-                catLower.includes("abonnement") ||
-                catLower.includes("logement") ||
-                catLower.includes("serveurs") ||
-                catLower.includes("facture") ||
-                catLower.includes("bureau") ||
-                catLower.includes("marketing") ||
-                catLower.includes("publicité")
-              ) {
-                besoins += amt;
-              } else if (
-                catLower.includes("loisir") ||
-                catLower.includes("sortie") ||
-                catLower.includes("cadeaux") ||
-                catLower.includes("shopping") ||
-                catLower.includes("équipement") ||
-                catLower.includes("matériel") ||
-                catLower.includes("voyage") ||
-                catLower.includes("restaurant") ||
-                catLower.includes("café") ||
-                catLower.includes("netflix") ||
-                catLower.includes("spotify")
-              ) {
-                envies += amt;
-              } else if (
-                catLower.includes("épargne") ||
-                catLower.includes("cagnottes") ||
-                catLower.includes("bourse") ||
-                catLower.includes("invest") ||
-                catLower.includes("stock") ||
-                catLower.includes("crypto")
-              ) {
-                epargne += amt;
-              } else {
-                besoins += amt;
-              }
-            });
-          } else {
-            const defaultExpenses: { [key: string]: number } = {
-              "2026-07": 4420,
-              "2026-06": 22800,
-              "2026-05": 21000,
-              "2026-04": 15400,
-              "2026-03": 19500,
-              "2026-02": 16800
-            };
-            const currentMonthKey = selectedPeriod.startsWith("month:") ? selectedPeriod.replace("month:", "") : "2026-07";
-            const simulatedTotal = defaultExpenses[currentMonthKey] || 15000;
-            besoins = simulatedTotal * 0.55;
-            envies = simulatedTotal * 0.30;
-            epargne = simulatedTotal * 0.15;
-          }
+            const catLower = cat.toLowerCase();
+            if (
+              catLower.includes("alimentation") ||
+              catLower.includes("transport") ||
+              catLower.includes("carburant") ||
+              catLower.includes("logiciel") ||
+              catLower.includes("saas") ||
+              catLower.includes("abonnement") ||
+              catLower.includes("logement") ||
+              catLower.includes("serveurs") ||
+              catLower.includes("facture") ||
+              catLower.includes("bureau") ||
+              catLower.includes("marketing") ||
+              catLower.includes("publicité")
+            ) {
+              besoins += amt;
+            } else if (
+              catLower.includes("loisir") ||
+              catLower.includes("sortie") ||
+              catLower.includes("cadeaux") ||
+              catLower.includes("shopping") ||
+              catLower.includes("équipement") ||
+              catLower.includes("matériel") ||
+              catLower.includes("voyage") ||
+              catLower.includes("restaurant") ||
+              catLower.includes("café") ||
+              catLower.includes("netflix") ||
+              catLower.includes("spotify")
+            ) {
+              envies += amt;
+            } else if (
+              catLower.includes("épargne") ||
+              catLower.includes("cagnottes") ||
+              catLower.includes("bourse") ||
+              catLower.includes("invest") ||
+              catLower.includes("stock") ||
+              catLower.includes("crypto")
+            ) {
+              epargne += amt;
+            } else {
+              besoins += amt;
+            }
+          });
 
           if (activeSubCost > 0) {
             besoins += activeSubCost;

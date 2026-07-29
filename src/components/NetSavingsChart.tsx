@@ -104,15 +104,6 @@ export default function NetSavingsChart({ transactions = [], abonnements = [] }:
 
   // Build the detailed chart data
   const chartData = useMemo(() => {
-    const baselineDefaults: { [key: string]: { income: number; expenses: number } } = {
-      "2026-02": { income: 24500, expenses: 16800 },
-      "2026-03": { income: 28000, expenses: 19500 },
-      "2026-04": { income: 26200, expenses: 15400 },
-      "2026-05": { income: 31000, expenses: 21000 },
-      "2026-06": { income: 29500, expenses: 22800 },
-      "2026-07": { income: 0, expenses: 0 }
-    };
-
     const activeSubCost = abonnements
       .filter(a => a.status === "Actif")
       .reduce((sum, a) => sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
@@ -131,9 +122,8 @@ export default function NetSavingsChart({ transactions = [], abonnements = [] }:
         }
       });
 
-      const baseVal = baselineDefaults[key] || { income: 25000, expenses: 18000 };
-      const finalIncome = income > 0 ? income : baseVal.income;
-      let finalExpenses = expenses > 0 ? expenses : baseVal.expenses;
+      const finalIncome = income;
+      let finalExpenses = expenses;
       
       // Auto-add active subscriptions/charges
       if (activeSubCost > 0) {

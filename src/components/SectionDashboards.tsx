@@ -195,15 +195,6 @@ export function FinanceSectionDashboard({
 
   // Build monthly comparison data for the bar chart
   const monthlyChartData = React.useMemo(() => {
-    const baselineDefaults: { [key: string]: { income: number; expenses: number } } = {
-      "2026-02": { income: 24500, expenses: 16800 },
-      "2026-03": { income: 28000, expenses: 19500 },
-      "2026-04": { income: 26200, expenses: 15400 },
-      "2026-05": { income: 31000, expenses: 21000 },
-      "2026-06": { income: 29500, expenses: 22800 },
-      "2026-07": { income: 0, expenses: 0 }
-    };
-
     return last6Months.map(({ key, label }) => {
       let income = 0;
       let expenses = 0;
@@ -218,10 +209,8 @@ export function FinanceSectionDashboard({
         }
       });
 
-      const baseVal = baselineDefaults[key] || { income: 25000, expenses: 18000 };
-      
-      const finalIncome = income > 0 ? income : baseVal.income;
-      const finalExpenses = expenses > 0 ? expenses : baseVal.expenses;
+      const finalIncome = income;
+      const finalExpenses = expenses;
       const netSavings = finalIncome - finalExpenses;
 
       return {

@@ -29,15 +29,6 @@ interface MonthlyComparisonCardProps {
   abonnements?: Abonnement[];
 }
 
-const defaultBaselines: { [key: string]: { revenue: number; expense: number } } = {
-  "2026-07": { revenue: 37700, expense: 4420 },
-  "2026-06": { revenue: 29500, expense: 22800 },
-  "2026-05": { revenue: 31000, expense: 21000 },
-  "2026-04": { revenue: 26200, expense: 15400 },
-  "2026-03": { revenue: 28000, expense: 19500 },
-  "2026-02": { revenue: 24500, expense: 16800 }
-};
-
 const CustomChartTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -66,10 +57,9 @@ export default function MonthlyComparisonCard({
   // Find all unique months available in transactions
   const availableMonths = useMemo(() => {
     const monthsSet = new Set<string>();
-    // Default fallback months if no transactions
-    monthsSet.add("2026-07");
-    monthsSet.add("2026-06");
-    monthsSet.add("2026-05");
+    const now = new Date();
+    const currentM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    monthsSet.add(currentM);
 
     transactions.forEach(t => {
       if (t.date && t.date.length >= 7) {
@@ -96,20 +86,14 @@ export default function MonthlyComparisonCard({
 
     const monthTransactions = transactions.filter(t => t.date && t.date.startsWith(monthStr));
 
-    if (monthTransactions.length > 0) {
-      monthTransactions.forEach(t => {
-        const amt = t.amount || 0;
-        if (t.type === "Revenue") {
-          totalRevenue += amt;
-        } else if (t.type === "Dépense") {
-          totalExpense += amt;
-        }
-      });
-    } else {
-      const baseline = defaultBaselines[monthStr] || { revenue: 25000, expense: 18000 };
-      totalRevenue = baseline.revenue;
-      totalExpense = baseline.expense;
-    }
+    monthTransactions.forEach(t => {
+      const amt = t.amount || 0;
+      if (t.type === "Revenue") {
+        totalRevenue += amt;
+      } else if (t.type === "Dépense") {
+        totalExpense += amt;
+      }
+    });
 
     if (activeSubCost > 0) {
       totalExpense += activeSubCost;
