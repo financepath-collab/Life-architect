@@ -61,7 +61,31 @@ const CustomChartTooltip = ({ active, payload }: any) => {
 
 const normalizeCategory = (rawCat: string): string => {
   if (!rawCat) return "Autres";
-  const normTx = rawCat.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const normTx = rawCat.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  if (
+    normTx.includes("charges fixes") ||
+    normTx === "abonnements & charges" ||
+    normTx === "charges fixes & abonnements" ||
+    normTx === "abonnements & charges récurrentes" ||
+    rawCat === "Abonnements & Charges" ||
+    rawCat === "Charges Fixes & Abonnements"
+  ) {
+    return "Abonnements & Charges";
+  }
+
+  if (
+    rawCat === "Logiciels & SaaS" ||
+    rawCat === "Alimentation" ||
+    rawCat === "Alimentation & Courses" ||
+    rawCat === "Logement & Serveurs" ||
+    rawCat === "Équipement & Matériel" ||
+    rawCat === "Marketing & Publicité" ||
+    rawCat === "Transport & Carburant" ||
+    rawCat === "Loisirs & Sorties"
+  ) {
+    return rawCat;
+  }
 
   const mappings: { [key: string]: string } = {
     alimentation: "Alimentation",
@@ -99,9 +123,6 @@ const normalizeCategory = (rawCat: string): string => {
     hosting: "Logiciels & SaaS",
     hostinger: "Logiciels & SaaS",
     cloud: "Logiciels & SaaS",
-    subscriptions: "Logiciels & SaaS",
-    abonnement: "Logiciels & SaaS",
-    abonnements: "Logiciels & SaaS",
     vpn: "Logiciels & SaaS",
 
     marketing: "Marketing & Publicité",

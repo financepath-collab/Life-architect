@@ -39,6 +39,30 @@ export const normalizeCategory = (rawCat: string = ""): string => {
   if (!rawCat) return "Autre";
   const normTx = rawCat.toLowerCase().trim();
 
+  if (
+    normTx.includes("charges fixes") ||
+    normTx === "abonnements & charges" ||
+    normTx === "charges fixes & abonnements" ||
+    normTx === "abonnements & charges récurrentes" ||
+    rawCat === "Abonnements & Charges" ||
+    rawCat === "Charges Fixes & Abonnements"
+  ) {
+    return "Abonnements & Charges";
+  }
+
+  if (
+    rawCat === "Logiciels & SaaS" ||
+    rawCat === "Alimentation & Courses" ||
+    rawCat === "Logement & Serveurs" ||
+    rawCat === "Équipement & Matériel" ||
+    rawCat === "Marketing & Publicité" ||
+    rawCat === "Transport & Carburant" ||
+    rawCat === "Loisirs & Sorties" ||
+    rawCat === "Dépenses Courantes & Achats"
+  ) {
+    return rawCat;
+  }
+
   const mappings: { [key: string]: string } = {
     alimentation: "Alimentation & Courses",
     courses: "Alimentation & Courses",
@@ -70,9 +94,6 @@ export const normalizeCategory = (rawCat: string = ""): string => {
     chatgpt: "Logiciels & SaaS",
     openai: "Logiciels & SaaS",
     hosting: "Logiciels & SaaS",
-    subscription: "Logiciels & SaaS",
-    abonnement: "Logiciels & SaaS",
-    abonnements: "Logiciels & SaaS",
 
     marketing: "Marketing & Publicité",
     publicite: "Marketing & Publicité",
@@ -304,7 +325,11 @@ export default function CategoryDetailModal({
   const totalAmount = useMemo(() => {
     let sum = categoryTransactions.reduce((acc, t) => acc + (t.amount || 0), 0);
     // Include active subscriptions cost if category is Abonnements
-    if (normalizeCategory(categoryName || "") === "Abonnements & Charges") {
+    const targetNormCat = normalizeCategory(categoryName || "");
+    if (
+      targetNormCat === "Abonnements & Charges" ||
+      targetNormCat === "Charges Fixes & Abonnements"
+    ) {
       const activeSubCost = abonnements
         .filter(a => a.status === "Actif")
         .reduce((s, a) => s + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
@@ -313,7 +338,8 @@ export default function CategoryDetailModal({
     return sum;
   }, [categoryTransactions, categoryName, abonnements]);
 
-  const avgAmount = categoryTransactions.length > 0 ? totalAmount / categoryTransactions.length : 0;
+  const totalOpsCount = categoryTransactions.length + (categoryAbonnements.length > 0 ? categoryAbonnements.length : 0);
+  const avgAmount = totalOpsCount > 0 ? totalAmount / totalOpsCount : 0;
   
   const percentShare = useMemo(() => {
     if (!totalPeriodExpenses || totalPeriodExpenses <= 0) return 0;
@@ -459,11 +485,18 @@ export default function CategoryDetailModal({
                   Total : {categoryAbonnements.reduce((s, a) => s + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0).toLocaleString("fr-FR")} MAD/mois
                 </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {categoryAbonnements.map((sub) => (
-                  <div key={sub.id} className="bg-white dark:bg-zinc-900 border border-purple-100 dark:border-purple-900/40 p-2.5 rounded-xl flex items-center justify-between text-xs">
-                    <div className="font-bold text-neutral-800 dark:text-neutral-200">{sub.name}</div>
-                    <div className="font-black text-purple-600 dark:text-purple-400">-{sub.costMonthly} MAD</div>
+                  <div key={sub.id} className="bg-white dark:bg-zinc-900 border border-purple-100 dark:border-purple-900/50 p-3 rounded-xl flex items-center justify-between text-xs shadow-3xs">
+                    <div className="space-y-0.5">
+                      <span className="font-bold text-neutral-900 dark:text-neutral-100 block">{sub.serviceName}</span>
+                      <span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">
+                        {sub.category || "Abonnement"} • Facturation {sub.billingPeriod}
+                      </span>
+                    </div>
+                    <div className="font-black font-mono text-purple-600 dark:text-purple-400 shrink-0 ml-2">
+                      -{sub.costMonthly.toLocaleString("fr-FR")} MAD/m
+                    </div>
                   </div>
                 ))}
               </div>
