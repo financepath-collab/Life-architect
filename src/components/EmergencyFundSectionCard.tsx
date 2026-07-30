@@ -101,12 +101,34 @@ export default function EmergencyFundSectionCard({
   const [transferAmount, setTransferAmount] = useState<number>(1000);
   const [transferNote, setTransferNote] = useState<string>("Apport mensuel Fonds de Secours");
   const [isTransferring, setIsTransferring] = useState<boolean>(false);
+  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [showEditTargetModal, setShowEditTargetModal] = useState<boolean>(false);
   const [customTargetAmount, setCustomTargetAmount] = useState<number>(emergencyFundGoal.targetAmount);
 
   const selectedAccount = useMemo(() => {
     return eligibleAccounts.find(a => a.id === selectedAccountId) || eligibleAccounts[0];
   }, [eligibleAccounts, selectedAccountId]);
+
+  // Pre-transfer check before showing confirmation AlertDialog
+  const handlePreTransferCheck = () => {
+    if (!selectedAccount) {
+      triggerToast?.("Veuillez sélectionner un compte source.", "warning");
+      return;
+    }
+
+    if (!transferAmount || transferAmount <= 0) {
+      triggerToast?.("Veuillez indiquer un montant supérieur à 0 MAD.", "warning");
+      return;
+    }
+
+    if (transferAmount > selectedAccount.balance) {
+      triggerToast?.(`Solde insuffisant sur ${selectedAccount.name} (${selectedAccount.balance.toLocaleString("fr-FR")} MAD disponible).`, "error");
+      return;
+    }
+
+    // Open confirmation AlertDialog
+    setShowConfirmModal(true);
+  };
 
   // Recent emergency fund transfers history
   const emergencyFundHistory = useMemo(() => {
@@ -211,8 +233,9 @@ export default function EmergencyFundSectionCard({
         "success"
       );
 
-      // Reset form
+      // Reset form and close modal
       setTransferAmount(1000);
+      setShowConfirmModal(false);
     } catch (err) {
       triggerToast?.("Une erreur est survenue lors du transfert.", "error");
     } finally {
@@ -444,7 +467,7 @@ export default function EmergencyFundSectionCard({
 
             <button
               type="button"
-              onClick={handleExecuteTransfer}
+              onClick={handlePreTransferCheck}
               disabled={isTransferring || !transferAmount || transferAmount <= 0}
               className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0"
             >
@@ -567,6 +590,114 @@ export default function EmergencyFundSectionCard({
                   className="px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black shadow-xs hover:bg-emerald-500"
                 >
                   Enregistrer
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* TRANSFER CONFIRMATION ALERT DIALOG */}
+      <AnimatePresence>
+        {showConfirmModal && selectedAccount && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="alert-dialog-title">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-zinc-900 border-2 border-emerald-500/40 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-5 relative overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <ArrowRightLeft className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 id="alert-dialog-title" className="text-base font-black text-neutral-900 dark:text-neutral-100 tracking-tight">
+                      Confirmation de Transfert de Fonds
+                    </h4>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Veuillez vérifier et valider la transaction vers votre réserve d'urgence.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="p-1.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Transfer Details Card */}
+              <div className="bg-neutral-50 dark:bg-zinc-950/80 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl p-4 space-y-3">
+                {/* Amount Highlight */}
+                <div className="text-center bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 rounded-xl p-3">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 block">
+                    Montant du virement
+                  </span>
+                  <span className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                    +{transferAmount.toLocaleString("fr-FR")} MAD
+                  </span>
+                </div>
+
+                {/* Source & Destination Breakdown */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                  <div className="bg-white dark:bg-zinc-900 p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-1">
+                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-1">
+                      <Wallet className="w-3 h-3 text-neutral-500" />
+                      Compte Débité
+                    </div>
+                    <div className="font-extrabold text-neutral-900 dark:text-neutral-100 truncate">
+                      {selectedAccount.name}
+                    </div>
+                    <div className="text-[11px] font-mono text-neutral-500">
+                      Nouveau solde : <strong className="text-neutral-800 dark:text-neutral-200">{Math.max(0, selectedAccount.balance - transferAmount).toLocaleString("fr-FR")} MAD</strong>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-zinc-900 p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-1">
+                    <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                      <PiggyBank className="w-3 h-3 text-emerald-500" />
+                      Destination
+                    </div>
+                    <div className="font-extrabold text-neutral-900 dark:text-neutral-100 truncate">
+                      {emergencyFundGoal.name}
+                    </div>
+                    <div className="text-[11px] font-mono text-neutral-500">
+                      Nouveau total : <strong className="text-emerald-600 dark:text-emerald-400">{(emergencyFundGoal.currentAmount + transferAmount).toLocaleString("fr-FR")} MAD</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Impact Info */}
+                <div className="flex items-center gap-2 text-[11px] text-neutral-600 dark:text-neutral-300 bg-white/60 dark:bg-zinc-900/60 p-2.5 rounded-xl border border-neutral-200/60 dark:border-neutral-800">
+                  <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>
+                    La couverture financière passera à <strong>~{((emergencyFundGoal.currentAmount + transferAmount) / (estimatedMonthlyExpense || 12000)).toFixed(1)} mois</strong> de dépenses.
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-neutral-100 dark:bg-zinc-800 hover:bg-neutral-200 dark:hover:bg-zinc-700 text-neutral-700 dark:text-neutral-300 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExecuteTransfer}
+                  disabled={isTransferring}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Confirmer le transfert</span>
                 </button>
               </div>
             </motion.div>

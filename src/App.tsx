@@ -77,6 +77,7 @@ import ProjectFoldersSection from "./components/ProjectFoldersSection";
 import AlertsBanner from "./components/AlertsBanner";
 import { HabitsSummaryCard } from "./components/HabitsSummaryCard";
 import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
+import SubscriptionManagerModule from "./components/SubscriptionManagerModule";
 import MonthlyPerformanceCard from "./components/MonthlyPerformanceCard";
 import MonthlyExpenseAnalysisCard from "./components/MonthlyExpenseAnalysisCard";
 import MonthlyComparisonCard from "./components/MonthlyComparisonCard";
@@ -4312,6 +4313,12 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Critical Subscriptions 3-Day Visual Alert Banner */}
+              <CriticalSubscriptionsAlert
+                abonnements={abonnements}
+                onNavigateToModule={handleNavigateToModule}
+              />
+
               {/* Integrated Alert & Notification Hub */}
               <AlertsBanner
                 abonnements={abonnements}
@@ -5130,7 +5137,17 @@ export default function App() {
 
                 {/* Interactive Content Card */}
                 <div className="bg-white border border-neutral-200 rounded-3xl p-6 shadow-xs min-h-[420px]">
-                  {(activeMenu === "saisie_unifiee" || activeMenu === "transactions" || activeMenu === "salaires" || activeMenu === "abonnements" || activeMenu === "achats") ? (
+                  {activeMenu === "abonnements" ? (
+                    <SubscriptionManagerModule
+                      abonnements={abonnements}
+                      setAbonnements={setAbonnements}
+                      transactions={transactions}
+                      setTransactions={setTransactions}
+                      accounts={accounts}
+                      setAccounts={setAccounts}
+                      triggerToast={triggerToast}
+                    />
+                  ) : (activeMenu === "saisie_unifiee" || activeMenu === "transactions" || activeMenu === "salaires" || activeMenu === "achats") ? (
                     <UnifiedFinancialEntrySection
                       transactions={transactions}
                       setTransactions={setTransactions}

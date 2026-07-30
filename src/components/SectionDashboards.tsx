@@ -12,6 +12,7 @@ import MonthlyExpenseAnalysisCard from "./MonthlyExpenseAnalysisCard";
 import MonthlyNetIncomeWidget from "./MonthlyNetIncomeWidget";
 import MonthlySavingsGaugeCard from "./MonthlySavingsGaugeCard";
 import MonthlyComparisonCard from "./MonthlyComparisonCard";
+import SubscriptionScatterChartCard from "./SubscriptionScatterChartCard";
 import RequiredMonthlySavingsCard from "./RequiredMonthlySavingsCard";
 import Savings3MonthProjectionSimulationCard from "./Savings3MonthProjectionSimulationCard";
 import EmergencyFundSectionCard from "./EmergencyFundSectionCard";
@@ -506,7 +507,7 @@ export function FinanceSectionDashboard({
       </div>
 
       {/* Monthly Variation Rate & Comparison Summary Card */}
-      <MonthlyComparisonCard transactions={transactions} abonnements={abonnements} />
+      <MonthlyComparisonCard transactions={transactions} abonnements={abonnements} salaires={salaires} />
 
       {/* Pie Chart and Category Breakdown Analysis Card */}
       <MonthlyExpenseAnalysisCard transactions={transactions} abonnements={abonnements} />
@@ -515,6 +516,13 @@ export function FinanceSectionDashboard({
       <MonthlySavingsGaugeCard
         transactions={transactions}
         abonnements={abonnements}
+        salaires={salaires}
+      />
+
+      {/* Subscription Scatter Chart Card: Abonnements vs Taux d'Épargne */}
+      <SubscriptionScatterChartCard
+        abonnements={abonnements}
+        transactions={transactions}
         salaires={salaires}
       />
 
@@ -1338,6 +1346,7 @@ export function FinanceSectionDashboard({
             stocks={stocks}
             epargnes={epargnes}
             abonnements={abonnements}
+            salaires={salaires}
           />
           <NetSavingsChart transactions={transactions} abonnements={abonnements} />
           <SavingsTrendChart transactions={transactions} abonnements={abonnements} />

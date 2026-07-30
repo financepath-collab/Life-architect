@@ -45,7 +45,20 @@ export const INITIAL_WEEKLY_OBJECTIVES: WeeklyObjective[] = [
   { id: "o3", text: "Finaliser un nouveau module de cours pour l'Académie (Udemy/Site)", completed: false },
 ];
 
-export const INITIAL_TRANSACTIONS: FinanceTransaction[] = [];
+export const INITIAL_TRANSACTIONS: FinanceTransaction[] = [
+  // July 2026 transactions
+  { id: "tx_1", date: "2026-07-05", description: "Abonnement AWS & Hostinger Cloud", amount: 1250, type: "Dépense", category: "Logiciels & SaaS", account: "Compte Courant CIH", status: "Validé" },
+  { id: "tx_2", date: "2026-07-12", description: "Courses Carrefour & Supermarché", amount: 2850, type: "Dépense", category: "Alimentation", account: "Compte Courant CIH", status: "Validé" },
+  { id: "tx_3", date: "2026-07-15", description: "Plein Carburant Shell", amount: 750, type: "Dépense", category: "Transport & Carburant", account: "Compte Courant CIH", status: "Validé" },
+  { id: "tx_4", date: "2026-07-22", description: "Mission Freelance Design UI", amount: 8500, type: "Revenue", category: "Prestation / Consulting", account: "Compte Courant Attijari", status: "Validé" },
+  { id: "tx_5", date: "2026-07-25", description: "Achat Équipement Micro Shure", amount: 3200, type: "Dépense", category: "Équipement & Matériel", account: "Compte Courant Attijari", status: "Validé" },
+
+  // June 2026 transactions
+  { id: "tx_6", date: "2026-06-08", description: "Supermarché Marjane Anfa", amount: 3400, type: "Dépense", category: "Alimentation", account: "Compte Courant CIH", status: "Validé" },
+  { id: "tx_7", date: "2026-06-14", description: "Entretien Véhicule & Vidange", amount: 1800, type: "Dépense", category: "Transport & Carburant", account: "Compte Courant CIH", status: "Validé" },
+  { id: "tx_8", date: "2026-06-20", description: "Sorties & Restaurants", amount: 1450, type: "Dépense", category: "Loisirs & Sorties", account: "Compte Courant CIH", status: "Validé" },
+  { id: "tx_9", date: "2026-06-27", description: "Consulting Stratégie Digital", amount: 5000, type: "Revenue", category: "Prestation / Consulting", account: "Compte Courant Attijari", status: "Validé" }
+];
 
 export const INITIAL_STOCKS: StockEntry[] = [
   { id: "s1", symbol: "ATW", name: "Attijariwafa Bank", buyPrice: 505.0, currentPrice: 512.5, quantity: 20, lastUpdated: "2026-07-10" },
@@ -63,7 +76,26 @@ export const INITIAL_BUDGETS: FinanceBudget[] = [
   { id: "b6", category: "Loisirs & Sorties", limitAmount: 1500, spentAmount: 0, period: "Mensuel" }
 ];
 
-export const INITIAL_SALAIRES: FinanceSalaire[] = [];
+export const INITIAL_SALAIRES: FinanceSalaire[] = [
+  {
+    id: "sal_2026_07",
+    date: "2026-07-28",
+    source: "Employeur principal (Tech Inc)",
+    grossAmount: 48000,
+    netAmount: 35000,
+    status: "Reçu",
+    jour_paiement: 28
+  },
+  {
+    id: "sal_2026_06",
+    date: "2026-06-28",
+    source: "Employeur principal (Tech Inc)",
+    grossAmount: 48000,
+    netAmount: 35000,
+    status: "Reçu",
+    jour_paiement: 28
+  }
+];
 
 export const INITIAL_EPARGNES: FinanceEpargne[] = [
   { id: "e1", name: "Fonds d'urgence (3 mois) - Sécurité", targetAmount: 42000, currentAmount: 42000, deadline: "2026-06-30", status: "Atteint" },

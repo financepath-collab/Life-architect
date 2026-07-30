@@ -4,9 +4,11 @@ import {
   FinanceBudget, 
   StockEntry, 
   FinanceEpargne, 
-  Abonnement 
+  Abonnement,
+  FinanceSalaire
 } from "../types";
 import CategoryDetailModal from "./CategoryDetailModal";
+import SubscriptionScatterChartCard from "./SubscriptionScatterChartCard";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -125,6 +127,7 @@ interface FinanceChartsProps {
   stocks: StockEntry[];
   epargnes: FinanceEpargne[];
   abonnements: Abonnement[];
+  salaires?: FinanceSalaire[];
 }
 
 export default function FinanceCharts({
@@ -132,7 +135,8 @@ export default function FinanceCharts({
   budgets = [],
   stocks = [],
   epargnes = [],
-  abonnements = []
+  abonnements = [],
+  salaires = []
 }: FinanceChartsProps) {
   // 0. Find the latest year and month among transactions to align the 6-month chart timeline perfectly
   const referenceDate = React.useMemo(() => {
@@ -1146,6 +1150,13 @@ export default function FinanceCharts({
           </div>
 
         </div>
+
+        {/* NEW SCATTER CHART: Abonnements vs Taux d'Épargne */}
+        <SubscriptionScatterChartCard
+          abonnements={abonnements}
+          transactions={transactions}
+          salaires={salaires}
+        />
 
       </div>
 

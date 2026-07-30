@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { FinanceTransaction, Abonnement } from "../types";
+import { FinanceTransaction, Abonnement, FinanceSalaire } from "../types";
 import {
   TrendingUp,
   TrendingDown,
@@ -27,6 +27,7 @@ import {
 interface MonthlyComparisonCardProps {
   transactions: FinanceTransaction[];
   abonnements?: Abonnement[];
+  salaires?: FinanceSalaire[];
 }
 
 const CustomChartTooltip = ({ active, payload, label }: any) => {
@@ -52,9 +53,10 @@ const CustomChartTooltip = ({ active, payload, label }: any) => {
 
 export default function MonthlyComparisonCard({
   transactions = [],
-  abonnements = []
+  abonnements = [],
+  salaires = []
 }: MonthlyComparisonCardProps) {
-  // Find all unique months available in transactions
+  // Find all unique months available in transactions & salaires
   const availableMonths = useMemo(() => {
     const monthsSet = new Set<string>();
     const now = new Date();
@@ -67,8 +69,14 @@ export default function MonthlyComparisonCard({
       }
     });
 
+    salaires.forEach(s => {
+      if (s.date && s.date.length >= 7) {
+        monthsSet.add(s.date.substring(0, 7));
+      }
+    });
+
     return Array.from(monthsSet).sort().reverse();
-  }, [transactions]);
+  }, [transactions, salaires]);
 
   // Selected month state
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
@@ -80,10 +88,16 @@ export default function MonthlyComparisonCard({
     let totalRevenue = 0;
     let totalExpense = 0;
 
-    const activeSubCost = abonnements
-      .filter(a => a.status === "Actif")
-      .reduce((sum, a) => sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
+    // A) Salaires for this month
+    const monthSalaires = salaires.filter(s => s.date && s.date.startsWith(monthStr));
+    if (monthSalaires.length > 0) {
+      totalRevenue += monthSalaires.reduce((acc, s) => acc + (s.netAmount || 0), 0);
+    } else if (salaires.length > 0 && monthStr === availableMonths[0]) {
+      // Fallback: if salaires exist without date matching, count for active current month
+      totalRevenue += salaires.reduce((acc, s) => acc + (s.netAmount || 0), 0);
+    }
 
+    // B) Transactions for this month
     const monthTransactions = transactions.filter(t => t.date && t.date.startsWith(monthStr));
 
     monthTransactions.forEach(t => {
@@ -95,8 +109,18 @@ export default function MonthlyComparisonCard({
       }
     });
 
+    // C) Active Subscriptions (abonnements)
+    const activeSubCost = abonnements
+      .filter(a => a.status === "Actif")
+      .reduce((sum, a) => sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12), 0);
+
+    // Only add subscription costs if there are actual transactions/salaries in this month,
+    // OR if it is the current selected top month.
+    // This prevents empty unpopulated past months from artificially echoing current month expenses.
     if (activeSubCost > 0) {
-      totalExpense += activeSubCost;
+      if (monthTransactions.length > 0 || monthSalaires.length > 0 || monthStr === availableMonths[0]) {
+        totalExpense += activeSubCost;
+      }
     }
 
     const netSavings = totalRevenue - totalExpense;

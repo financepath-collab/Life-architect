@@ -213,6 +213,9 @@ export interface Abonnement {
   billingPeriod: "Mensuel" | "Annuel";
   nextBillingDate: string;
   status: "Actif" | "Suspendu";
+  category?: string;
+  account?: string;
+  notes?: string;
 }
 
 // 5. Formation Submodules
