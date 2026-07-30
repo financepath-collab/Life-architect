@@ -526,703 +526,706 @@ export function FinanceSectionDashboard({
               {overviewMode === "full" && "👁️ Vue complète de tous les modules financiers"}
             </div>
           </div>
-          {/* Stats Bento Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 text-white flex flex-col justify-between h-32 shadow-sm">
-          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Patrimoine Total</span>
-          <div>
-            <h4 className="text-xl font-black font-mono leading-none">
-              {totalNetWorth.toLocaleString("fr-FR")} MAD
-            </h4>
-            <span className="text-[10px] text-neutral-400 block mt-1">Liquidités, bourse & épargne d'urgence</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex flex-col justify-between h-32 shadow-3xs">
-          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Liquidités en Comptes</span>
-          <div>
-            <h4 className="text-xl font-bold font-mono text-neutral-900 leading-none">
-              {totalAccountBalance.toLocaleString("fr-FR")} MAD
-            </h4>
-            <span className="text-[10px] text-neutral-400 block mt-1">{accounts.length} comptes actifs configurés</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex flex-col justify-between h-32 shadow-3xs">
-          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Portefeuille Bourse (BVC)</span>
-          <div>
-            <h4 className="text-xl font-bold font-mono text-neutral-900 leading-none">
-              {totalStockValuation.toLocaleString("fr-FR")} MAD
-            </h4>
-            <span className="text-[10px] text-neutral-400 block mt-1">{stocks.length} lignes d'investissement d'élite</span>
-          </div>
-        </div>
-
-        <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-2xl p-5 flex flex-col justify-between h-32 shadow-3xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Total Épargné Actuel</span>
-            <PiggyBank className="w-4 h-4 text-emerald-600 shrink-0" />
-          </div>
-          <div>
-            <h4 className="text-xl font-black font-mono text-emerald-950 leading-none">
-              {totalEpargneActuel.toLocaleString("fr-FR")} MAD
-            </h4>
-            <span className="text-[10px] text-emerald-700 font-medium block mt-1">
-              {ongoingEpargnes.length} objectif(s) en cours ({ongoingPct}% de la cible)
-            </span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex flex-col justify-between h-32 shadow-3xs">
-          <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Cagnottes Épargne (Total)</span>
-          <div>
-            <h4 className="text-xl font-bold font-mono text-neutral-900 leading-none">
-              {totalEpargne.toLocaleString("fr-FR")} MAD
-            </h4>
-            <span className="text-[10px] text-neutral-400 block mt-1">{epargnes.length} projets d'épargne enregistrés</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Structural Bank Accounts Breakdown Card */}
-      <div className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-3">
-          <div>
-            <h3 className="text-sm font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2 uppercase tracking-wide">
-              <Landmark className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>Architecture de vos 3 Comptes Bancaires</span>
-            </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
-              Attribution fonctionnelle et répartition stratégique de votre trésorerie
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-extrabold font-mono text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-zinc-800 px-3 py-1 rounded-lg">
-              Total Liquidités: {totalAccountBalance.toLocaleString("fr-FR")} MAD
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {accounts.map(acc => {
-            const isAttijari = acc.name.toLowerCase().includes("attijari") || acc.usage?.toLowerCase().includes("salaire");
-            const isBPCarnet = acc.name.toLowerCase().includes("carnet") || acc.usage?.toLowerCase().includes("fonds de secours") || acc.usage?.toLowerCase().includes("épargne");
-            const isBPCheque = acc.name.toLowerCase().includes("chèque") || acc.name.toLowerCase().includes("bourse") || acc.usage?.toLowerCase().includes("bourse");
-
-            let theme = "border-neutral-200 bg-neutral-50/50 dark:bg-zinc-800/40";
-            let badgeBg = "bg-neutral-100 text-neutral-700 dark:bg-zinc-800 dark:text-neutral-300";
-            let iconColor = "text-neutral-600";
-            let defaultTag = "Trésorerie & Solde";
-
-            if (isAttijari) {
-              theme = "border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20";
-              badgeBg = "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200";
-              iconColor = "text-indigo-600 dark:text-indigo-400";
-              defaultTag = "Salaire & Charges Mensuelles";
-            } else if (isBPCarnet) {
-              theme = "border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/30 dark:bg-emerald-950/20";
-              badgeBg = "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200";
-              iconColor = "text-emerald-600 dark:text-emerald-400";
-              defaultTag = "Épargne & Fonds de Secours";
-            } else if (isBPCheque) {
-              theme = "border-amber-200 dark:border-amber-900/60 bg-amber-50/30 dark:bg-amber-950/20";
-              badgeBg = "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200";
-              iconColor = "text-amber-600 dark:text-amber-400";
-              defaultTag = "Opérations Bourse (BVC)";
-            }
-
-            return (
-              <div key={acc.id} className={`border rounded-xl p-4 flex flex-col justify-between space-y-3 transition-all ${theme}`}>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${badgeBg}`}>
-                      {defaultTag}
-                    </span>
-                    <Landmark className={`w-4 h-4 shrink-0 ${iconColor}`} />
-                  </div>
-                  <h4 className="text-xs font-black text-neutral-900 dark:text-neutral-100 line-clamp-1 mt-1">
-                    {acc.name}
+          {/* 1. Stats Bento Grid */}
+          {(overviewMode === "essential" || overviewMode === "analytics" || overviewMode === "full") && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 text-white flex flex-col justify-between h-32 shadow-sm">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Patrimoine Total</span>
+                <div>
+                  <h4 className="text-xl font-black font-mono leading-none">
+                    {totalNetWorth.toLocaleString("fr-FR")} MAD
                   </h4>
-                  <p className="text-[11px] text-neutral-600 dark:text-neutral-400 font-medium leading-snug">
-                    {acc.usage || (isAttijari ? "Reçoit le salaire mensuel et règle l'ensemble des charges fixes." : isBPCarnet ? "Conservation de l'épargne et réserve du fonds de secours." : isBPCheque ? "Compte dédié aux opérations de bourse (BVC)." : "Solde de trésorerie disponible.")}
-                  </p>
+                  <span className="text-[10px] text-neutral-400 block mt-1">Liquidités, bourse & épargne d'urgence</span>
                 </div>
+              </div>
 
-                <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase">Solde Actuel</span>
-                  <span className="text-sm font-black font-mono text-neutral-900 dark:text-neutral-100">
-                    {acc.balance.toLocaleString("fr-FR")} {acc.currency || "MAD"}
+              <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex flex-col justify-between h-32 shadow-3xs">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Liquidités en Comptes</span>
+                <div>
+                  <h4 className="text-xl font-bold font-mono text-neutral-900 leading-none">
+                    {totalAccountBalance.toLocaleString("fr-FR")} MAD
+                  </h4>
+                  <span className="text-[10px] text-neutral-400 block mt-1">{accounts.length} comptes actifs configurés</span>
+                </div>
+              </div>
+
+              <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex flex-col justify-between h-32 shadow-3xs">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Portefeuille Bourse (BVC)</span>
+                <div>
+                  <h4 className="text-xl font-bold font-mono text-neutral-900 leading-none">
+                    {totalStockValuation.toLocaleString("fr-FR")} MAD
+                  </h4>
+                  <span className="text-[10px] text-neutral-400 block mt-1">{stocks.length} lignes d'investissement d'élite</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-2xl p-5 flex flex-col justify-between h-32 shadow-3xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Total Épargné Actuel</span>
+                  <PiggyBank className="w-4 h-4 text-emerald-600 shrink-0" />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black font-mono text-emerald-950 leading-none">
+                    {totalEpargneActuel.toLocaleString("fr-FR")} MAD
+                  </h4>
+                  <span className="text-[10px] text-emerald-700 font-medium block mt-1">
+                    {ongoingEpargnes.length} objectif(s) en cours ({ongoingPct}% de la cible)
                   </span>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Monthly Variation Rate & Comparison Summary Card */}
-      <MonthlyComparisonCard transactions={transactions} abonnements={abonnements} salaires={salaires} />
-
-      {/* Pie Chart and Category Breakdown Analysis Card */}
-      <MonthlyExpenseAnalysisCard transactions={transactions} abonnements={abonnements} />
-
-      {/* Monthly Savings Goal Progress Gauge Card */}
-      <MonthlySavingsGaugeCard
-        transactions={transactions}
-        abonnements={abonnements}
-        salaires={salaires}
-      />
-
-      {/* Subscription Scatter Chart Card: Abonnements vs Taux d'Épargne */}
-      <SubscriptionScatterChartCard
-        abonnements={abonnements}
-        transactions={transactions}
-        salaires={salaires}
-      />
-
-      {/* 3-Month Savings Projection & Simulation Card */}
-      <Savings3MonthProjectionSimulationCard
-        transactions={transactions}
-        abonnements={abonnements}
-        salaires={salaires}
-        initialBalance={totalEpargneActuel}
-      />
-
-      {/* Emergency Fund Section Card with Quick Transfer */}
-      <EmergencyFundSectionCard
-        accounts={accounts}
-        epargnes={epargnes}
-        transactions={transactions}
-        setAccounts={setAccounts}
-        setEpargnes={setEpargnes}
-        setTransactions={setTransactions}
-        triggerToast={triggerToast}
-      />
-
-      {/* Required Monthly Savings Calculator Card to reach all ongoing epargnes goals by their deadlines */}
-      <RequiredMonthlySavingsCard
-        epargnes={epargnes}
-        transactions={transactions}
-        abonnements={abonnements}
-        salaires={salaires}
-        onNavigate={onNavigate}
-      />
-
-      {/* Monthly Net Income Widget (Calculates automatically subtracting recurring expenses/subscriptions and monthly costs/budgets from revenues) */}
-      <MonthlyNetIncomeWidget
-        budgets={budgets}
-        abonnements={abonnements}
-        transactions={transactions}
-        salaires={salaires}
-        accounts={accounts}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Enveloppes Budgétaires Status */}
-        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
-                <Landmark className="w-4 h-4 text-neutral-700" />
-                <span>Suivi Budgétaire d'Élite</span>
-              </h3>
-              {exceededBudgetsCount > 0 ? (
-                <span className="text-[9px] bg-red-100 border border-red-200 text-red-800 px-2 py-0.5 rounded-full font-bold">
-                  {exceededBudgetsCount} Dépassés
-                </span>
-              ) : criticalBudgetsCount > 0 ? (
-                <span className="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-bold">
-                  {criticalBudgetsCount} Limites Critiques
-                </span>
-              ) : (
-                <span className="text-[9px] bg-emerald-100 border border-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                  Tous Budgets OK
-                </span>
-              )}
-            </div>
-
-            <div className="space-y-3.5">
-              {budgets.map((b, idx) => {
-                const spentPct = b.limitAmount > 0 ? Math.round((b.spentAmount / b.limitAmount) * 100) : 0;
-                
-                // Transition hue from emerald green (142) to bright red (0)
-                const ratio = Math.min(100, spentPct) / 100;
-                const hue = Math.max(0, 142 - ratio * 142);
-                const barColor = `hsl(${hue}, 80%, 45%)`;
-                const badgeBg = `hsl(${hue}, 85%, 96%)`;
-                const badgeText = `hsl(${hue}, 85%, 35%)`;
-                const badgeBorder = `hsl(${hue}, 85%, 88%)`;
-
-                return (
-                  <div key={idx} className="space-y-1.5">
-                    <div className="flex justify-between items-center text-xs font-bold text-neutral-800">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
-                        <span className="truncate max-w-[120px] md:max-w-[150px]" title={b.category}>{b.category}</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[11px] text-neutral-500 font-medium font-mono">
-                          {b.spentAmount.toLocaleString("fr-FR")} / {b.limitAmount.toLocaleString("fr-FR")} MAD
-                        </span>
-                        <span 
-                          className="text-[9px] font-black px-1.5 py-0.5 rounded-md font-mono shrink-0 shadow-3xs"
-                          style={{ 
-                            backgroundColor: badgeBg, 
-                            color: badgeText,
-                            border: `1px solid ${badgeBorder}`
-                          }}
-                        >
-                          {spentPct}%
-                        </span>
-                      </div>
-                    </div>
-                    <div className="w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden p-[1px] shadow-inner relative">
-                      <div 
-                        className="h-full rounded-full transition-all duration-500 ease-out" 
-                        style={{ 
-                          width: `${Math.min(100, spentPct)}%`,
-                          backgroundColor: barColor,
-                          boxShadow: spentPct > 100 ? '0 0 8px rgba(239, 68, 68, 0.5)' : `0 0 4px ${barColor}40`
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <button 
-            onClick={() => onNavigate("budgets")}
-            className="w-full mt-4 py-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <span>Optimiser et ajuster mes budgets</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Prochains Prélèvements SaaS */}
-        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
-                <Bell className="w-4 h-4 text-neutral-700" />
-                <span>SaaS & Factures</span>
-              </h3>
-              <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full font-mono">
-                {abonnements.filter(a => a.status === "Actif").length} SaaS Actifs
-              </span>
-            </div>
-
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-              {abonnements.filter(a => a.status === "Actif").slice(0, 3).map((ab) => (
-                <div key={ab.id} className="p-3 bg-neutral-50 border border-neutral-200/50 rounded-xl flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-neutral-900 block">{ab.serviceName}</span>
-                    <span className="text-[10px] text-neutral-400 font-medium">Facturation {ab.billingPeriod}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-bold font-mono text-neutral-850 block">{ab.costMonthly} MAD/m</span>
-                    <span className="text-[9px] text-neutral-500 font-bold">Le {new Date(ab.nextBillingDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
-                  </div>
+              <div className="bg-white border border-neutral-200 rounded-2xl p-5 flex flex-col justify-between h-32 shadow-3xs">
+                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Cagnottes Épargne (Total)</span>
+                <div>
+                  <h4 className="text-xl font-bold font-mono text-neutral-900 leading-none">
+                    {totalEpargne.toLocaleString("fr-FR")} MAD
+                  </h4>
+                  <span className="text-[10px] text-neutral-400 block mt-1">{epargnes.length} projets d'épargne enregistrés</span>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <button 
-            onClick={() => onNavigate("abonnements")}
-            className="w-full mt-4 py-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <span>Voir tous les abonnements</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Anticiper les Dépenses & Projections de fin de mois */}
-        <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-                <span>Anticipation Fin de Mois</span>
-              </h3>
-              <span className={`text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                projectionData.statusColor === "red" 
-                  ? "bg-red-100 border border-red-200 text-red-800" 
-                  : projectionData.statusColor === "amber" 
-                    ? "bg-amber-100 border border-amber-200 text-amber-800" 
-                    : "bg-emerald-100 border border-emerald-200 text-emerald-800"
-              }`}>
-                {projectionData.statusLabel}
-              </span>
-            </div>
-
-            {/* Calculations metrics */}
-            <div className="grid grid-cols-2 gap-2.5 py-1">
-              <div className="bg-neutral-50/75 border border-neutral-200/40 p-2 text-center rounded-xl">
-                <span className="text-[8.5px] text-neutral-400 font-black uppercase tracking-wider block mb-0.5">Moyenne / Jour</span>
-                <span className="text-[12.5px] font-black font-mono text-neutral-800">
-                  {projectionData.averageDailySpent.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} MAD
-                </span>
-              </div>
-              <div className="bg-neutral-50/75 border border-neutral-200/40 p-2 text-center rounded-xl">
-                <span className="text-[8.5px] text-neutral-400 font-black uppercase tracking-wider block mb-0.5">Jours Restants</span>
-                <span className="text-[12.5px] font-black font-mono text-neutral-800">
-                  {projectionData.daysRemaining} jours
-                </span>
               </div>
             </div>
+          )}
 
-            <div className="space-y-1.5 border-t border-neutral-100/60 pt-2.5">
-              <div className="flex justify-between text-[11px] font-bold text-neutral-500">
-                <span>Dépenses cumulées</span>
-                <span className="font-mono text-neutral-800 font-bold">{projectionData.baselineExpenses.toLocaleString("fr-FR")} MAD</span>
+          {/* 2. Structural Bank Accounts Breakdown Card */}
+          {(overviewMode === "essential" || overviewMode === "operations" || overviewMode === "full") && (
+            <div className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-3">
+                <div>
+                  <h3 className="text-sm font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2 uppercase tracking-wide">
+                    <Landmark className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>Architecture de vos 3 Comptes Bancaires</span>
+                  </h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
+                    Attribution fonctionnelle et répartition stratégique de votre trésorerie
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold font-mono text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-zinc-800 px-3 py-1 rounded-lg">
+                    Total Liquidités: {totalAccountBalance.toLocaleString("fr-FR")} MAD
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between text-[11px] font-bold text-neutral-500">
-                <span>Projection fin de mois</span>
-                <span className={`font-mono font-black ${projectionData.isOverrun ? "text-red-600" : "text-emerald-600"}`}>
-                  {projectionData.totalProjectedSpent.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} MAD
-                </span>
-              </div>
-              <div className="flex justify-between text-[11px] font-bold text-neutral-500">
-                <span>Limite Budget</span>
-                <span className="font-mono text-neutral-700 font-semibold">{projectionData.totalLimit.toLocaleString("fr-FR")} MAD</span>
-              </div>
-            </div>
 
-            {/* Interactive Progress / Gauge bar representing Real vs Projected vs Limit */}
-            <div className="space-y-1 pt-1">
-              <div className="flex justify-between text-[9.5px] font-black uppercase tracking-wide">
-                <span className="text-neutral-400">Progression & Projection</span>
-                <span className={`font-mono ${projectionData.isOverrun ? "text-red-600 animate-pulse" : "text-emerald-600"}`}>
-                  {projectionData.spentPct.toFixed(0)}% du budget
-                </span>
-              </div>
-              <div className="relative w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden border border-neutral-200/30">
-                {/* 1. Real Spent */}
-                <div 
-                  className="absolute left-0 top-0 h-full bg-neutral-900 transition-all duration-300 z-10" 
-                  style={{ width: `${Math.min(100, (projectionData.baselineExpenses / projectionData.totalLimit) * 100)}%` }}
-                />
-                {/* 2. Projected Spent (remaining) */}
-                <div 
-                  className={`absolute top-0 h-full transition-all duration-300 opacity-70 ${
-                    projectionData.statusColor === "red" 
-                      ? "bg-red-400" 
-                      : projectionData.statusColor === "amber" 
-                        ? "bg-amber-400" 
-                        : "bg-emerald-400"
-                  }`}
-                  style={{ 
-                    left: `${Math.min(100, (projectionData.baselineExpenses / projectionData.totalLimit) * 100)}%`,
-                    width: `${Math.min(100 - (projectionData.baselineExpenses / projectionData.totalLimit) * 100, (projectionData.projectedRemainingSpend / projectionData.totalLimit) * 100)}%`,
-                    backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.4) 3px, rgba(255,255,255,0.4) 6px)"
-                  }}
-                />
-                {/* 3. Budget Limit Marker (at 100%) */}
-                <div className="absolute right-0 top-0 h-full w-1 bg-red-600 z-20" title="Limite Budget" />
-              </div>
-            </div>
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {accounts.map(acc => {
+                  const isAttijari = acc.name.toLowerCase().includes("attijari") || acc.usage?.toLowerCase().includes("salaire");
+                  const isBPCarnet = acc.name.toLowerCase().includes("carnet") || acc.usage?.toLowerCase().includes("fonds de secours") || acc.usage?.toLowerCase().includes("épargne");
+                  const isBPCheque = acc.name.toLowerCase().includes("chèque") || acc.name.toLowerCase().includes("bourse") || acc.usage?.toLowerCase().includes("bourse");
 
-          {/* Advice / Copilot Banner */}
-          <div className={`p-2.5 rounded-xl border flex items-start gap-2.5 transition-all ${
-            projectionData.statusColor === "red"
-              ? "bg-red-50/50 border-red-200/50 text-red-900"
-              : projectionData.statusColor === "amber"
-                ? "bg-amber-50/50 border-amber-200/50 text-amber-900"
-                : "bg-emerald-50/40 border-emerald-200/40 text-emerald-900"
-          }`}>
-            <AlertCircle className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
-              projectionData.statusColor === "red" ? "text-red-600" : projectionData.statusColor === "amber" ? "text-amber-600" : "text-emerald-600"
-            }`} />
-            <p className="text-[10px] font-semibold leading-relaxed">
-              {projectionData.advice}
-            </p>
-          </div>
-        </div>
-      </div>
+                  let theme = "border-neutral-200 bg-neutral-50/50 dark:bg-zinc-800/40";
+                  let badgeBg = "bg-neutral-100 text-neutral-700 dark:bg-zinc-800 dark:text-neutral-300";
+                  let iconColor = "text-neutral-600";
+                  let defaultTag = "Trésorerie & Solde";
 
-      {/* Bar Chart comparing inflows (Revenus) vs outflows (Dépenses) */}
-      <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-4 shadow-3xs animate-in fade-in duration-300">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-neutral-900 text-white rounded-xl">
-              <Activity className="w-5 h-5 text-amber-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-neutral-950 uppercase tracking-wider">
-                Flux de Trésorerie (6 Derniers Mois)
-              </h3>
-              <p className="text-xs text-neutral-500 font-medium">
-                Comparaison de vos revenus mensuels totaux (Entrées) et de vos dépenses mensuelles (Sorties).
-              </p>
-            </div>
-          </div>
-          
-          {/* Legend indicator badges */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-600">
-              <span className="w-3 h-3 rounded bg-neutral-700" />
-              <span>Entrées</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-600">
-              <span className="w-3 h-3 rounded bg-neutral-400" />
-              <span>Sorties</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={monthlyChartData}
-              margin={{ top: 15, right: 15, left: -20, bottom: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
-              <XAxis 
-                dataKey="name" 
-                tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
-                axisLine={false}
-                tickLine={false}
-                dy={8}
-              />
-              <YAxis 
-                tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(val) => `${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
-              />
-              <Tooltip 
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    const rev = payload.find((p: any) => p.dataKey === "Revenus")?.value || 0;
-                    const dep = payload.find((p: any) => p.dataKey === "Dépenses")?.value || 0;
-                    const solde = rev - dep;
-                    return (
-                      <div className="bg-neutral-950 text-white border border-neutral-800 p-3 rounded-xl shadow-xl space-y-1 text-xs">
-                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{label}</p>
-                        <div className="space-y-1">
-                          <p className="flex justify-between gap-6">
-                            <span className="text-neutral-400 font-semibold">Entrées :</span>
-                            <span className="font-bold font-mono text-emerald-400">+{rev.toLocaleString("fr-FR")} MAD</span>
-                          </p>
-                          <p className="flex justify-between gap-6">
-                            <span className="text-neutral-400 font-semibold">Sorties :</span>
-                            <span className="font-bold font-mono text-red-400">-{dep.toLocaleString("fr-FR")} MAD</span>
-                          </p>
-                          <div className="border-t border-neutral-800 my-1 pt-1 flex justify-between gap-6">
-                            <span className="text-neutral-300 font-bold">Flux net :</span>
-                            <span className={`font-bold font-mono ${solde >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                              {solde >= 0 ? "+" : ""}{solde.toLocaleString("fr-FR")} MAD
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
+                  if (isAttijari) {
+                    theme = "border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20";
+                    badgeBg = "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200";
+                    iconColor = "text-indigo-600 dark:text-indigo-400";
+                    defaultTag = "Salaire & Charges Mensuelles";
+                  } else if (isBPCarnet) {
+                    theme = "border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/30 dark:bg-emerald-950/20";
+                    badgeBg = "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200";
+                    iconColor = "text-emerald-600 dark:text-emerald-400";
+                    defaultTag = "Épargne & Fonds de Secours";
+                  } else if (isBPCheque) {
+                    theme = "border-amber-200 dark:border-amber-900/60 bg-amber-50/30 dark:bg-amber-950/20";
+                    badgeBg = "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200";
+                    iconColor = "text-amber-600 dark:text-amber-400";
+                    defaultTag = "Opérations Bourse (BVC)";
                   }
-                  return null;
-                }}
-              />
-              <Bar 
-                dataKey="Revenus" 
-                fill="#404040" 
-                radius={[4, 4, 0, 0]} 
-                maxBarSize={32}
-              />
-              <Bar 
-                dataKey="Dépenses" 
-                fill="#a3a3a3" 
-                radius={[4, 4, 0, 0]} 
-                maxBarSize={32}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
 
-      {/* Spending Velocity Chart */}
-      <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-4 shadow-3xs animate-in fade-in duration-300">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-neutral-900 text-white rounded-xl">
-              <TrendingUp className="w-5 h-5 text-amber-500 animate-pulse" />
+                  return (
+                    <div key={acc.id} className={`border rounded-xl p-4 flex flex-col justify-between space-y-3 transition-all ${theme}`}>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${badgeBg}`}>
+                            {defaultTag}
+                          </span>
+                          <Landmark className={`w-4 h-4 shrink-0 ${iconColor}`} />
+                        </div>
+                        <h4 className="text-xs font-black text-neutral-900 dark:text-neutral-100 line-clamp-1 mt-1">
+                          {acc.name}
+                        </h4>
+                        <p className="text-[11px] text-neutral-600 dark:text-neutral-400 font-medium leading-snug">
+                          {acc.usage || (isAttijari ? "Reçoit le salaire mensuel et règle l'ensemble des charges fixes." : isBPCarnet ? "Conservation de l'épargne et réserve du fonds de secours." : isBPCheque ? "Compte dédié aux opérations de bourse (BVC)." : "Solde de trésorerie disponible.")}
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase">Solde Actuel</span>
+                        <span className="text-sm font-black font-mono text-neutral-900 dark:text-neutral-100">
+                          {acc.balance.toLocaleString("fr-FR")} {acc.currency || "MAD"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-black text-neutral-950 uppercase tracking-wider">
-                Vitesse de Dépense ({velocityChartData.monthName})
-              </h3>
-              <p className="text-xs text-neutral-500 font-medium">
-                Dépenses cumulées quotidiennes réelles comparées à la trajectoire budgétaire idéale.
-              </p>
+          )}
+
+          {/* 3. Monthly Variation Rate & Comparison Summary Card */}
+          {(overviewMode === "essential" || overviewMode === "full") && (
+            <MonthlyComparisonCard transactions={transactions} abonnements={abonnements} salaires={salaires} />
+          )}
+
+          {/* 4. Analytics Cards (Pie Chart, Savings Gauge, Scatter Chart) */}
+          {(overviewMode === "analytics" || overviewMode === "full") && (
+            <div className="space-y-6">
+              <MonthlyExpenseAnalysisCard transactions={transactions} abonnements={abonnements} />
+              <MonthlySavingsGaugeCard
+                transactions={transactions}
+                abonnements={abonnements}
+                salaires={salaires}
+              />
+              <SubscriptionScatterChartCard
+                abonnements={abonnements}
+                transactions={transactions}
+                salaires={salaires}
+              />
             </div>
-          </div>
+          )}
 
-          {/* Velocity Status Badges */}
-          <div className="flex flex-wrap items-center gap-2">
-            {velocityChartData.actualIsOverIdeal ? (
-              <span className="text-[10px] bg-red-50 border border-red-200 text-red-800 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
-                <AlertCircle className="w-3 h-3 text-red-600" />
-                Vitesse Élevée : Attention à la dérive !
-              </span>
-            ) : velocityChartData.cumulativeSpent > 0 ? (
-              <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
-                <CheckSquare className="w-3 h-3 text-emerald-600" />
-                Vitesse Maîtrisée : Trajectoire d'excellence
-              </span>
-            ) : (
-              <span className="text-[10px] bg-neutral-50 border border-neutral-200 text-neutral-600 px-2.5 py-1 rounded-full font-bold">
-                Aucune dépense ce mois-ci
-              </span>
-            )}
-            <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2.5 py-1 rounded-full font-mono font-bold">
-              Cumulé : {velocityChartData.cumulativeSpent.toLocaleString("fr-FR")} / {velocityChartData.totalLimit.toLocaleString("fr-FR")} MAD
-            </span>
-          </div>
-        </div>
+          {/* 5. Goals & Projections Cards */}
+          {(overviewMode === "goals" || overviewMode === "full") && (
+            <div className="space-y-6">
+              <Savings3MonthProjectionSimulationCard
+                transactions={transactions}
+                abonnements={abonnements}
+                salaires={salaires}
+                initialBalance={totalEpargneActuel}
+              />
+              <EmergencyFundSectionCard
+                accounts={accounts}
+                epargnes={epargnes}
+                transactions={transactions}
+                setAccounts={setAccounts}
+                setEpargnes={setEpargnes}
+                setTransactions={setTransactions}
+                triggerToast={triggerToast}
+              />
+              <RequiredMonthlySavingsCard
+                epargnes={epargnes}
+                transactions={transactions}
+                abonnements={abonnements}
+                salaires={salaires}
+                onNavigate={onNavigate}
+              />
+            </div>
+          )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-          {/* Chart area */}
-          <div className="lg:col-span-8 h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={velocityChartData.chartPoints}
-                margin={{ top: 15, right: 15, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
-                <XAxis 
-                  dataKey="day" 
-                  tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
-                  axisLine={false}
-                  tickLine={false}
-                  dy={8}
-                />
-                <YAxis 
-                  tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(val) => `${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
-                />
-                <Tooltip 
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
+          {/* 6. Monthly Net Income Widget */}
+          {(overviewMode === "essential" || overviewMode === "full") && (
+            <MonthlyNetIncomeWidget
+              budgets={budgets}
+              abonnements={abonnements}
+              transactions={transactions}
+              salaires={salaires}
+              accounts={accounts}
+            />
+          )}
+
+          {/* 7. 3-Column Grid: Budgets, SaaS & Anticipation */}
+          {(overviewMode === "essential" || overviewMode === "goals" || overviewMode === "full") && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Enveloppes Budgétaires Status */}
+              <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                    <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
+                      <Landmark className="w-4 h-4 text-neutral-700" />
+                      <span>Suivi Budgétaire d'Élite</span>
+                    </h3>
+                    {exceededBudgetsCount > 0 ? (
+                      <span className="text-[9px] bg-red-100 border border-red-200 text-red-800 px-2 py-0.5 rounded-full font-bold">
+                        {exceededBudgetsCount} Dépassés
+                      </span>
+                    ) : criticalBudgetsCount > 0 ? (
+                      <span className="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-bold">
+                        {criticalBudgetsCount} Limites Critiques
+                      </span>
+                    ) : (
+                      <span className="text-[9px] bg-emerald-100 border border-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                        Tous Budgets OK
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-3.5">
+                    {budgets.map((b, idx) => {
+                      const spentPct = b.limitAmount > 0 ? Math.round((b.spentAmount / b.limitAmount) * 100) : 0;
+                      
+                      const ratio = Math.min(100, spentPct) / 100;
+                      const hue = Math.max(0, 142 - ratio * 142);
+                      const barColor = `hsl(${hue}, 80%, 45%)`;
+                      const badgeBg = `hsl(${hue}, 85%, 96%)`;
+                      const badgeText = `hsl(${hue}, 85%, 35%)`;
+                      const badgeBorder = `hsl(${hue}, 85%, 88%)`;
+
                       return (
-                        <div className="bg-neutral-950 text-white border border-neutral-800 p-3 rounded-xl shadow-xl space-y-1 text-xs">
-                          <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Jour {data.day}</p>
-                          <div className="space-y-1">
-                            <p className="flex justify-between gap-6">
-                              <span className="text-neutral-400 font-semibold">Cumulé Réel :</span>
-                              <span className="font-bold font-mono text-white">
-                                {data["Dépenses Cumulées"] !== undefined ? `${data["Dépenses Cumulées"].toLocaleString("fr-FR")} MAD` : "Non survenu"}
+                        <div key={idx} className="space-y-1.5">
+                          <div className="flex justify-between items-center text-xs font-bold text-neutral-800">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
+                              <span className="truncate max-w-[120px] md:max-w-[150px]" title={b.category}>{b.category}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[11px] text-neutral-500 font-medium font-mono">
+                                {b.spentAmount.toLocaleString("fr-FR")} / {b.limitAmount.toLocaleString("fr-FR")} MAD
                               </span>
-                            </p>
-                            <p className="flex justify-between gap-6">
-                              <span className="text-neutral-400 font-semibold">Cible Trajectoire :</span>
-                              <span className="font-bold font-mono text-neutral-300">
-                                {data["Trajectoire Idéale"].toLocaleString("fr-FR")} MAD
+                              <span 
+                                className="text-[9px] font-black px-1.5 py-0.5 rounded-md font-mono shrink-0 shadow-3xs"
+                                style={{ 
+                                  backgroundColor: badgeBg, 
+                                  color: badgeText,
+                                  border: `1px solid ${badgeBorder}`
+                                }}
+                              >
+                                {spentPct}%
                               </span>
-                            </p>
-                            <p className="flex justify-between gap-6">
-                              <span className="text-neutral-400 font-semibold">Limite Budget :</span>
-                              <span className="font-bold font-mono text-red-400">
-                                {data["Limite de Budget"].toLocaleString("fr-FR")} MAD
-                              </span>
-                            </p>
+                            </div>
+                          </div>
+                          <div className="w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden p-[1px] shadow-inner relative">
+                            <div 
+                              className="h-full rounded-full transition-all duration-500 ease-out" 
+                              style={{ 
+                                width: `${Math.min(100, spentPct)}%`,
+                                backgroundColor: barColor,
+                                boxShadow: spentPct > 100 ? '0 0 8px rgba(239, 68, 68, 0.5)' : `0 0 4px ${barColor}40`
+                              }}
+                            />
                           </div>
                         </div>
                       );
-                    }
-                    return null;
-                  }}
-                />
-                {/* 1. Limite Globale (Total budget ceiling) */}
-                <Line 
-                  type="monotone" 
-                  dataKey="Limite de Budget" 
-                  stroke="#ef4444" 
-                  strokeWidth={1.5}
-                  strokeDasharray="4 4"
-                  dot={false}
-                  activeDot={false}
-                />
-                {/* 2. Trajectoire Idéale Linear Budget build-up */}
-                <Line 
-                  type="monotone" 
-                  dataKey="Trajectoire Idéale" 
-                  stroke="#a3a3a3" 
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                  activeDot={false}
-                />
-                {/* 3. Dépenses Cumulées Réelles (stops at todayDay) */}
-                <Line 
-                  type="monotone" 
-                  dataKey="Dépenses Cumulées" 
-                  stroke="#171717" 
-                  strokeWidth={3}
-                  connectNulls={false}
-                  dot={{ r: 3, fill: '#171717' }}
-                  activeDot={{ r: 6, fill: '#171717', stroke: '#ffffff', strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+                    })}
+                  </div>
+                </div>
 
-          {/* Explanation, guidance & indicators */}
-          <div className="lg:col-span-4 space-y-4 bg-neutral-50 p-5 border border-neutral-200/50 rounded-2xl h-full flex flex-col justify-between">
-            <div className="space-y-2.5">
-              <h4 className="text-xs font-black text-neutral-800 uppercase tracking-wider pb-1.5 border-b border-neutral-200/60 flex items-center gap-1.5">
-                <span>Indicateurs de Vitesse</span>
-                <span className="text-[9px] bg-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded-md font-mono">Jour {velocityChartData.todayDay}</span>
-              </h4>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-neutral-500">Dépenses Cumulées :</span>
-                  <span className="font-mono font-bold text-neutral-950">
-                    {velocityChartData.cumulativeSpent.toLocaleString("fr-FR")} MAD
-                  </span>
+                <button 
+                  onClick={() => onNavigate("budgets")}
+                  className="w-full mt-4 py-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>Optimiser et ajuster mes budgets</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Prochains Prélèvements SaaS */}
+              <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                    <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-neutral-700" />
+                      <span>SaaS & Factures</span>
+                    </h3>
+                    <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full font-mono">
+                      {abonnements.filter(a => a.status === "Actif").length} SaaS Actifs
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {abonnements.filter(a => a.status === "Actif").slice(0, 3).map((ab) => (
+                      <div key={ab.id} className="p-3 bg-neutral-50 border border-neutral-200/50 rounded-xl flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-neutral-900 block">{ab.serviceName}</span>
+                          <span className="text-[10px] text-neutral-400 font-medium">Facturation {ab.billingPeriod}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-bold font-mono text-neutral-850 block">{ab.costMonthly} MAD/m</span>
+                          <span className="text-[9px] text-neutral-500 font-bold">Le {new Date(ab.nextBillingDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-neutral-500">Objectif à ce jour :</span>
-                  <span className="font-mono font-bold text-neutral-600">
-                    {velocityChartData.currentIdeal.toLocaleString("fr-FR")} MAD
-                  </span>
+
+                <button 
+                  onClick={() => onNavigate("abonnements")}
+                  className="w-full mt-4 py-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>Voir tous les abonnements</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Anticiper les Dépenses & Projections de fin de mois */}
+              <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+                    <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                      <span>Anticipation Fin de Mois</span>
+                    </h3>
+                    <span className={`text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      projectionData.statusColor === "red" 
+                        ? "bg-red-100 border border-red-200 text-red-800" 
+                        : projectionData.statusColor === "amber" 
+                          ? "bg-amber-100 border border-amber-200 text-amber-800" 
+                          : "bg-emerald-100 border border-emerald-200 text-emerald-800"
+                    }`}>
+                      {projectionData.statusLabel}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5 py-1">
+                    <div className="bg-neutral-50/75 border border-neutral-200/40 p-2 text-center rounded-xl">
+                      <span className="text-[8.5px] text-neutral-400 font-black uppercase tracking-wider block mb-0.5">Moyenne / Jour</span>
+                      <span className="text-[12.5px] font-black font-mono text-neutral-800">
+                        {projectionData.averageDailySpent.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} MAD
+                      </span>
+                    </div>
+                    <div className="bg-neutral-50/75 border border-neutral-200/40 p-2 text-center rounded-xl">
+                      <span className="text-[8.5px] text-neutral-400 font-black uppercase tracking-wider block mb-0.5">Jours Restants</span>
+                      <span className="text-[12.5px] font-black font-mono text-neutral-800">
+                        {projectionData.daysRemaining} jours
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 border-t border-neutral-100/60 pt-2.5">
+                    <div className="flex justify-between text-[11px] font-bold text-neutral-500">
+                      <span>Dépenses cumulées</span>
+                      <span className="font-mono text-neutral-800 font-bold">{projectionData.baselineExpenses.toLocaleString("fr-FR")} MAD</span>
+                    </div>
+                    <div className="flex justify-between text-[11px] font-bold text-neutral-500">
+                      <span>Projection fin de mois</span>
+                      <span className={`font-mono font-black ${projectionData.isOverrun ? "text-red-600" : "text-emerald-600"}`}>
+                        {projectionData.totalProjectedSpent.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} MAD
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[11px] font-bold text-neutral-500">
+                      <span>Limite Budget</span>
+                      <span className="font-mono text-neutral-700 font-semibold">{projectionData.totalLimit.toLocaleString("fr-FR")} MAD</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between text-[9.5px] font-black uppercase tracking-wide">
+                      <span className="text-neutral-400">Progression & Projection</span>
+                      <span className={`font-mono ${projectionData.isOverrun ? "text-red-600 animate-pulse" : "text-emerald-600"}`}>
+                        {projectionData.spentPct.toFixed(0)}% du budget
+                      </span>
+                    </div>
+                    <div className="relative w-full bg-neutral-100 h-2.5 rounded-full overflow-hidden border border-neutral-200/30">
+                      <div 
+                        className="absolute left-0 top-0 h-full bg-neutral-900 transition-all duration-300 z-10" 
+                        style={{ width: `${Math.min(100, (projectionData.baselineExpenses / projectionData.totalLimit) * 100)}%` }}
+                      />
+                      <div 
+                        className={`absolute top-0 h-full transition-all duration-300 opacity-70 ${
+                          projectionData.statusColor === "red" 
+                            ? "bg-red-400" 
+                            : projectionData.statusColor === "amber" 
+                              ? "bg-amber-400" 
+                              : "bg-emerald-400"
+                        }`}
+                        style={{ 
+                          left: `${Math.min(100, (projectionData.baselineExpenses / projectionData.totalLimit) * 100)}%`,
+                          width: `${Math.min(100 - (projectionData.baselineExpenses / projectionData.totalLimit) * 100, (projectionData.projectedRemainingSpend / projectionData.totalLimit) * 100)}%`,
+                          backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.4) 3px, rgba(255,255,255,0.4) 6px)"
+                        }}
+                      />
+                      <div className="absolute right-0 top-0 h-full w-1 bg-red-600 z-20" title="Limite Budget" />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-neutral-500">Écart Trajectoire :</span>
-                  <span className={`font-mono font-bold ${
-                    velocityChartData.cumulativeSpent - velocityChartData.currentIdeal > 0 
-                      ? "text-red-600" 
-                      : "text-emerald-600"
-                  }`}>
-                    {velocityChartData.cumulativeSpent - velocityChartData.currentIdeal > 0 ? "+" : ""}
-                    {(velocityChartData.cumulativeSpent - velocityChartData.currentIdeal).toLocaleString("fr-FR")} MAD
-                  </span>
+
+                <div className={`p-2.5 rounded-xl border flex items-start gap-2.5 transition-all ${
+                  projectionData.statusColor === "red"
+                    ? "bg-red-50/50 border-red-200/50 text-red-900"
+                    : projectionData.statusColor === "amber"
+                      ? "bg-amber-50/50 border-amber-200/50 text-amber-900"
+                      : "bg-emerald-50/40 border-emerald-200/40 text-emerald-900"
+                }`}>
+                  <AlertCircle className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${
+                    projectionData.statusColor === "red" ? "text-red-600" : projectionData.statusColor === "amber" ? "text-amber-600" : "text-emerald-600"
+                  }`} />
+                  <p className="text-[10px] font-semibold leading-relaxed">
+                    {projectionData.advice}
+                  </p>
                 </div>
               </div>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <div className="text-[10px] text-neutral-400 font-semibold leading-normal border-t border-neutral-200/40 pt-3">
-                📈 <strong>Guide de Lecture :</strong>
-                <ul className="list-disc list-inside mt-1 space-y-1 text-neutral-500 font-medium">
-                  <li>La ligne rouge en pointillés est votre limite mensuelle maximale.</li>
-                  <li>La ligne grise en pointillés est le rythme d'épuisement linéaire idéal.</li>
-                  <li>Votre ligne noire cumulée doit rester au-dessous de la ligne grise.</li>
-                </ul>
+          {/* 8. Cashflow Bar Chart & Spending Velocity Line Chart */}
+          {(overviewMode === "analytics" || overviewMode === "full") && (
+            <div className="space-y-6">
+              {/* Bar Chart comparing inflows (Revenus) vs outflows (Dépenses) */}
+              <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-4 shadow-3xs animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-neutral-900 text-white rounded-xl">
+                      <Activity className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-neutral-950 uppercase tracking-wider">
+                        Flux de Trésorerie (6 Derniers Mois)
+                      </h3>
+                      <p className="text-xs text-neutral-500 font-medium">
+                        Comparaison de vos revenus mensuels totaux (Entrées) et de vos dépenses mensuelles (Sorties).
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-600">
+                      <span className="w-3 h-3 rounded bg-neutral-700" />
+                      <span>Entrées</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-600">
+                      <span className="w-3 h-3 rounded bg-neutral-400" />
+                      <span>Sorties</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={monthlyChartData}
+                      margin={{ top: 15, right: 15, left: -20, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={8}
+                      />
+                      <YAxis 
+                        tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(val) => `${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
+                      />
+                      <Tooltip 
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            const rev = payload.find((p: any) => p.dataKey === "Revenus")?.value || 0;
+                            const dep = payload.find((p: any) => p.dataKey === "Dépenses")?.value || 0;
+                            const solde = rev - dep;
+                            return (
+                              <div className="bg-neutral-950 text-white border border-neutral-800 p-3 rounded-xl shadow-xl space-y-1 text-xs">
+                                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{label}</p>
+                                <div className="space-y-1">
+                                  <p className="flex justify-between gap-6">
+                                    <span className="text-neutral-400 font-semibold">Entrées :</span>
+                                    <span className="font-bold font-mono text-emerald-400">+{rev.toLocaleString("fr-FR")} MAD</span>
+                                  </p>
+                                  <p className="flex justify-between gap-6">
+                                    <span className="text-neutral-400 font-semibold">Sorties :</span>
+                                    <span className="font-bold font-mono text-red-400">-{dep.toLocaleString("fr-FR")} MAD</span>
+                                  </p>
+                                  <div className="border-t border-neutral-800 my-1 pt-1 flex justify-between gap-6">
+                                    <span className="text-neutral-300 font-bold">Flux net :</span>
+                                    <span className={`font-bold font-mono ${solde >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                      {solde >= 0 ? "+" : ""}{solde.toLocaleString("fr-FR")} MAD
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar 
+                        dataKey="Revenus" 
+                        fill="#404040" 
+                        radius={[4, 4, 0, 0]} 
+                        maxBarSize={32}
+                      />
+                      <Bar 
+                        dataKey="Dépenses" 
+                        fill="#a3a3a3" 
+                        radius={[4, 4, 0, 0]} 
+                        maxBarSize={32}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Spending Velocity Chart */}
+              <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-4 shadow-3xs animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-neutral-900 text-white rounded-xl">
+                      <TrendingUp className="w-5 h-5 text-amber-500 animate-pulse" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-neutral-950 uppercase tracking-wider">
+                        Vitesse de Dépense ({velocityChartData.monthName})
+                      </h3>
+                      <p className="text-xs text-neutral-500 font-medium">
+                        Dépenses cumulées quotidiennes réelles comparées à la trajectoire budgétaire idéale.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {velocityChartData.actualIsOverIdeal ? (
+                      <span className="text-[10px] bg-red-50 border border-red-200 text-red-800 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 text-red-600" />
+                        Vitesse Élevée : Attention à la dérive !
+                      </span>
+                    ) : velocityChartData.cumulativeSpent > 0 ? (
+                      <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                        <CheckSquare className="w-3 h-3 text-emerald-600" />
+                        Vitesse Maîtrisée : Trajectoire d'excellence
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-neutral-50 border border-neutral-200 text-neutral-600 px-2.5 py-1 rounded-full font-bold">
+                        Aucune dépense ce mois-ci
+                      </span>
+                    )}
+                    <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2.5 py-1 rounded-full font-mono font-bold">
+                      Cumulé : {velocityChartData.cumulativeSpent.toLocaleString("fr-FR")} / {velocityChartData.totalLimit.toLocaleString("fr-FR")} MAD
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                  <div className="lg:col-span-8 h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={velocityChartData.chartPoints}
+                        margin={{ top: 15, right: 15, left: -20, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                        <XAxis 
+                          dataKey="day" 
+                          tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                          axisLine={false}
+                          tickLine={false}
+                          dy={8}
+                        />
+                        <YAxis 
+                          tick={{ fill: '#737373', fontSize: 10, fontWeight: 600 }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickFormatter={(val) => `${val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val}`}
+                        />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-neutral-950 text-white border border-neutral-800 p-3 rounded-xl shadow-xl space-y-1 text-xs">
+                                  <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Jour {data.day}</p>
+                                  <div className="space-y-1">
+                                    <p className="flex justify-between gap-6">
+                                      <span className="text-neutral-400 font-semibold">Cumulé Réel :</span>
+                                      <span className="font-bold font-mono text-white">
+                                        {data["Dépenses Cumulées"] !== undefined ? `${data["Dépenses Cumulées"].toLocaleString("fr-FR")} MAD` : "Non survenu"}
+                                      </span>
+                                    </p>
+                                    <p className="flex justify-between gap-6">
+                                      <span className="text-neutral-400 font-semibold">Cible Trajectoire :</span>
+                                      <span className="font-bold font-mono text-neutral-300">
+                                        {data["Trajectoire Idéale"].toLocaleString("fr-FR")} MAD
+                                      </span>
+                                    </p>
+                                    <p className="flex justify-between gap-6">
+                                      <span className="text-neutral-400 font-semibold">Limite Budget :</span>
+                                      <span className="font-bold font-mono text-red-400">
+                                        {data["Limite de Budget"].toLocaleString("fr-FR")} MAD
+                                      </span>
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="Limite de Budget" 
+                          stroke="#ef4444" 
+                          strokeWidth={1.5}
+                          strokeDasharray="4 4"
+                          dot={false}
+                          activeDot={false}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="Trajectoire Idéale" 
+                          stroke="#a3a3a3" 
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          dot={false}
+                          activeDot={false}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="Dépenses Cumulées" 
+                          stroke="#171717" 
+                          strokeWidth={3}
+                          connectNulls={false}
+                          dot={{ r: 3, fill: '#171717' }}
+                          activeDot={{ r: 6, fill: '#171717', stroke: '#ffffff', strokeWidth: 2 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="lg:col-span-4 space-y-4 bg-neutral-50 p-5 border border-neutral-200/50 rounded-2xl h-full flex flex-col justify-between">
+                    <div className="space-y-2.5">
+                      <h4 className="text-xs font-black text-neutral-800 uppercase tracking-wider pb-1.5 border-b border-neutral-200/60 flex items-center gap-1.5">
+                        <span>Indicateurs de Vitesse</span>
+                        <span className="text-[9px] bg-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded-md font-mono">Jour {velocityChartData.todayDay}</span>
+                      </h4>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-neutral-500">Dépenses Cumulées :</span>
+                          <span className="font-mono font-bold text-neutral-950">
+                            {velocityChartData.cumulativeSpent.toLocaleString("fr-FR")} MAD
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-neutral-500">Objectif à ce jour :</span>
+                          <span className="font-mono font-bold text-neutral-600">
+                            {velocityChartData.currentIdeal.toLocaleString("fr-FR")} MAD
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-neutral-500">Écart Trajectoire :</span>
+                          <span className={`font-mono font-bold ${
+                            velocityChartData.cumulativeSpent - velocityChartData.currentIdeal > 0 
+                              ? "text-red-600" 
+                              : "text-emerald-600"
+                          }`}>
+                            {velocityChartData.cumulativeSpent - velocityChartData.currentIdeal > 0 ? "+" : ""}
+                            {(velocityChartData.cumulativeSpent - velocityChartData.currentIdeal).toLocaleString("fr-FR")} MAD
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-[10px] text-neutral-400 font-semibold leading-normal border-t border-neutral-200/40 pt-3">
+                        📈 <strong>Guide de Lecture :</strong>
+                        <ul className="list-disc list-inside mt-1 space-y-1 text-neutral-500 font-medium">
+                          <li>La ligne rouge en pointillés est votre limite mensuelle maximale.</li>
+                          <li>La ligne grise en pointillés est le rythme d'épuisement linéaire idéal.</li>
+                          <li>Votre ligne noire cumulée doit rester au-dessous de la ligne grise.</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+          )}
 
-      {/* TRANSACTION ANALYSIS & SORTING CARD */}
-      <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-5 shadow-3xs animate-in fade-in duration-300">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
+          {/* 9. TRANSACTION ANALYSIS & SORTING CARD */}
+          {(overviewMode === "operations" || overviewMode === "full") && (
+            <div className="bg-white border border-neutral-200 rounded-3xl p-6 space-y-5 shadow-3xs animate-in fade-in duration-300">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-100 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-indigo-50 border border-indigo-200/80 text-indigo-700 rounded-2xl shrink-0">
               <ArrowUpDown className="w-5 h-5" />
@@ -1491,6 +1494,7 @@ export function FinanceSectionDashboard({
           </div>
         )}
       </div>
+          )}
         </div>
       ) : activeDashTab === "charts" ? (
         <div className="space-y-6 animate-in fade-in duration-300">
