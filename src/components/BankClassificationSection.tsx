@@ -15,12 +15,18 @@ import {
   Layers,
   ChevronRight,
   TrendingUp,
-  Percent
+  Percent,
+  History,
+  ChevronDown,
+  ChevronUp,
+  ArrowDownRight,
+  Receipt
 } from "lucide-react";
-import { Account } from "../types";
+import { Account, FinanceTransaction } from "../types";
 
 interface BankClassificationSectionProps {
   accounts: Account[];
+  transactions?: FinanceTransaction[];
   onAddAccount?: () => void;
   onEditAccount?: (account: Account) => void;
 }
@@ -245,10 +251,19 @@ export function detectBankGroup(account: Account): BankGroupKey {
 
 export default function BankClassificationSection({
   accounts = [],
+  transactions = [],
   onAddAccount,
   onEditAccount
 }: BankClassificationSectionProps) {
   const [selectedBankFilter, setSelectedBankFilter] = useState<BankGroupKey | "all">("all");
+  const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
+
+  const toggleHistory = (bankKey: string) => {
+    setExpandedHistory(prev => ({
+      ...prev,
+      [bankKey]: !prev[bankKey]
+    }));
+  };
 
   // Group accounts by bank
   const { groupedBanks, totalLiquidity, dominantBank } = useMemo(() => {
@@ -406,6 +421,23 @@ export default function BankClassificationSection({
         {filteredBanks.map((item) => {
           const { config, accounts: bankAccounts, totalBalance, percentage } = item;
           const IconComponent = config.icon;
+          const isHistoryExpanded = !!expandedHistory[config.key];
+
+          // Filter up to 5 most recent transactions for this specific bank
+          const bankTxs = transactions.filter(tx => {
+            if (!tx.account) return false;
+            const txAccLower = tx.account.toLowerCase().trim();
+
+            const matchesAccount = bankAccounts.some(
+              acc => acc.id === tx.account || acc.name.toLowerCase().trim() === txAccLower || txAccLower.includes(acc.name.toLowerCase().trim())
+            );
+            if (matchesAccount) return true;
+
+            const mockAcc: Account = { id: "", name: tx.account, type: "Bancaire", balance: 0, currency: "MAD" };
+            return detectBankGroup(mockAcc) === config.key;
+          })
+          .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+          .slice(0, 5);
 
           return (
             <div
@@ -516,6 +548,93 @@ export default function BankClassificationSection({
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Recent Transactions Dropdown Section */}
+              <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleHistory(config.key)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer bg-white/90 dark:bg-zinc-800/90 hover:bg-white dark:hover:bg-zinc-800 text-neutral-800 dark:text-neutral-200 border-neutral-200/80 dark:border-neutral-700 shadow-2xs group"
+                  >
+                    <History className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 group-hover:rotate-[-20deg] transition-transform" />
+                    <span>Historique récent</span>
+                    <span className="px-1.5 py-0.2 bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 font-mono text-[10px] font-black rounded-md">
+                      {bankTxs.length}
+                    </span>
+                    {isHistoryExpanded ? (
+                      <ChevronUp className="w-3.5 h-3.5 text-neutral-400" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
+                    )}
+                  </button>
+
+                  <span className="text-[10px] text-neutral-500 font-medium font-mono">
+                    {bankTxs.length > 0 ? "5 derniers mouvements" : "Aucune transaction"}
+                  </span>
+                </div>
+
+                {/* Collapsible Dropdown List */}
+                {isHistoryExpanded && (
+                  <div className="bg-white/95 dark:bg-zinc-950/90 border border-neutral-200/90 dark:border-neutral-800/90 rounded-2xl p-3 space-y-2 shadow-inner transition-all animate-fadeIn">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-neutral-100 dark:border-neutral-800/80">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 font-mono flex items-center gap-1">
+                        <Receipt className="w-3 h-3 text-indigo-500" />
+                        Dernières transactions • {config.bankName}
+                      </span>
+                      <span className="text-[10px] font-bold font-mono text-neutral-400">
+                        Max 5 opérations
+                      </span>
+                    </div>
+
+                    {bankTxs.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {bankTxs.map((tx) => {
+                          const isRevenue = tx.type === "Revenue" || tx.type === "Revenu";
+                          return (
+                            <div
+                              key={tx.id}
+                              className="p-2.5 rounded-xl bg-neutral-50/80 dark:bg-zinc-900/80 border border-neutral-200/60 dark:border-neutral-800/80 flex items-center justify-between gap-2.5 text-xs hover:bg-neutral-100/80 dark:hover:bg-zinc-800/60 transition-colors"
+                            >
+                              <div className="space-y-0.5 min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-neutral-900 dark:text-neutral-100 truncate block">
+                                    {tx.description}
+                                  </span>
+                                  <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-neutral-200/80 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-300">
+                                    {tx.category || "Général"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-medium">
+                                  <span>📅 {tx.date}</span>
+                                  {tx.account && (
+                                    <span>• 💳 {tx.account}</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="text-right font-mono shrink-0 pl-2">
+                                <span className={`font-black text-xs block ${isRevenue ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                                  {isRevenue ? "+" : "-"}{Math.abs(tx.amount || 0).toLocaleString("fr-FR")} MAD
+                                </span>
+                                {tx.status && (
+                                  <span className="text-[9px] text-neutral-400 block font-sans">
+                                    {tx.status}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-[11px] text-neutral-400 italic">
+                        Aucune transaction récente répertoriée pour cet établissement.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );

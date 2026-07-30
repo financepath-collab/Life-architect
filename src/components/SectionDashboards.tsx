@@ -589,7 +589,7 @@ export function FinanceSectionDashboard({
 
           {/* 2. Structural Bank Accounts Classification Section */}
           {(overviewMode === "essential" || overviewMode === "operations" || overviewMode === "full") && (
-            <BankClassificationSection accounts={accounts} />
+            <BankClassificationSection accounts={accounts} transactions={transactions} />
           )}
 
           {/* 3. Monthly Variation Rate & Comparison Summary Card */}

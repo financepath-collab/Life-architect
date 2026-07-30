@@ -1151,6 +1151,7 @@ export default function InteractiveModuleTable({
       {(title.toLowerCase().includes("compte") || title.toLowerCase().includes("trésorerie")) && (
         <BankClassificationSection 
           accounts={data} 
+          transactions={transactions}
           onAddAccount={openAddModal} 
           onEditAccount={(acc) => openEditModal(acc)} 
         />
