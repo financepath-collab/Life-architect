@@ -110,6 +110,7 @@ export function FinanceSectionDashboard({
   setAccounts, setEpargnes, setTransactions
 }: FinanceDashProps) {
   const [activeDashTab, setActiveDashTab] = useState<"overview" | "charts" | "correlations" | "fire" | "settings">(initialTab);
+  const [overviewMode, setOverviewMode] = useState<"essential" | "analytics" | "goals" | "operations" | "full">("essential");
 
   // Transaction sorting & filtering state for dashboard analysis
   const [txSortKey, setTxSortKey] = useState<"date" | "amount" | "description">("date");
@@ -448,6 +449,83 @@ export function FinanceSectionDashboard({
 
       {activeDashTab === "overview" ? (
         <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Sub-View Mode Selector for Clean Dashboard Layout */}
+          <div className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-neutral-800 p-2.5 rounded-2xl shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 md:pb-0">
+              <button
+                type="button"
+                onClick={() => setOverviewMode("essential")}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  overviewMode === "essential"
+                    ? "bg-indigo-600 text-white shadow-xs font-black"
+                    : "bg-neutral-100 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-zinc-700"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Vue Essentielle</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOverviewMode("analytics")}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  overviewMode === "analytics"
+                    ? "bg-indigo-600 text-white shadow-xs font-black"
+                    : "bg-neutral-100 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-zinc-700"
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>Analyses & Dépenses</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOverviewMode("goals")}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  overviewMode === "goals"
+                    ? "bg-indigo-600 text-white shadow-xs font-black"
+                    : "bg-neutral-100 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-zinc-700"
+                }`}
+              >
+                <Target className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Objectifs & Projections</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOverviewMode("operations")}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  overviewMode === "operations"
+                    ? "bg-indigo-600 text-white shadow-xs font-black"
+                    : "bg-neutral-100 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-zinc-700"
+                }`}
+              >
+                <ArrowUpDown className="w-3.5 h-3.5" />
+                <span>Opérations ({sortedAndFilteredTransactions.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setOverviewMode("full")}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  overviewMode === "full"
+                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs font-black"
+                    : "bg-neutral-100 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-zinc-700"
+                }`}
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>Vue Globale Organisée</span>
+              </button>
+            </div>
+
+            <div className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 hidden xl:block">
+              {overviewMode === "essential" && "✨ Synthèse haute lisibilité des indicateurs clés et du solde"}
+              {overviewMode === "analytics" && "📊 Camembert de dépenses, comparatifs et flux de trésorerie"}
+              {overviewMode === "goals" && "🎯 Jauges d'épargne, fonds de secours et prévisions 3 mois"}
+              {overviewMode === "operations" && "📋 Historique et tri dynamique de vos transactions"}
+              {overviewMode === "full" && "👁️ Vue complète de tous les modules financiers"}
+            </div>
+          </div>
           {/* Stats Bento Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 text-white flex flex-col justify-between h-32 shadow-sm">
