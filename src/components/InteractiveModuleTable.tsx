@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import CategoryDetailModal from "./CategoryDetailModal";
+import BankClassificationSection from "./BankClassificationSection";
 import { motion } from "motion/react";
 import { 
   ResponsiveContainer, 
@@ -1144,6 +1145,15 @@ export default function InteractiveModuleTable({
             </div>
           )}
         </div>
+      )}
+
+      {/* Module Comptes: Section dédiée de Classification par Banque */}
+      {(title.toLowerCase().includes("compte") || title.toLowerCase().includes("trésorerie")) && (
+        <BankClassificationSection 
+          accounts={data} 
+          onAddAccount={openAddModal} 
+          onEditAccount={(acc) => openEditModal(acc)} 
+        />
       )}
 
       {/* Module Achats Coûteux: Simulateur d'Allocation & Pédagogie de Financement */}
