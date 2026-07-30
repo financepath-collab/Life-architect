@@ -246,6 +246,7 @@ export interface Account {
   type: "Bancaire" | "Espèces" | "Crypto";
   balance: number; // MAD
   currency: string;
+  usage?: string;
 }
 
 export interface ResourceLink {

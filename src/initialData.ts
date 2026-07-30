@@ -245,11 +245,10 @@ export const INITIAL_SCREENMEDIA: ScreenMediaItem[] = [
 
 
 export const INITIAL_ACCOUNTS: Account[] = [
-  { id: "acct1", name: "Attijariwafa Pro Main", type: "Bancaire", balance: 145800, currency: "MAD" },
-  { id: "acct2", name: "CIH E-Commerce", type: "Bancaire", balance: 12450, currency: "MAD" },
-  { id: "acct3", name: "BMCE Épargne Or", type: "Bancaire", balance: 75000, currency: "MAD" },
-  { id: "acct4", name: "Espèces Dirhams (Coffre)", type: "Espèces", balance: 8400, currency: "MAD" },
-  { id: "acct5", name: "Binance (Crypto BTC/USDT)", type: "Crypto", balance: 2500, currency: "USD" }
+  { id: "acct_attijari", name: "Attijariwafa Bank (Compte Courant)", type: "Bancaire", balance: 45000, currency: "MAD", usage: "Réception du salaire & Paiement des charges mensuelles" },
+  { id: "acct_bp_carnet", name: "Banque Populaire (Compte sur Carnet)", type: "Bancaire", balance: 85000, currency: "MAD", usage: "Réservé à l'Épargne de précaution & Fonds de Secours" },
+  { id: "acct_bp_cheque", name: "Banque Populaire (Compte Chèque Bourse)", type: "Bancaire", balance: 35000, currency: "MAD", usage: "Opérations de Bourse (BVC) & Portefeuille Titres" },
+  { id: "acct_cash", name: "Espèces Dirhams (Coffre)", type: "Espèces", balance: 5000, currency: "MAD", usage: "Réserve physique liquide" }
 ];
 
 export const INITIAL_RESOURCELINKS: ResourceLink[] = [

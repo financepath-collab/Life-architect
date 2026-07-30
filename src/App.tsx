@@ -386,7 +386,7 @@ export default function App() {
         const forms = await fetchAndMigrate<Formation[]>("mp_formations_v2", INITIAL_FORMATIONS);
         const bk = await fetchAndMigrate<BookItem[]>("mp_books_v3", INITIAL_BOOKS);
         const media = await fetchAndMigrate<ScreenMediaItem[]>("mp_screenmedia_v3", INITIAL_SCREENMEDIA);
-        const acc = await fetchAndMigrate<Account[]>("mp_accounts_v2", INITIAL_ACCOUNTS);
+        const acc = await fetchAndMigrate<Account[]>("mp_accounts_v3", INITIAL_ACCOUNTS);
         const lk = await fetchAndMigrate<ResourceLink[]>("mp_links_v2", INITIAL_RESOURCELINKS);
         const chan = await fetchAndMigrate<ChannelInfo[]>("mp_channels_v2", INITIAL_CHANNELS);
         const wish = await fetchAndMigrate<WishListItem[]>("mp_wishlist_v2", INITIAL_WISHLIST);
@@ -1134,7 +1134,7 @@ export default function App() {
   });
 
   const [accounts, setAccounts] = useState<Account[]>(() => {
-    const saved = localStorage.getItem("mp_accounts_v2");
+    const saved = localStorage.getItem("mp_accounts_v3");
     return saved ? JSON.parse(saved) : INITIAL_ACCOUNTS;
   });
 
@@ -1883,7 +1883,7 @@ export default function App() {
 
   useEffect(() => {
     if (isDbLoaded && !isInternalStateUpdateRef.current) {
-      dbStore.setItem("mp_accounts_v2", accounts);
+      dbStore.setItem("mp_accounts_v3", accounts);
     }
   }, [accounts, isDbLoaded]);
 
@@ -1958,7 +1958,7 @@ export default function App() {
         dbStore.setItem("mp_formations_v2", formations),
         dbStore.setItem("mp_books_v3", books),
         dbStore.setItem("mp_screenmedia_v3", screenMedia),
-        dbStore.setItem("mp_accounts_v2", accounts),
+        dbStore.setItem("mp_accounts_v3", accounts),
         dbStore.setItem("mp_links_v2", links),
         dbStore.setItem("mp_channels_v2", channels),
         dbStore.setItem("mp_wishlist_v2", wishList),
@@ -2087,7 +2087,7 @@ export default function App() {
       "mp_formations_v2",
       "mp_books_v3",
       "mp_screenmedia_v3",
-      "mp_accounts_v2",
+      "mp_accounts_v3",
       "mp_links_v2",
       "mp_channels_v2",
       "mp_wishlist_v2",
@@ -3218,6 +3218,7 @@ export default function App() {
           columns: [
             { key: "name", label: "Nom du Compte / Banque", type: "text", required: true },
             { key: "type", label: "Catégorie de Compte", type: "select", options: ["Bancaire", "Espèces", "Crypto"] },
+            { key: "usage", label: "Mission & Allocation", type: "text" },
             { key: "balance", label: "Solde", type: "number", required: true },
             { key: "currency", label: "Devise", type: "select", options: ["MAD", "EUR", "USD"] }
           ] as TableColumn[]

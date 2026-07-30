@@ -584,6 +584,82 @@ export function FinanceSectionDashboard({
         </div>
       </div>
 
+      {/* Structural Bank Accounts Breakdown Card */}
+      <div className="bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-neutral-800 rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-3">
+          <div>
+            <h3 className="text-sm font-black text-neutral-900 dark:text-neutral-100 flex items-center gap-2 uppercase tracking-wide">
+              <Landmark className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Architecture de vos 3 Comptes Bancaires</span>
+            </h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
+              Attribution fonctionnelle et répartition stratégique de votre trésorerie
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-extrabold font-mono text-neutral-900 dark:text-neutral-100 bg-neutral-100 dark:bg-zinc-800 px-3 py-1 rounded-lg">
+              Total Liquidités: {totalAccountBalance.toLocaleString("fr-FR")} MAD
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {accounts.map(acc => {
+            const isAttijari = acc.name.toLowerCase().includes("attijari") || acc.usage?.toLowerCase().includes("salaire");
+            const isBPCarnet = acc.name.toLowerCase().includes("carnet") || acc.usage?.toLowerCase().includes("fonds de secours") || acc.usage?.toLowerCase().includes("épargne");
+            const isBPCheque = acc.name.toLowerCase().includes("chèque") || acc.name.toLowerCase().includes("bourse") || acc.usage?.toLowerCase().includes("bourse");
+
+            let theme = "border-neutral-200 bg-neutral-50/50 dark:bg-zinc-800/40";
+            let badgeBg = "bg-neutral-100 text-neutral-700 dark:bg-zinc-800 dark:text-neutral-300";
+            let iconColor = "text-neutral-600";
+            let defaultTag = "Trésorerie & Solde";
+
+            if (isAttijari) {
+              theme = "border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20";
+              badgeBg = "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200";
+              iconColor = "text-indigo-600 dark:text-indigo-400";
+              defaultTag = "Salaire & Charges Mensuelles";
+            } else if (isBPCarnet) {
+              theme = "border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/30 dark:bg-emerald-950/20";
+              badgeBg = "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200";
+              iconColor = "text-emerald-600 dark:text-emerald-400";
+              defaultTag = "Épargne & Fonds de Secours";
+            } else if (isBPCheque) {
+              theme = "border-amber-200 dark:border-amber-900/60 bg-amber-50/30 dark:bg-amber-950/20";
+              badgeBg = "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200";
+              iconColor = "text-amber-600 dark:text-amber-400";
+              defaultTag = "Opérations Bourse (BVC)";
+            }
+
+            return (
+              <div key={acc.id} className={`border rounded-xl p-4 flex flex-col justify-between space-y-3 transition-all ${theme}`}>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${badgeBg}`}>
+                      {defaultTag}
+                    </span>
+                    <Landmark className={`w-4 h-4 shrink-0 ${iconColor}`} />
+                  </div>
+                  <h4 className="text-xs font-black text-neutral-900 dark:text-neutral-100 line-clamp-1 mt-1">
+                    {acc.name}
+                  </h4>
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-400 font-medium leading-snug">
+                    {acc.usage || (isAttijari ? "Reçoit le salaire mensuel et règle l'ensemble des charges fixes." : isBPCarnet ? "Conservation de l'épargne et réserve du fonds de secours." : isBPCheque ? "Compte dédié aux opérations de bourse (BVC)." : "Solde de trésorerie disponible.")}
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800 flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase">Solde Actuel</span>
+                  <span className="text-sm font-black font-mono text-neutral-900 dark:text-neutral-100">
+                    {acc.balance.toLocaleString("fr-FR")} {acc.currency || "MAD"}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Monthly Variation Rate & Comparison Summary Card */}
       <MonthlyComparisonCard transactions={transactions} abonnements={abonnements} salaires={salaires} />
 
