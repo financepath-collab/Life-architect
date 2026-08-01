@@ -15,7 +15,13 @@ import {
   Activity, 
   Sparkles,
   AlertCircle,
-  Calendar
+  Calendar,
+  Zap,
+  Award,
+  Coffee,
+  X,
+  HeartPulse,
+  ShieldCheck
 } from "lucide-react";
 
 // Predefined default exercises for a 30-minute balanced session
@@ -64,6 +70,39 @@ export default function FocusSport({
   const [newExName, setNewExName] = useState("");
   const [newExDesc, setNewExDesc] = useState("");
   const [newExDuration, setNewExDuration] = useState("5 min");
+
+  // --- SMART SUPPLEMENT REMINDER (POST-WORKOUT DYMATIZE ISO100) ---
+  const [showSupplementReminder, setShowSupplementReminder] = useState(false);
+  const [supplementTaken, setSupplementTaken] = useState(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    return localStorage.getItem(`mp_supplement_dymatize_${todayStr}`) === "true";
+  });
+  const [supplementDismissed, setSupplementDismissed] = useState(false);
+
+  // Automatically detect when any sport exercise is marked completed -> trigger supplement reminder
+  useEffect(() => {
+    const hasCompletedExercise = exercises.some((ex: any) => ex.completed);
+    if (hasCompletedExercise && !supplementTaken && !supplementDismissed) {
+      setShowSupplementReminder(true);
+    } else if (!hasCompletedExercise) {
+      setShowSupplementReminder(false);
+      setSupplementDismissed(false);
+    }
+  }, [exercises, supplementTaken, supplementDismissed]);
+
+  const handleValidateSupplement = () => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    localStorage.setItem(`mp_supplement_dymatize_${todayStr}`, "true");
+    setSupplementTaken(true);
+    setShowSupplementReminder(false);
+  };
+
+  const handleCancelSupplement = () => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    localStorage.removeItem(`mp_supplement_dymatize_${todayStr}`);
+    setSupplementTaken(false);
+    setSupplementDismissed(false);
+  };
 
   // --- MUSIC PLAYLIST STATES REMOVED ---
 
@@ -205,14 +244,146 @@ export default function FocusSport({
           </p>
         </div>
 
-        <button
-          onClick={handleResetExercises}
-          className="text-xs bg-neutral-150 hover:bg-neutral-200 text-neutral-800 px-4 py-2.5 rounded-xl font-bold transition-all border border-neutral-200/60 flex items-center gap-2"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-          Réinitialiser la Séance
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {(!supplementTaken && !showSupplementReminder) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSupplementDismissed(false);
+                setShowSupplementReminder(true);
+              }}
+              className="text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 px-3.5 py-2.5 rounded-xl font-bold transition-all border border-amber-300/80 flex items-center gap-2 cursor-pointer shadow-2xs"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+              <span>Rappel ISO100</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleResetExercises}
+            className="text-xs bg-neutral-150 hover:bg-neutral-200 text-neutral-800 px-4 py-2.5 rounded-xl font-bold transition-all border border-neutral-200/60 flex items-center gap-2 cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Réinitialiser la Séance
+          </button>
+        </div>
       </div>
+
+      {/* SMART SUPPLEMENT REMINDER UI NOTIFICATION (DYMATIZE ISO100) */}
+      <AnimatePresence>
+        {showSupplementReminder && (
+          <motion.div
+            initial={{ opacity: 0, y: -15, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -15, scale: 0.98 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="bg-gradient-to-r from-neutral-900 via-neutral-900 to-indigo-950 text-white p-6 rounded-3xl border-2 border-amber-500/50 shadow-xl relative overflow-hidden"
+          >
+            {/* Ambient background glow */}
+            <div className="absolute -right-12 -top-12 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative z-10">
+              <div className="space-y-2.5 max-w-2xl">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
+                    <Zap className="w-3 h-3 text-amber-400 fill-amber-400" />
+                    Fenêtre Anabolique Ouverte
+                  </span>
+                  <span className="bg-white/10 text-neutral-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    Post-Entraînement
+                  </span>
+                </div>
+
+                <h3 className="text-base md:text-lg font-black text-white tracking-tight flex items-center gap-2">
+                  <Award className="w-5 h-5 text-amber-400 shrink-0" />
+                  Rappel Supplémentation : Whey Dymatize ISO100
+                </h3>
+
+                <p className="text-xs text-neutral-300 leading-relaxed">
+                  Exercice validé ! Pour stopper le catabolisme, maximiser la synthèse protéique et accélérer votre régénération musculaire, prenez votre dose de <strong className="text-white font-bold">Dymatize ISO100 Hydrolyzed Whey</strong> (1 cuillère dans 200–250 ml d&apos;eau fraîche) dans les 30 à 45 minutes après l&apos;effort.
+                </p>
+
+                {/* NUTRITION HIGHLIGHTS PILLS */}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="text-[10px] font-extrabold bg-white/10 hover:bg-white/15 text-amber-300 px-2.5 py-1 rounded-xl border border-white/10 flex items-center gap-1">
+                    💪 25g Protéines Isolates
+                  </span>
+                  <span className="text-[10px] font-extrabold bg-white/10 hover:bg-white/15 text-cyan-300 px-2.5 py-1 rounded-xl border border-white/10 flex items-center gap-1">
+                    ⚡ 5.5g BCAA & 2.7g Leucine
+                  </span>
+                  <span className="text-[10px] font-extrabold bg-white/10 hover:bg-white/15 text-emerald-300 px-2.5 py-1 rounded-xl border border-white/10 flex items-center gap-1">
+                    🌱 0g Sucre • Hydrolysée
+                  </span>
+                </div>
+              </div>
+
+              {/* ACTION BUTTONS */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={handleValidateSupplement}
+                  className="bg-amber-400 hover:bg-amber-300 text-neutral-950 px-5 py-3 rounded-2xl text-xs font-black transition-all shadow-lg hover:shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>Valider ma prise ISO100</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSupplementDismissed(true);
+                    setShowSupplementReminder(false);
+                  }}
+                  className="bg-white/10 hover:bg-white/20 text-neutral-300 hover:text-white px-4 py-3 rounded-2xl text-xs font-bold transition-all border border-white/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Plus tard</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CONFIRMED SUPPLEMENT TAKEN BANNER */}
+      <AnimatePresence>
+        {supplementTaken && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            className="bg-emerald-950/40 border border-emerald-500/40 text-emerald-100 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-black text-white uppercase tracking-tight">
+                    Supplémentation Post-Workout Validée
+                  </h4>
+                  <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    Dymatize ISO100 • 25g Whey
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-200/80 leading-relaxed mt-0.5">
+                  Dose de protéines hydrolysées enregistrée. Synthèse protéique et régénération musculaire actives.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCancelSupplement}
+              className="text-[11px] font-bold text-emerald-300 hover:text-white bg-emerald-900/40 hover:bg-emerald-900/70 px-3 py-1.5 rounded-xl border border-emerald-500/30 transition-all cursor-pointer shrink-0 self-end sm:self-center"
+            >
+              Annuler
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* CORE GRID LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -326,9 +497,17 @@ export default function FocusSport({
                   Validez chaque exercice pour compléter les 30 minutes de séance sportive active.
                 </p>
               </div>
-              <span className="text-xs bg-neutral-100 border border-neutral-200 text-neutral-800 px-3 py-1 rounded-full font-mono font-bold">
-                {exercises.filter((ex: any) => ex.completed).length} / {exercises.length} validés
-              </span>
+              <div className="flex items-center gap-2">
+                {supplementTaken && (
+                  <span className="text-[10px] bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5 shadow-2xs" title="Supplémentation prise">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>ISO100 ✓</span>
+                  </span>
+                )}
+                <span className="text-xs bg-neutral-100 border border-neutral-200 text-neutral-800 px-3 py-1 rounded-full font-mono font-bold">
+                  {exercises.filter((ex: any) => ex.completed).length} / {exercises.length} validés
+                </span>
+              </div>
             </div>
 
             {/* Progress bar */}

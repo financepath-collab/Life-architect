@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { SkinTracker } from "../types";
 import { 
   Sparkles, 
@@ -36,40 +36,40 @@ const DEFAULT_ROUTINE_STEPS: RoutineStep[] = [
     id: "step_m1",
     period: "morning",
     stepNumber: 1,
-    productName: "Nettoyant Doux (Cleanser)",
-    description: "Élimine l'excès de sébum accumulé pendant la nuit.",
+    productName: "CeraVe Gel Moussant",
+    description: "Nettoyage doux au lever - élimine l'excès de sébum sans assécher.",
     isActive: true
   },
   {
     id: "step_m2",
     period: "morning",
     stepNumber: 2,
-    productName: "Tonique Hydratant",
-    description: "Rééquilibre le pH de la peau et prépare aux soins suivants.",
+    productName: "Eau Thermale La Roche-Posay",
+    description: "Apaisement et hydratation légère avant les actifs antioxydants.",
     isActive: true
   },
   {
     id: "step_m3",
     period: "morning",
     stepNumber: 3,
-    productName: "Sérum Vitamine C (Produit A)",
-    description: "Antioxydant puissant pour stimuler l'éclat et protéger du vieillissement.",
+    productName: "La Roche-Posay Pure Vitamin C12",
+    description: "Sérum antioxydant puissant - stimule l'éclat, unifie le teint et protège.",
     isActive: true
   },
   {
     id: "step_m4",
     period: "morning",
     stepNumber: 4,
-    productName: "Crème Hydratante Légère",
-    description: "Maintient l'eau dans la barrière cutanée toute la journée.",
+    productName: "CeraVe Lotion Hydratante",
+    description: "Hydratant léger - maintient l'eau dans la barrière cutanée.",
     isActive: true
   },
   {
     id: "step_m5",
     period: "morning",
     stepNumber: 5,
-    productName: "Protection Solaire (SPF 50)",
-    description: "Étape indispensable pour protéger la peau des rayons UV nocifs.",
+    productName: "La Roche-Posay Anthelios UVMune 400 SPF50+",
+    description: "Protection solaire Oil Control indispensable SPF50+.",
     isActive: true
   },
   // SOIR
@@ -77,33 +77,49 @@ const DEFAULT_ROUTINE_STEPS: RoutineStep[] = [
     id: "step_e1",
     period: "evening",
     stepNumber: 1,
-    productName: "Huile Nettoyante (Double Nettoyage)",
-    description: "Dissout les filtres solaires (SPF), l'excès de sébum et le maquillage.",
+    productName: "CeraVe Eau Micellaire",
+    description: "Démaquillage en douceur et élimination des filtres solaires (SPF).",
     isActive: true
   },
   {
     id: "step_e2",
     period: "evening",
     stepNumber: 2,
-    productName: "Nettoyant Moussant Purifiant",
-    description: "Nettoie en profondeur à base d'eau et élimine les dernières impuretés.",
+    productName: "CeraVe Gel Moussant",
+    description: "Nettoyage moussant purifiant à base d'eau, élimine les impuretés.",
     isActive: true
   },
   {
     id: "step_e3",
     period: "evening",
     stepNumber: 3,
-    productName: "Sérum Actif / Rétinol (Produit B)",
-    description: "Traitement ciblé pour stimuler le renouvellement cellulaire et corriger.",
+    productName: "Eau Thermale La Roche-Posay",
+    description: "Apaisement cutané (Attendre 15 minutes avant le traitement).",
     isActive: true
   },
   {
     id: "step_e4",
     period: "evening",
     stepNumber: 4,
-    productName: "Crème Riche / Crème Barrière",
-    description: "Nourrit intensément et répare la barrière cutanée pendant le sommeil.",
+    productName: "Differin (Adapalène)",
+    description: "Traitement anti-acné & marques (Programmé 2 à 3x/sem - Attendre 10 min).",
     isActive: true
+  },
+  {
+    id: "step_e5",
+    period: "evening",
+    stepNumber: 5,
+    productName: "La Roche-Posay Cicaplast Baume B5+",
+    description: "Baume réparateur intense - apaisement anti-irritation de la barrière.",
+    isActive: true
+  },
+  {
+    id: "step_e6",
+    period: "evening",
+    stepNumber: 6,
+    productName: "CeraVe Resurfacing Retinol Serum",
+    description: "En réserve - Bloqué automatiquement les soirs d'utilisation de Differin.",
+    isActive: false
   }
 ];
 
@@ -128,6 +144,16 @@ export default function SkinTrackerSection({
   const [productsUsed, setProductsUsed] = useState("");
   const [waterIntakeLiters, setWaterIntakeLiters] = useState(1.5);
   const [photoUrl, setPhotoUrl] = useState<string | undefined>(undefined);
+
+  const [differinFreq, setDifferinFreq] = useState<"2x" | "3x">("2x");
+
+  const isDifferinDay = useMemo(() => {
+    const d = new Date(date);
+    const day = d.getDay(); // 0=Dim, 1=Lun, 2=Mar, 3=Mer, 4=Jeu, 5=Ven, 6=Sam
+    return differinFreq === "2x" ? (day === 2 || day === 6) : (day === 2 || day === 4 || day === 6);
+  }, [date, differinFreq]);
+
+  const isIrritated = skinCondition === "Sensible" || skinCondition === "Acné/Irritée";
 
   // --- SKINCARE ROUTINE STEPS STATES & STORAGE ---
   const [routineSteps, setRoutineSteps] = useState<RoutineStep[]>(() => {
@@ -554,9 +580,82 @@ export default function SkinTrackerSection({
 
       {/* TAB 1: ROUTINE & SAISIE */}
       {activeTab === "routine" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* SAISIE FORM (lg:col-span-5) */}
+        <div className="space-y-6">
+          {/* BANNER IA ASSISTANT SKINCARE & REGLES MAROC */}
+          <div className="bg-gradient-to-r from-teal-900 via-neutral-900 to-indigo-950 text-white p-5 rounded-3xl shadow-lg border border-teal-500/30 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-white tracking-tight">
+                    Assistant Skincare IA - Profil Maroc (Peau Nette, Acné & Marques)
+                  </h3>
+                  <p className="text-[11px] text-teal-200/80">
+                    Règles dynamiques anti-irritation & programmation automatique Differin / Rétinol
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/15">
+                <span className="text-[10px] font-bold text-teal-300 uppercase tracking-wider">Fréquence Differin :</span>
+                <button
+                  onClick={() => setDifferinFreq(prev => prev === "2x" ? "3x" : "2x")}
+                  className="text-xs font-extrabold bg-teal-500 hover:bg-teal-600 text-neutral-950 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                >
+                  {differinFreq === "2x" ? "2x / sem (Mar & Sam)" : "3x / sem (Mar, Jeu, Sam)"}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* STATUT DIFFERIN VS RETINOL */}
+              <div className={`p-3.5 rounded-2xl border ${
+                isIrritated 
+                  ? "bg-rose-950/40 border-rose-500/40 text-rose-200" 
+                  : isDifferinDay 
+                    ? "bg-teal-950/40 border-teal-500/40 text-teal-200" 
+                    : "bg-white/5 border-white/10 text-neutral-200"
+              }`}>
+                <div className="flex items-center gap-2 font-extrabold text-xs mb-1">
+                  {isIrritated ? "⚠️ PROTOCOLE APAISANT ACTIF" : isDifferinDay ? "🛡️ SOIR DIFFERIN PROGRAMMÉ" : "ℹ️ SOIR DE REPOS DIFFERIN"}
+                </div>
+                <p className="text-[11px] leading-relaxed opacity-90">
+                  {isIrritated ? (
+                    "Irritation signalée → Differin temporairement suspendu aujourd'hui. Recommandation : Appliquer Cicaplast Baume B5+ en couche protectrice."
+                  ) : isDifferinDay ? (
+                    "Utilisation de Differin ce soir. Le CeraVe Resurfacing Retinol est automatiquement verrouillé (règle de sécurité anti-acné)."
+                  ) : (
+                    "Aucun Differin ce soir. Routine douce hydratante : Eau Micellaire + Gel Moussant + Eau Thermale + Cicaplast."
+                  )}
+                </p>
+              </div>
+
+              {/* REGLE VITAMINE C */}
+              <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl text-neutral-200">
+                <div className="flex items-center gap-2 font-extrabold text-xs text-amber-300 mb-1">
+                  💡 Règle Vitamine C12
+                </div>
+                <p className="text-[11px] leading-relaxed opacity-90">
+                  Si vous oubliez la Vitamine C le matin, ne doublez jamais la dose le lendemain. Reprenez une dose normale au réveil avec SPF50+.
+                </p>
+              </div>
+
+              {/* OBJECTIFS PEAU & BARBE */}
+              <div className="bg-white/5 border border-white/10 p-3.5 rounded-2xl text-neutral-200">
+                <div className="flex items-center gap-2 font-extrabold text-xs text-cyan-300 mb-1">
+                  🎯 Objectifs Maroc
+                </div>
+                <p className="text-[11px] leading-relaxed opacity-90">
+                  Éliminer les marques d'acné, affiner le grain de peau, et fortifier les cheveux & la barbe (hydratation et zinc combinés).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* SAISIE FORM (lg:col-span-5) */}
           <div className="lg:col-span-5 bg-neutral-50/50 border border-neutral-200/70 rounded-3xl p-6 space-y-5">
             <div className="border-b border-neutral-200/50 pb-3 flex items-center gap-2">
               <Sliders className="w-4 h-4 text-neutral-700" />
@@ -866,9 +965,10 @@ export default function SkinTrackerSection({
               </div>
             )}
           </div>
-
         </div>
-      )}
+
+      </div>
+    )}
 
       {/* TAB 2: ÉTAPES DE MA ROUTINE */}
       {activeTab === "etapes" && (
@@ -1127,13 +1227,33 @@ export default function SkinTrackerSection({
 
                           {/* CONTENT */}
                           <div className="flex-1 space-y-0.5 min-w-0">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               <span className="bg-indigo-100 text-indigo-800 font-mono font-bold text-[9px] px-1.5 py-0.2 rounded shrink-0">
                                 Étape {step.stepNumber}
                               </span>
                               <h5 className={`text-xs font-extrabold truncate ${isChecked ? "text-indigo-950/60 line-through" : "text-neutral-900"}`}>
                                 {step.productName}
                               </h5>
+                              {step.productName.toLowerCase().includes("differin") && (
+                                <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
+                                  isIrritated
+                                    ? "bg-rose-100 text-rose-800 border border-rose-300"
+                                    : isDifferinDay
+                                      ? "bg-teal-100 text-teal-800 border border-teal-300"
+                                      : "bg-neutral-100 text-neutral-500"
+                                }`}>
+                                  {isIrritated ? "⚠️ Suspendu (Irritation)" : isDifferinDay ? "🔥 Actif ce soir" : "⏸️ Repos (Non Programmé)"}
+                                </span>
+                              )}
+                              {step.productName.toLowerCase().includes("retinol") && (
+                                <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
+                                  isDifferinDay
+                                    ? "bg-rose-100 text-rose-800 border border-rose-300"
+                                    : "bg-neutral-100 text-neutral-600 border border-neutral-200"
+                                }`}>
+                                  {isDifferinDay ? "🔒 Bloqué (Soir Differin)" : "En Réserve"}
+                                </span>
+                              )}
                             </div>
                             {step.description && (
                               <p className={`text-[10px] leading-relaxed line-clamp-2 ${isChecked ? "text-indigo-800/40" : "text-neutral-500 font-medium"}`}>
