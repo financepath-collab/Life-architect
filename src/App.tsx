@@ -68,7 +68,6 @@ import SavingsTrendChart from "./components/SavingsTrendChart";
 import FocusSport from "./components/FocusSport";
 import SkinTrackerSection from "./components/SkinTrackerSection";
 import MealPlannerSection from "./components/MealPlannerSection";
-import PerformanceCorrelations from "./components/PerformanceCorrelations";
 import MediaHubSection from "./components/MediaHubSection";
 import FormationsSection from "./components/FormationsSection";
 import MediaAndAcademySection from "./components/MediaAndAcademySection";
@@ -206,7 +205,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string>("dashboard"); // "dashboard", or "submodule_id"
   const [dashboardTab, setDashboardTab] = useState<"routines" | "charts" | "launchpad">("routines");
-  const [activeChartsSubTab, setActiveChartsSubTab] = useState<"finance" | "correlations" | "fire">("finance");
+  const [activeChartsSubTab, setActiveChartsSubTab] = useState<"finance" | "fire">("finance");
   const [focusMode, setFocusMode] = useState<boolean>(() => {
     return localStorage.getItem("la_focus_mode") === "true";
   });

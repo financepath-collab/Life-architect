@@ -19,7 +19,6 @@ import EmergencyFundSectionCard from "./EmergencyFundSectionCard";
 import FinanceCharts from "./FinanceCharts";
 import NetSavingsChart from "./NetSavingsChart";
 import SavingsTrendChart from "./SavingsTrendChart";
-import PerformanceCorrelations from "./PerformanceCorrelations";
 import FireCalculator from "./FireCalculator";
 import FinanceCategorySettings from "./FinanceCategorySettings";
 import BankClassificationSection from "./BankClassificationSection";
@@ -98,7 +97,7 @@ interface FinanceDashProps {
   sportHistory?: string[];
   weeklyObjectives?: WeeklyObjective[];
   onNavigate: (moduleId: string) => void;
-  initialTab?: "overview" | "charts" | "correlations" | "fire" | "settings";
+  initialTab?: "overview" | "charts" | "fire" | "settings";
   triggerToast?: (message: string, type?: "success" | "info" | "warning" | "error") => void;
   setAccounts?: React.Dispatch<React.SetStateAction<Account[]>>;
   setEpargnes?: React.Dispatch<React.SetStateAction<FinanceEpargne[]>>;
@@ -110,7 +109,7 @@ export function FinanceSectionDashboard({
   sportHistory = [], weeklyObjectives = [], onNavigate, initialTab = "overview", triggerToast,
   setAccounts, setEpargnes, setTransactions
 }: FinanceDashProps) {
-  const [activeDashTab, setActiveDashTab] = useState<"overview" | "charts" | "correlations" | "fire" | "settings">(initialTab);
+  const [activeDashTab, setActiveDashTab] = useState<"overview" | "charts" | "fire" | "settings">(initialTab);
   const [overviewMode, setOverviewMode] = useState<"essential" | "analytics" | "goals" | "operations" | "full">("essential");
 
   // Transaction sorting & filtering state for dashboard analysis
@@ -394,19 +393,6 @@ export function FinanceSectionDashboard({
             >
               <BarChart3 className="w-3.5 h-3.5" />
               <span>Graphiques & Trends</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveDashTab("correlations")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeDashTab === "correlations"
-                  ? "bg-neutral-950 text-white shadow-xs font-black"
-                  : "text-neutral-600 hover:text-neutral-950 hover:bg-white/60"
-              }`}
-            >
-              <Activity className="w-3.5 h-3.5" />
-              <span>Corrélations Effort</span>
             </button>
 
             <button
@@ -1436,14 +1422,6 @@ export function FinanceSectionDashboard({
           />
           <NetSavingsChart transactions={transactions} abonnements={abonnements} />
           <SavingsTrendChart transactions={transactions} abonnements={abonnements} />
-        </div>
-      ) : activeDashTab === "correlations" ? (
-        <div className="animate-in fade-in duration-300">
-          <PerformanceCorrelations
-            sportHistory={sportHistory}
-            weeklyObjectives={weeklyObjectives}
-            transactions={transactions}
-          />
         </div>
       ) : activeDashTab === "settings" ? (
         <div className="animate-in fade-in duration-300">
