@@ -108,24 +108,23 @@ export default function MonthlyNetIncomeWidget({
 
     const baseTotalRevenue = salaryAmount + otherRevenueAmount;
 
-    // 2. Calculate Subscriptions (Abonnements Mensuels)
-    // Subscriptions are typically general monthly recurring, but we can filter active ones
-    const activeSubscribers = abonnements.filter(a => a.status === "Actif");
-    const totalSubscriptionsCost = activeSubscribers.reduce((sum, a) => {
-      if (a.billingPeriod === "Annuel") {
-        return sum + (a.costMonthly / 12);
-      }
-      return sum + a.costMonthly;
-    }, 0);
-
-    // 3. Calculate Monthly Costs (Actual Expenses vs Budget limits)
-    // Actual expenses (Dépenses)
+    // 2. Calculate Actual expenses (Dépenses) in selected month
     const expensesInMonth = transactions.filter(t => 
       t.type === "Dépense" && 
       t.date && 
       t.date.startsWith(selectedMonth)
     );
     const totalActualExpenses = expensesInMonth.reduce((sum, t) => sum + t.amount, 0);
+
+    // 3. Calculate Fixed & Recurring Charges (Charges Fixes / Abonnements) from entered transactions
+    const fixedChargesInMonth = expensesInMonth.filter(t => 
+      t.category === "Charges Fixes & Abonnements" || 
+      t.category === "Abonnements & Charges" || 
+      t.category === "Charges Fixes" || 
+      t.recurrence === "Mensuel" || 
+      t.recurrence === "Annuel"
+    );
+    const totalFixedCharges = fixedChargesInMonth.reduce((sum, t) => sum + t.amount, 0);
 
     // Budget limits
     const totalBudgetLimit = budgets.reduce((sum, b) => sum + b.limitAmount, 0);
@@ -138,24 +137,27 @@ export default function MonthlyNetIncomeWidget({
     
     const finalCalculatedExpenses = calculatedExpenses + (simulationEnabled ? simulatedExpense : 0);
 
-    // Monthly Net Income calculation
-    const netIncome = finalTotalRevenue - totalSubscriptionsCost - finalCalculatedExpenses;
+    // Monthly Net Income calculation (charges are already included in finalCalculatedExpenses)
+    const netIncome = finalTotalRevenue - finalCalculatedExpenses;
 
     // Net Savings Rate (Taux d'épargne net)
     const savingsRate = finalTotalRevenue > 0 ? (netIncome / finalTotalRevenue) * 100 : 0;
+    const variableExpenses = Math.max(0, finalCalculatedExpenses - totalFixedCharges);
 
     return {
       salaryAmount,
       otherRevenueAmount,
       totalRevenue: finalTotalRevenue,
       baseTotalRevenue,
-      totalSubscriptionsCost,
+      totalFixedCharges,
+      totalSubscriptionsCost: totalFixedCharges, // alias for compatibility
+      variableExpenses,
       actualExpenses: totalActualExpenses,
       budgetLimit: totalBudgetLimit,
       totalExpenses: finalCalculatedExpenses,
       netIncome,
       savingsRate,
-      activeSubsCount: activeSubscribers.length,
+      activeSubsCount: fixedChargesInMonth.length,
     };
   }, [selectedMonth, budgets, abonnements, transactions, salaires, calculationMode, simulationEnabled, simulatedRevenue, simulatedExpense]);
 
@@ -469,47 +471,47 @@ export default function MonthlyNetIncomeWidget({
               </div>
             </div>
 
-            {/* CARD 2: ABONNEMENTS */}
+            {/* CARD 2: CHARGES FIXES & ABONNEMENTS */}
             <div className="p-4 bg-indigo-50/20 dark:bg-indigo-950/10 border border-indigo-100/50 dark:border-indigo-900/30 rounded-2xl">
               <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block mb-1">
-                Abonnements SaaS
+                Charges & Abonnements
               </span>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-black text-indigo-700 dark:text-indigo-300 font-mono">
-                  <CountUpNumber value={stats.totalSubscriptionsCost} />
+                  <CountUpNumber value={stats.totalFixedCharges} />
                 </span>
-                <span className="text-[10px] text-indigo-600 font-bold">MAD/m</span>
+                <span className="text-[10px] text-indigo-600 font-bold">MAD</span>
               </div>
               <div className="mt-2 text-[9px] text-neutral-500 dark:text-neutral-400 space-y-0.5">
                 <div className="flex justify-between">
-                  <span>Services actifs:</span>
+                  <span>Transactions fixes:</span>
                   <span className="font-bold">{stats.activeSubsCount}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Pression budgétaire:</span>
+                  <span>Poids budgétaire:</span>
                   <span className="font-mono text-neutral-600 dark:text-neutral-400">
-                    <CountUpNumber value={stats.totalRevenue > 0 ? (stats.totalSubscriptionsCost / stats.totalRevenue) * 100 : 0} decimals={1} suffix="%" />
+                    <CountUpNumber value={stats.totalRevenue > 0 ? (stats.totalFixedCharges / stats.totalRevenue) * 100 : 0} decimals={1} suffix="%" />
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* CARD 3: AUTRES COÛTS / DEPENSES */}
+            {/* CARD 3: DEPENSES VARIABLES */}
             <div className="p-4 bg-neutral-50 dark:bg-zinc-900/30 border border-neutral-200/50 dark:border-neutral-800/80 rounded-2xl">
               <span className="text-[9px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block mb-1">
-                {calculationMode === "actual" ? "Dépenses Réelles" : "Limites Budgets"}
+                {calculationMode === "actual" ? "Dépenses Variables" : "Limites Budgets"}
               </span>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-black text-neutral-800 dark:text-neutral-200 font-mono">
-                  <CountUpNumber value={stats.totalExpenses} />
+                  <CountUpNumber value={stats.variableExpenses} />
                 </span>
                 <span className="text-[10px] text-neutral-500 font-bold">MAD</span>
               </div>
               <div className="mt-2 text-[9px] text-neutral-500 dark:text-neutral-400 space-y-0.5">
                 <div className="flex justify-between">
-                  <span>Base calculée:</span>
+                  <span>Total dépenses:</span>
                   <span className="font-mono font-bold">
-                    <CountUpNumber value={calculationMode === "actual" ? stats.actualExpenses : stats.budgetLimit} suffix=" MAD" />
+                    <CountUpNumber value={stats.totalExpenses} suffix=" MAD" />
                   </span>
                 </div>
                 {simulationEnabled && simulatedExpense > 0 && (
@@ -535,28 +537,28 @@ export default function MonthlyNetIncomeWidget({
             </div>
             
             <div className="relative w-full bg-neutral-100 dark:bg-zinc-900 h-3 rounded-full overflow-hidden p-[1px] border border-neutral-200/40 dark:border-neutral-800">
-              {/* 1. Subscriptions bar (Indigo) */}
+              {/* 1. Charges Fixes bar (Indigo) */}
               <div 
                 className="absolute left-0 top-0 h-full bg-indigo-500 transition-all duration-300 z-10" 
-                style={{ width: `${Math.min(100, (stats.totalSubscriptionsCost / Math.max(1, stats.totalRevenue)) * 100)}%` }}
-                title={`Abonnements : ${stats.totalSubscriptionsCost.toFixed(0)} MAD`}
+                style={{ width: `${Math.min(100, (stats.totalFixedCharges / Math.max(1, stats.totalRevenue)) * 100)}%` }}
+                title={`Charges Fixes : ${stats.totalFixedCharges.toFixed(0)} MAD`}
               />
-              {/* 2. Budgets/Expenses bar (Slate/Neutral) */}
+              {/* 2. Variable Expenses bar (Slate/Neutral) */}
               <div 
                 className="absolute top-0 h-full bg-neutral-700 dark:bg-neutral-500 transition-all duration-300 z-5"
                 style={{ 
-                  left: `${Math.min(100, (stats.totalSubscriptionsCost / Math.max(1, stats.totalRevenue)) * 100)}%`,
-                  width: `${Math.min(100 - (stats.totalSubscriptionsCost / Math.max(1, stats.totalRevenue)) * 100, (stats.totalExpenses / Math.max(1, stats.totalRevenue)) * 100)}%`
+                  left: `${Math.min(100, (stats.totalFixedCharges / Math.max(1, stats.totalRevenue)) * 100)}%`,
+                  width: `${Math.min(100 - (stats.totalFixedCharges / Math.max(1, stats.totalRevenue)) * 100, (stats.variableExpenses / Math.max(1, stats.totalRevenue)) * 100)}%`
                 }}
-                title={`Coûts : ${stats.totalExpenses.toFixed(0)} MAD`}
+                title={`Dépenses Variables : ${stats.variableExpenses.toFixed(0)} MAD`}
               />
               {/* 3. Net Savings bar (Emerald - positive savings) */}
               {stats.netIncome > 0 && (
                 <div 
                   className="absolute top-0 h-full bg-emerald-500 transition-all duration-300 z-1 animate-pulse"
                   style={{ 
-                    left: `${Math.min(100, ((stats.totalSubscriptionsCost + stats.totalExpenses) / Math.max(1, stats.totalRevenue)) * 100)}%`,
-                    width: `${Math.min(100 - ((stats.totalSubscriptionsCost + stats.totalExpenses) / Math.max(1, stats.totalRevenue)) * 100, (stats.netIncome / Math.max(1, stats.totalRevenue)) * 100)}%`
+                    left: `${Math.min(100, ((stats.totalFixedCharges + stats.variableExpenses) / Math.max(1, stats.totalRevenue)) * 100)}%`,
+                    width: `${Math.min(100 - ((stats.totalFixedCharges + stats.variableExpenses) / Math.max(1, stats.totalRevenue)) * 100, (stats.netIncome / Math.max(1, stats.totalRevenue)) * 100)}%`
                   }}
                   title={`Épargne Nette : ${stats.netIncome.toFixed(0)} MAD`}
                 />
@@ -566,10 +568,10 @@ export default function MonthlyNetIncomeWidget({
             {/* Labels for progress bar */}
             <div className="flex items-center gap-3 text-[9px] text-neutral-400 dark:text-neutral-500 font-mono">
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-indigo-500" /> Abonnements ({stats.totalRevenue > 0 ? ((stats.totalSubscriptionsCost / stats.totalRevenue) * 100).toFixed(0) : 0}%)
+                <span className="w-2 h-2 rounded-full bg-indigo-500" /> Charges Fixes ({stats.totalRevenue > 0 ? ((stats.totalFixedCharges / stats.totalRevenue) * 100).toFixed(0) : 0}%)
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-neutral-700 dark:bg-neutral-500" /> Autres Coûts ({stats.totalRevenue > 0 ? ((stats.totalExpenses / stats.totalRevenue) * 100).toFixed(0) : 0}%)
+                <span className="w-2 h-2 rounded-full bg-neutral-700 dark:bg-neutral-500" /> Variables ({stats.totalRevenue > 0 ? ((stats.variableExpenses / stats.totalRevenue) * 100).toFixed(0) : 0}%)
               </span>
               {stats.netIncome > 0 && (
                 <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">

@@ -36,7 +36,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Repeat
+  Repeat,
+  AlertTriangle
 } from "lucide-react";
 import { 
   FinanceTransaction, 
@@ -161,6 +162,7 @@ export default function UnifiedFinancialEntrySection({
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<FinanceTransaction | null>(null);
+  const [transactionToDelete, setTransactionToDelete] = useState<FinanceTransaction | null>(null);
 
   // Form Fields
   const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
@@ -1208,7 +1210,7 @@ export default function UnifiedFinancialEntrySection({
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={() => handleDeleteTx(tx.id)}
+                            onClick={() => setTransactionToDelete(tx)}
                             className="p-1.5 rounded-lg bg-neutral-100 text-neutral-600 hover:bg-rose-50 hover:text-rose-600 transition-all cursor-pointer"
                             title="Supprimer"
                           >
@@ -1955,6 +1957,80 @@ export default function UnifiedFinancialEntrySection({
                   className="px-6 py-2.5 bg-neutral-900 text-white font-extrabold rounded-xl text-xs hover:bg-neutral-800 transition-all cursor-pointer"
                 >
                   Fermer la Gestion
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE CONFIRMATION DE SUPPRESSION DE TRANSACTION */}
+      <AnimatePresence>
+        {transactionToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl border border-neutral-200 p-6 max-w-md w-full shadow-2xl space-y-5"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-neutral-950">
+                    Supprimer la transaction ?
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    Action définitive et irréversible
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-2 text-xs">
+                <div className="flex justify-between items-center text-neutral-600">
+                  <span>Date :</span>
+                  <span className="font-bold text-neutral-900">{transactionToDelete.date}</span>
+                </div>
+                <div className="flex justify-between items-center text-neutral-600">
+                  <span>Description :</span>
+                  <span className="font-bold text-neutral-900">{transactionToDelete.description || "Sans description"}</span>
+                </div>
+                <div className="flex justify-between items-center text-neutral-600">
+                  <span>Catégorie :</span>
+                  <span className="font-bold text-neutral-900">{transactionToDelete.category}</span>
+                </div>
+                <div className="flex justify-between items-center text-neutral-600 pt-1 border-t border-neutral-200">
+                  <span>Montant :</span>
+                  <span className="font-mono font-extrabold text-sm text-neutral-950">
+                    {transactionToDelete.amount.toLocaleString("fr-FR")} MAD
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-neutral-600 leading-relaxed">
+                Cette suppression va réajuster automatiquement les soldes de vos comptes bancaires ainsi que le suivi budgétaire associé à cette transaction.
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTransactionToDelete(null)}
+                  className="px-5 py-2.5 rounded-xl border border-neutral-200 bg-white hover:bg-neutral-100 text-neutral-700 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDeleteTx(transactionToDelete.id);
+                    setTransactionToDelete(null);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Supprimer définitivement</span>
                 </button>
               </div>
             </motion.div>

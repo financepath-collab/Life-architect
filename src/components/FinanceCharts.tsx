@@ -3,12 +3,11 @@ import {
   FinanceTransaction, 
   FinanceBudget, 
   StockEntry, 
-  FinanceEpargne, 
+  FinanceEpargne,
   Abonnement,
   FinanceSalaire
 } from "../types";
 import CategoryDetailModal from "./CategoryDetailModal";
-import SubscriptionScatterChartCard from "./SubscriptionScatterChartCard";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -211,12 +210,6 @@ export default function FinanceCharts({
   const stockPortfolioCost = stocks.reduce((acc, s) => acc + s.buyPrice * s.quantity, 0);
   const stockPortfolioValue = stocks.reduce((acc, s) => acc + s.currentPrice * s.quantity, 0);
   const stockProfitLoss = stockPortfolioValue - stockPortfolioCost;
-
-  const totalMonthlyAbonnements = abonnements
-    .filter(a => a.status === "Actif")
-    .reduce((sum, a) => {
-      return sum + (a.billingPeriod === "Mensuel" ? a.costMonthly : a.costMonthly / 12);
-    }, 0);
 
   // Selected period state for the pie chart ("all", "month:2026-07", "quarter:2026-Q3", etc.)
   const [selectedPiePeriod, setSelectedPiePeriod] = useState<string>("all");
@@ -1118,45 +1111,7 @@ export default function FinanceCharts({
             )}
           </div>
 
-          {/* Subscriptions cost impact */}
-          <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-neutral-950 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-neutral-800" />
-                <span>Impact de vos Abonnements</span>
-              </h3>
-              <span className="text-xs font-mono text-neutral-900 bg-neutral-100 px-2.5 py-1 rounded-lg border border-neutral-200 font-bold">
-                {totalMonthlyAbonnements.toLocaleString("fr-FR")} MAD / mois
-              </span>
-            </div>
-
-            <p className="text-xs text-neutral-500 leading-relaxed">
-              Vos abonnements actifs récurrents s'élèvent à un total mensuel estimé de <span className="text-neutral-800 font-semibold">{totalMonthlyAbonnements.toFixed(0)} MAD</span>, soit environ <span className="text-neutral-800 font-semibold">{(totalMonthlyAbonnements * 12).toLocaleString("fr-FR")} MAD par an</span>.
-            </p>
-
-            <div className="space-y-2">
-              {abonnements.filter(a => a.status === "Actif").slice(0, 4).map(sub => (
-                <div key={sub.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl border border-neutral-200">
-                  <div className="space-y-0.5">
-                    <span className="text-xs font-semibold text-neutral-800">{sub.serviceName}</span>
-                    <span className="text-[9px] text-neutral-400 block">Prochain prélèvement : {sub.nextBillingDate}</span>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-neutral-700">
-                    {sub.costMonthly} MAD / {sub.billingPeriod === "Mensuel" ? "mois" : "an"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </div>
-
-        {/* NEW SCATTER CHART: Abonnements vs Taux d'Épargne */}
-        <SubscriptionScatterChartCard
-          abonnements={abonnements}
-          transactions={transactions}
-          salaires={salaires}
-        />
 
       </div>
 
