@@ -29,17 +29,14 @@ import {
   JournalEntry,
   MediaProgressLog
 } from "./types";
-import { MediaProgressWidget } from "./components/MediaProgressWidget";
 
 
 
 import { 
   INITIAL_HABITS, 
   INITIAL_WEEKLY_OBJECTIVES,
-  INITIAL_TRANSACTIONS, 
   INITIAL_STOCKS, 
   INITIAL_BUDGETS, 
-  INITIAL_SALAIRES, 
   INITIAL_EPARGNES, 
   INITIAL_ACTIONS_30_JOURS, 
   INITIAL_PROFIL_AMELIORATIONS, 
@@ -61,48 +58,56 @@ import {
   INITIAL_PROJECT_FOLDERS
 } from "./initialData";
 
-import InteractiveModuleTable, { TableColumn } from "./components/InteractiveModuleTable";
-import FinanceCharts from "./components/FinanceCharts";
-import NetSavingsChart from "./components/NetSavingsChart";
-import SavingsTrendChart from "./components/SavingsTrendChart";
-import FocusSport from "./components/FocusSport";
-import SkinTrackerSection from "./components/SkinTrackerSection";
-import MealPlannerSection from "./components/MealPlannerSection";
-import MediaHubSection from "./components/MediaHubSection";
-import FormationsSection from "./components/FormationsSection";
-import MediaAndAcademySection from "./components/MediaAndAcademySection";
-import CareerSection from "./components/CareerSection";
-import ProjectFoldersSection from "./components/ProjectFoldersSection";
+import type { TableColumn } from "./components/InteractiveModuleTable";
+import type { ThemePresetId } from "./components/ThemeSelectorModal";
+import { THEME_PRESETS } from "./components/ThemeSelectorModal";
+
+// Eagerly loaded critical components for fast initial shell render
 import AlertsBanner from "./components/AlertsBanner";
-import { HabitsSummaryCard } from "./components/HabitsSummaryCard";
-import CriticalSubscriptionsAlert from "./components/CriticalSubscriptionsAlert";
-import SubscriptionManagerModule from "./components/SubscriptionManagerModule";
-import MonthlyPerformanceCard from "./components/MonthlyPerformanceCard";
-import MonthlyExpenseAnalysisCard from "./components/MonthlyExpenseAnalysisCard";
-import MonthlyComparisonCard from "./components/MonthlyComparisonCard";
-import MonthlyGoalsSection from "./components/MonthlyGoalsSection";
-import EditorialCalendarSection from "./components/EditorialCalendarSection";
-import CentralCalendar from "./components/CentralCalendar";
-import DashboardUnifiedCalendar from "./components/DashboardUnifiedCalendar";
-import WeeklyCategoryStatsCard from "./components/WeeklyCategoryStatsCard";
 import WeatherWidget from "./components/WeatherWidget";
-import DisciplineHeatmap from "./components/DisciplineHeatmap";
-import HabitsTrackerSection from "./components/HabitsTrackerSection";
-import FireCalculator from "./components/FireCalculator";
-import ExcelSyncToolbar from "./components/ExcelSyncToolbar";
-import QuickCaptureInbox from "./components/QuickCaptureInbox";
-import CommandCenterModal from "./components/CommandCenterModal";
-import BudgetOptimizer from "./components/BudgetOptimizer";
-import SettingsModal from "./components/SettingsModal";
-import ThemeSelectorModal, { ThemePresetId, THEME_PRESETS } from "./components/ThemeSelectorModal";
-import UnifiedFinancialEntrySection from "./components/UnifiedFinancialEntrySection";
+
+// Lazy-loaded submodules and cards to shrink initial bundle size and optimize initial load
+const InteractiveModuleTable = React.lazy(() => import("./components/InteractiveModuleTable"));
+const FinanceCharts = React.lazy(() => import("./components/FinanceCharts"));
+const NetSavingsChart = React.lazy(() => import("./components/NetSavingsChart"));
+const SavingsTrendChart = React.lazy(() => import("./components/SavingsTrendChart"));
+const FocusSport = React.lazy(() => import("./components/FocusSport"));
+const SkinTrackerSection = React.lazy(() => import("./components/SkinTrackerSection"));
+const MealPlannerSection = React.lazy(() => import("./components/MealPlannerSection"));
+const MediaHubSection = React.lazy(() => import("./components/MediaHubSection"));
+const FormationsSection = React.lazy(() => import("./components/FormationsSection"));
+const MediaAndAcademySection = React.lazy(() => import("./components/MediaAndAcademySection"));
+const CareerSection = React.lazy(() => import("./components/CareerSection"));
+const ProjectFoldersSection = React.lazy(() => import("./components/ProjectFoldersSection"));
+const HabitsSummaryCard = React.lazy(() => import("./components/HabitsSummaryCard").then(m => ({ default: m.HabitsSummaryCard })));
+const CriticalSubscriptionsAlert = React.lazy(() => import("./components/CriticalSubscriptionsAlert"));
+const SubscriptionManagerModule = React.lazy(() => import("./components/SubscriptionManagerModule"));
+const MonthlyPerformanceCard = React.lazy(() => import("./components/MonthlyPerformanceCard"));
+const MonthlyExpenseAnalysisCard = React.lazy(() => import("./components/MonthlyExpenseAnalysisCard"));
+const MonthlyComparisonCard = React.lazy(() => import("./components/MonthlyComparisonCard"));
+const MonthlyGoalsSection = React.lazy(() => import("./components/MonthlyGoalsSection"));
+const EditorialCalendarSection = React.lazy(() => import("./components/EditorialCalendarSection"));
+const CentralCalendar = React.lazy(() => import("./components/CentralCalendar"));
+const DashboardUnifiedCalendar = React.lazy(() => import("./components/DashboardUnifiedCalendar"));
+const WeeklyCategoryStatsCard = React.lazy(() => import("./components/WeeklyCategoryStatsCard"));
+const DisciplineHeatmap = React.lazy(() => import("./components/DisciplineHeatmap"));
+const HabitsTrackerSection = React.lazy(() => import("./components/HabitsTrackerSection"));
+const FireCalculator = React.lazy(() => import("./components/FireCalculator"));
+const ExcelSyncToolbar = React.lazy(() => import("./components/ExcelSyncToolbar"));
+const QuickCaptureInbox = React.lazy(() => import("./components/QuickCaptureInbox"));
+const CommandCenterModal = React.lazy(() => import("./components/CommandCenterModal"));
+const BudgetOptimizer = React.lazy(() => import("./components/BudgetOptimizer"));
+const SettingsModal = React.lazy(() => import("./components/SettingsModal"));
+const ThemeSelectorModal = React.lazy(() => import("./components/ThemeSelectorModal"));
+const UnifiedFinancialEntrySection = React.lazy(() => import("./components/UnifiedFinancialEntrySection"));
+const MediaProgressWidget = React.lazy(() => import("./components/MediaProgressWidget").then(m => ({ default: m.MediaProgressWidget })));
+
 import {
   initDriveAuth,
   driveSignIn,
+  logoutDrive,
   getDriveAccessToken,
-  saveToDrive,
-  loadFromDrive,
-  logoutDrive
+  loadFromDrive
 } from "./googleDriveService";
 import { dbStore } from "./indexedDBStore";
 import { mergePayloads } from "./utils/syncUtils";
@@ -113,12 +118,8 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { 
   FinanceSectionDashboard, 
   ProductivitySectionDashboard, 
-  HealthSectionDashboard, 
   LecturesSectionDashboard 
 } from "./components/SectionDashboards";
-
-
-
 
 // Icons imports
 import { 
@@ -127,11 +128,8 @@ import {
   TrendingUp, 
   TrendingDown, 
   Wallet, 
-  Briefcase, 
   PiggyBank, 
   Landmark, 
-  BarChart3, 
-  CheckSquare, 
   Calendar, 
   User, 
   Award, 
@@ -155,12 +153,10 @@ import {
   Menu, 
   X,
   Plus,
-  Trash2,
   CheckCircle,
   Square,
   RefreshCw,
   Clock,
-  ExternalLink,
   ArrowLeft,
   ArrowRight,
   Dumbbell,
@@ -168,19 +164,14 @@ import {
   EyeOff,
   Lock,
   AlertCircle,
-  Gift,
   Hourglass,
   Sun,
   Moon,
   Globe,
   Folder,
-  FolderOpen,
-  FolderPlus,
   FolderKanban,
   Target,
   ClipboardCheck,
-  CalendarDays,
-  Star,
   Settings,
   Save,
   Cloud,
@@ -3379,7 +3370,7 @@ export default function App() {
     return `${formatDate(monday)} au ${formatDate(sunday)}`;
   };
 
-  const getWeeklyPerformanceMetrics = () => {
+  const weeklyPerformanceMetrics = React.useMemo(() => {
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
     const day = today.getDay();
@@ -3443,10 +3434,12 @@ export default function App() {
       totalObjectives,
       totalCompletedObjectives
     };
-  };
+  }, [dailyHabits, habitHistory, weeklyObjectives]);
+
+  const getWeeklyPerformanceMetrics = () => weeklyPerformanceMetrics;
 
   // Dynamic Metrics helper for Category Hubs
-  const renderCategoryMetrics = (catId: string) => {
+  const categoryMetricsData = React.useMemo(() => {
     const totalInflow = transactions
       .filter(t => t.type === "Revenue")
       .reduce((sum, t) => sum + t.amount, 0);
@@ -3471,6 +3464,28 @@ export default function App() {
     }, 0);
 
     const sportExercisesCount = sportExercises.length;
+
+    return {
+      totalInflow,
+      totalOutflow,
+      stockPortfolioValue,
+      totalMonthlyAbonnements,
+      habitsCompleted,
+      totalBankBalance,
+      sportExercisesCount
+    };
+  }, [transactions, stocks, abonnements, dailyHabits, accounts, sportExercises]);
+
+  const renderCategoryMetrics = (catId: string) => {
+    const {
+      totalInflow,
+      totalOutflow,
+      stockPortfolioValue,
+      totalMonthlyAbonnements,
+      habitsCompleted,
+      totalBankBalance,
+      sportExercisesCount
+    } = categoryMetricsData;
 
     switch (catId) {
       case "finance":
@@ -4246,6 +4261,12 @@ export default function App() {
         
         {/* WORKSPACE CONTENT SCROLL */}
         <main className="flex-1 p-8 overflow-y-auto space-y-8 w-full px-4 sm:px-6 lg:px-8">
+          <React.Suspense fallback={
+            <div className="py-16 flex flex-col items-center justify-center space-y-3 bg-white/60 dark:bg-neutral-900/60 rounded-3xl border border-neutral-200/80 dark:border-neutral-800/80 backdrop-blur-sm shadow-xs">
+              <div className="w-8 h-8 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+              <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 font-mono uppercase tracking-wider">Chargement du module...</span>
+            </div>
+          }>
 
           {/* Cloud Sync Status Banner */}
           {!cloudSyncEnabled ? (
@@ -5440,6 +5461,7 @@ export default function App() {
             )}
           </AnimatePresence>
 
+          </React.Suspense>
         </main>
 
         {/* Global Footer info banner */}
@@ -5540,84 +5562,87 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* SECOND BRAIN COMMAND CENTER MODAL */}
-      <CommandCenterModal
-        isOpen={commandCenterOpen}
-        onClose={() => setCommandCenterOpen(false)}
-        setActiveMenu={setActiveMenu}
-        categories={categories}
-        focusMode={focusMode}
-        toggleFocusMode={handleToggleFocusMode}
-        resetRoutines={resetDailyRoutines}
-        forceBackup={() => triggerToast("Données du Second Brain sauvegardées localement avec succès !", "success")}
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
-      />
+      {/* LAZY LOADED MODALS */}
+      <React.Suspense fallback={null}>
+        {/* SECOND BRAIN COMMAND CENTER MODAL */}
+        <CommandCenterModal
+          isOpen={commandCenterOpen}
+          onClose={() => setCommandCenterOpen(false)}
+          setActiveMenu={setActiveMenu}
+          categories={categories}
+          focusMode={focusMode}
+          toggleFocusMode={handleToggleFocusMode}
+          resetRoutines={resetDailyRoutines}
+          forceBackup={() => triggerToast("Données du Second Brain sauvegardées localement avec succès !", "success")}
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+        />
 
-      {/* SYSTEM SETTINGS MODAL */}
-      <SettingsModal
-        isOpen={settingsModalOpen}
-        onClose={() => setSettingsModalOpen(false)}
-        cloudSyncEnabled={cloudSyncEnabled}
-        onToggleCloudSync={handleToggleCloudSync}
-        firebaseUser={firebaseUser}
-        syncStatus={syncStatus}
-        lastSyncedTime={lastSyncedTime}
-        isSyncing={isSyncing}
-        onForceSync={handleForceSync}
-        isDriveConnected={!!driveAccessToken}
-        isDriveLoading={isDriveLoading}
-        onConnectDrive={handleConnectDrive}
-        onDisconnectDrive={handleDisconnectDrive}
-        onBackupToDrive={handleBackupToDrive}
-        onRestoreFromDrive={handleRestoreFromDrive}
-        driveLastSynced={driveLastSynced}
-        driveAutoSync={driveAutoSync}
-        onToggleDriveAutoSync={handleToggleDriveAutoSync}
-        autoDarkTheme={autoDarkTheme}
-        onToggleAutoDarkTheme={(enabled: boolean) => {
-          setAutoDarkTheme(enabled);
-          if (enabled) {
-            triggerToast("Mode sombre automatique activé (19h00 - 7h00)", "success");
-            const currentHour = new Date().getHours();
-            setIsDarkMode(currentHour >= 19 || currentHour < 7);
-          } else {
-            triggerToast("Mode sombre automatique désactivé", "info");
-          }
-        }}
-        currentTheme={themePreset}
-        onSelectTheme={(preset) => {
-          setThemePreset(preset);
-          triggerToast("Thème visuel mis à jour", "success");
-        }}
-        onOpenThemeModal={() => setIsThemeModalOpen(true)}
-        accounts={accounts}
-        transactions={transactions}
-        dailyHabits={dailyHabits}
-        weeklyObjectives={weeklyObjectives}
-        budgets={budgets}
-        onUpdateBudgets={(updated) => setBudgets(updated)}
-        epargnes={epargnes}
-        abonnements={abonnements}
-        stocks={stocks}
-        journalEntries={journalEntries}
-      />
+        {/* SYSTEM SETTINGS MODAL */}
+        <SettingsModal
+          isOpen={settingsModalOpen}
+          onClose={() => setSettingsModalOpen(false)}
+          cloudSyncEnabled={cloudSyncEnabled}
+          onToggleCloudSync={handleToggleCloudSync}
+          firebaseUser={firebaseUser}
+          syncStatus={syncStatus}
+          lastSyncedTime={lastSyncedTime}
+          isSyncing={isSyncing}
+          onForceSync={handleForceSync}
+          isDriveConnected={!!driveAccessToken}
+          isDriveLoading={isDriveLoading}
+          onConnectDrive={handleConnectDrive}
+          onDisconnectDrive={handleDisconnectDrive}
+          onBackupToDrive={handleBackupToDrive}
+          onRestoreFromDrive={handleRestoreFromDrive}
+          driveLastSynced={driveLastSynced}
+          driveAutoSync={driveAutoSync}
+          onToggleDriveAutoSync={handleToggleDriveAutoSync}
+          autoDarkTheme={autoDarkTheme}
+          onToggleAutoDarkTheme={(enabled: boolean) => {
+            setAutoDarkTheme(enabled);
+            if (enabled) {
+              triggerToast("Mode sombre automatique activé (19h00 - 7h00)", "success");
+              const currentHour = new Date().getHours();
+              setIsDarkMode(currentHour >= 19 || currentHour < 7);
+            } else {
+              triggerToast("Mode sombre automatique désactivé", "info");
+            }
+          }}
+          currentTheme={themePreset}
+          onSelectTheme={(preset) => {
+            setThemePreset(preset);
+            triggerToast("Thème visuel mis à jour", "success");
+          }}
+          onOpenThemeModal={() => setIsThemeModalOpen(true)}
+          accounts={accounts}
+          transactions={transactions}
+          dailyHabits={dailyHabits}
+          weeklyObjectives={weeklyObjectives}
+          budgets={budgets}
+          onUpdateBudgets={(updated) => setBudgets(updated)}
+          epargnes={epargnes}
+          abonnements={abonnements}
+          stocks={stocks}
+          journalEntries={journalEntries}
+        />
 
-      {/* THEME & COLOR PALETTE SELECTION MODAL */}
-      <ThemeSelectorModal
-        isOpen={isThemeModalOpen}
-        onClose={() => setIsThemeModalOpen(false)}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={(dark) => {
-          if (autoDarkTheme) setAutoDarkTheme(false);
-          setIsDarkMode(dark);
-        }}
-        currentTheme={themePreset}
-        onSelectTheme={(preset) => {
-          setThemePreset(preset);
-          triggerToast("Thème visuel appliqué avec succès !", "success");
-        }}
-      />
+        {/* THEME & COLOR PALETTE SELECTION MODAL */}
+        <ThemeSelectorModal
+          isOpen={isThemeModalOpen}
+          onClose={() => setIsThemeModalOpen(false)}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={(dark) => {
+            if (autoDarkTheme) setAutoDarkTheme(false);
+            setIsDarkMode(dark);
+          }}
+          currentTheme={themePreset}
+          onSelectTheme={(preset) => {
+            setThemePreset(preset);
+            triggerToast("Thème visuel appliqué avec succès !", "success");
+          }}
+        />
+      </React.Suspense>
 
       {/* SYNC CONFLICT RESOLUTION MODAL */}
       <AnimatePresence>

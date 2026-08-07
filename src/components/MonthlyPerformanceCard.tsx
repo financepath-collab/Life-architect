@@ -8,9 +8,7 @@ import {
   Calendar, 
   ChevronDown, 
   ChevronUp, 
-  DollarSign, 
   Wallet,
-  ArrowRightLeft,
   PieChart,
   BarChart3,
   List

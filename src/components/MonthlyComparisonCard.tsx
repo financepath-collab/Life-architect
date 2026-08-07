@@ -8,9 +8,6 @@ import {
   Calendar,
   ChevronDown,
   Scale,
-  DollarSign,
-  ArrowRight,
-  Minus,
   Percent
 } from "lucide-react";
 import {

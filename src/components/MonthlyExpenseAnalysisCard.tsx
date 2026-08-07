@@ -8,9 +8,7 @@ import {
   PieChart as PieIcon,
   BarChart3,
   List,
-  AlertCircle,
-  Coins,
-  ArrowRight
+  Coins
 } from "lucide-react";
 import {
   ResponsiveContainer,

@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Palette, Check, Sun, Moon, Sparkles, Monitor, Layers, Eye } from "lucide-react";
+import { X, Palette, Check, Sun, Moon, Sparkles } from "lucide-react";
 
 export type ThemePresetId = "indigo" | "warm-cream" | "nordic-emerald" | "titanium-gray" | "midnight-oled" | "royal-amethyst" | "sunset-coral";
 

@@ -676,10 +676,10 @@ export default function FolderObjectivesModal({
                       Fixez des indicateurs de performance (KPI) pour mesurer et suivre la progression de votre projet.
                     </p>
                   </div>
-                  {!isAddingKpi && (
+                  {!showAddKpi && (
                     <button
                       type="button"
-                      onClick={() => setIsAddingKpi(true)}
+                      onClick={() => setShowAddKpi(true)}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-3xs flex items-center gap-1.5 cursor-pointer"
                       aria-label="Ajouter un objectif à ce dossier de projet"
                     >

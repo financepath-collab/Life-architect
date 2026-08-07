@@ -5,21 +5,13 @@ import {
   Banknote, 
   Coins, 
   Wallet, 
-  PieChart as PieChartIcon, 
-  ArrowUpRight, 
   Plus, 
   Edit3, 
-  ShieldCheck, 
-  CheckCircle2, 
   CreditCard,
-  Layers,
-  ChevronRight,
-  TrendingUp,
   Percent,
   History,
   ChevronDown,
   ChevronUp,
-  ArrowDownRight,
   Receipt
 } from "lucide-react";
 import { Account, FinanceTransaction } from "../types";

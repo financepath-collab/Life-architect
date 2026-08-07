@@ -3,7 +3,6 @@ import { MonthlyGoal, ProjectFolder } from "../types";
 import { 
   Plus, 
   Trash2, 
-  TrendingUp, 
   X, 
   Check, 
   Edit, 
@@ -11,7 +10,6 @@ import {
   DollarSign, 
   Users, 
   MessageSquare,
-  Sparkles,
   Calendar,
   AlertCircle
 } from "lucide-react";

@@ -4,15 +4,12 @@ import { Abonnement, ProfilAmelioration, FinanceEpargne, DailyHabit } from "../t
 import { 
   Bell, 
   Calendar, 
-  AlertCircle, 
   Clock, 
   ChevronDown, 
   ChevronUp, 
   EyeOff, 
   ArrowRight,
   Sparkles,
-  Coins,
-  ShieldAlert,
   Search,
   Filter
 } from "lucide-react";

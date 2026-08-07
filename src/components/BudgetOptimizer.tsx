@@ -7,7 +7,6 @@ import {
   ArrowRight, 
   Coins, 
   Lightbulb, 
-  Percent, 
   ChevronDown, 
   ChevronUp,
   AlertCircle,
