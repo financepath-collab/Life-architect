@@ -666,11 +666,27 @@ export default function FolderObjectivesModal({
 
               {/* List of KPIs */}
               {(!folder.objectives || folder.objectives.length === 0) ? (
-                <div className="text-center py-8 bg-neutral-50 dark:bg-zinc-950/60 border border-dashed border-neutral-200 dark:border-zinc-800 rounded-2xl p-4">
-                  <BarChart2 className="w-8 h-8 text-neutral-300 dark:text-zinc-600 mx-auto mb-2" />
-                  <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400">
-                    Aucun objectif chiffré défini pour l'instant.
-                  </p>
+                <div className="text-center py-8 bg-neutral-50 dark:bg-zinc-950/60 border border-dashed border-neutral-200 dark:border-zinc-800 rounded-3xl p-6 flex flex-col items-center justify-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-3xs">
+                    <Target className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1 max-w-xs">
+                    <h5 className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-tight">Aucun objectif défini</h5>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed">
+                      Fixez des indicateurs de performance (KPI) pour mesurer et suivre la progression de votre projet.
+                    </p>
+                  </div>
+                  {!isAddingKpi && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingKpi(true)}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-3xs flex items-center gap-1.5 cursor-pointer"
+                      aria-label="Ajouter un objectif à ce dossier de projet"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Ajouter un objectif</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">

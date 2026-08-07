@@ -77,7 +77,7 @@ export default function CriticalSubscriptionsAlert({
                     Urgent &lt; 3 Jours
                   </span>
                 </h3>
-                <p className="text-xs text-red-700 font-medium">
+                <p className="text-xs text-red-950 font-bold">
                   Les abonnements ci-dessous seront prélevés très prochainement ou sont arrivés à échéance. Veuillez approvisionner votre compte.
                 </p>
               </div>
@@ -85,8 +85,9 @@ export default function CriticalSubscriptionsAlert({
             
             <button
               onClick={() => setIsDismissed(true)}
-              className="p-1.5 hover:bg-red-100 rounded-xl text-red-600 transition-colors cursor-pointer shrink-0"
+              className="p-1.5 hover:bg-red-100 rounded-xl text-red-900 transition-colors cursor-pointer shrink-0"
               title="Masquer temporairement"
+              aria-label="Masquer temporairement la bannière de prélèvements imminents"
             >
               <X className="w-4 h-4" />
             </button>
@@ -107,24 +108,24 @@ export default function CriticalSubscriptionsAlert({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <CreditCard className="w-4 h-4 text-red-500 shrink-0" />
+                        <CreditCard className="w-4 h-4 text-red-600 shrink-0" />
                         <span className="text-xs font-black text-neutral-900 truncate uppercase tracking-tight group-hover:underline">
                           {sub.serviceName}
                         </span>
                       </div>
-                      <span className="text-[10px] font-mono font-bold text-red-600 shrink-0 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+                      <span className="text-[10px] font-mono font-black text-red-950 shrink-0 bg-red-100 px-2 py-0.5 rounded-md border border-red-300">
                         {sub.costMonthly.toLocaleString("fr-FR")} MAD
                       </span>
                     </div>
 
-                    <p className="text-[10px] text-neutral-500 font-medium line-clamp-1">
+                    <p className="text-[10px] text-neutral-600 font-medium line-clamp-1">
                       Période de facturation : {sub.billingPeriod}
                     </p>
                   </div>
 
                   <div className="flex items-center justify-between gap-2 pt-2 border-t border-red-100">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-red-700 font-mono">
-                      <Calendar className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                    <div className="flex items-center gap-1.5 text-[10px] font-black text-red-950 font-mono">
+                      <Calendar className="w-3.5 h-3.5 text-red-600 shrink-0" />
                       <span>{sub.nextBillingDate}</span>
                     </div>
 
@@ -144,7 +145,7 @@ export default function CriticalSubscriptionsAlert({
 
           {/* Action button */}
           <div className="flex items-center justify-between gap-4 pt-1 border-t border-red-200/50">
-            <div className="flex items-center gap-2 text-[11px] font-bold text-red-800">
+            <div className="flex items-center gap-2 text-[11px] font-black text-red-950">
               <AlertTriangle className="w-4 h-4 text-red-600 animate-bounce" />
               <span>Pensez à vérifier le solde de votre compte CIH E-Commerce pour parer aux rejets.</span>
             </div>
@@ -152,6 +153,7 @@ export default function CriticalSubscriptionsAlert({
             <button
               onClick={() => onNavigateToModule("abonnements")}
               className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-3xs cursor-pointer shrink-0"
+              aria-label="Accéder au module abonnements pour gérer les paiements"
             >
               <span>Gérer les abonnements</span>
               <ArrowRight className="w-3.5 h-3.5" />

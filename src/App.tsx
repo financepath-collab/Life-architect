@@ -162,6 +162,7 @@ import {
   Clock,
   ExternalLink,
   ArrowLeft,
+  ArrowRight,
   Dumbbell,
   Eye,
   EyeOff,
@@ -4065,6 +4066,7 @@ export default function App() {
               onClick={() => setSettingsModalOpen(true)}
               className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0 relative"
               title="Paramètres de synchronisation et du système"
+              aria-label="Ouvrir les paramètres de synchronisation et du système"
             >
               <Settings className="w-3.5 h-3.5" />
               {cloudSyncEnabled && syncStatus === "synced" && (
@@ -4078,6 +4080,7 @@ export default function App() {
               onClick={() => setIsThemeModalOpen(true)}
               className="p-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-600 dark:text-indigo-400 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-all cursor-pointer shrink-0 flex items-center gap-1.5 px-2.5"
               title="Changer la palette de couleurs du site (Émeraude, Indigo, Ambre, Violet, Corail...)"
+              aria-label="Ouvrir le sélecteur de thème et palette de couleurs"
             >
               <Palette className="w-3.5 h-3.5" />
               <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wider">Thème</span>
@@ -4094,6 +4097,7 @@ export default function App() {
               }}
               className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0"
               title={isDarkMode ? "Passer au mode clair" : "Passer au mode sombre professionnel"}
+              aria-label={isDarkMode ? "Passer au mode clair" : "Passer au mode sombre"}
             >
               {isDarkMode ? (
                 <Sun className="w-3.5 h-3.5 text-amber-500 fill-amber-300" />
@@ -4111,6 +4115,7 @@ export default function App() {
               }}
               className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0"
               title="Se déconnecter de la session"
+              aria-label="Verrouiller la session"
             >
               <Lock className="w-3.5 h-3.5" />
             </button>
@@ -4119,6 +4124,7 @@ export default function App() {
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="xl:hidden p-2 bg-neutral-50 hover:bg-neutral-100 rounded-xl border border-neutral-200 text-neutral-800 focus:outline-none cursor-pointer"
+              aria-label={sidebarOpen ? "Fermer le menu de navigation principal" : "Ouvrir le menu de navigation principal"}
             >
               {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
@@ -4781,27 +4787,42 @@ export default function App() {
                                       <div 
                                         key={alertId}
                                         onClick={() => handleNavigateToModule("comptes")}
-                                        className="group relative p-3 bg-red-50 border border-red-100 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-red-50/80 transition-all"
+                                        className="group relative p-3.5 bg-red-50 border border-red-200 hover:border-red-400 rounded-2xl flex items-center justify-between gap-3 cursor-pointer hover:bg-red-100/60 transition-all shadow-3xs"
                                       >
-                                        <div className="flex gap-2.5">
-                                          <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                                          <div className="space-y-0.5">
-                                            <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Trésorerie Basse</span>
-                                            <p className="text-xs font-bold text-neutral-850">
-                                              Compte {acc.name} est à {acc.balance.toLocaleString("fr-FR")} {acc.currency}.
+                                        <div className="flex items-start gap-2.5 min-w-0">
+                                          <AlertCircle className="w-4 h-4 text-red-700 shrink-0 mt-0.5" />
+                                          <div className="space-y-0.5 min-w-0">
+                                            <span className="text-[10px] font-black text-red-950 uppercase block tracking-wider font-mono">Trésorerie Basse</span>
+                                            <p className="text-xs font-bold text-red-950 leading-snug">
+                                              Compte <span className="underline">{acc.name}</span> : solde critique de <span className="font-mono text-red-700 font-extrabold">{acc.balance.toLocaleString("fr-FR")} {acc.currency}</span>.
                                             </p>
                                           </div>
                                         </div>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleSnoozeAlert(alertId);
-                                          }}
-                                          title="Masquer pendant 24h"
-                                          className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-red-600 hover:border-red-200 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0"
-                                        >
-                                          <Clock className="w-3.5 h-3.5" />
-                                        </button>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleNavigateToModule("comptes");
+                                            }}
+                                            className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1 shadow-3xs transition-all cursor-pointer"
+                                            aria-label={`Accéder directement au compte ${acc.name} pour réapprovisionner`}
+                                          >
+                                            <span>Voir le compte</span>
+                                            <ArrowRight className="w-3 h-3" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleSnoozeAlert(alertId);
+                                            }}
+                                            title="Masquer pendant 24h"
+                                            aria-label={`Masquer l'alerte de trésorerie basse pour le compte ${acc.name} pendant 24h`}
+                                            className="p-1.5 rounded-lg bg-white border border-red-200 text-neutral-600 hover:text-red-700 hover:bg-red-50 transition-all flex items-center justify-center cursor-pointer"
+                                          >
+                                            <Clock className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
                                       </div>
                                     );
                                   }
@@ -4817,7 +4838,7 @@ export default function App() {
                                       <motion.div 
                                         key={alertId}
                                         onClick={() => handleNavigateToModule("budgets")}
-                                        className="group relative p-3 bg-red-50/70 border border-red-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer hover:bg-red-55/90 transition-all shadow-3xs"
+                                        className="group relative p-3.5 bg-red-50 border border-red-200 hover:border-red-400 rounded-2xl flex items-center justify-between gap-3 cursor-pointer hover:bg-red-100/60 transition-all shadow-3xs"
                                         animate={{
                                           scale: [1, 1.015, 1],
                                           boxShadow: [
@@ -4832,29 +4853,44 @@ export default function App() {
                                           ease: "easeInOut"
                                         }}
                                       >
-                                        <div className="flex gap-2.5">
+                                        <div className="flex items-start gap-2.5 min-w-0">
                                           <div className="relative shrink-0 mt-0.5">
-                                            <AlertCircle className="w-4 h-4 text-red-600" />
+                                            <AlertCircle className="w-4 h-4 text-red-700" />
                                             <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
                                             <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-600" />
                                           </div>
-                                          <div className="space-y-0.5">
-                                            <span className="text-[10px] font-black text-red-800 uppercase block tracking-wider font-mono">Budget Dépassé</span>
-                                            <p className="text-xs font-bold text-neutral-850 leading-snug">
-                                              Enveloppe {b.category} : dépensé {b.spentAmount} MAD / limite {b.limitAmount} MAD.
+                                          <div className="space-y-0.5 min-w-0">
+                                            <span className="text-[10px] font-black text-red-950 uppercase block tracking-wider font-mono">Budget Dépassé</span>
+                                            <p className="text-xs font-bold text-red-950 leading-snug">
+                                              Enveloppe {b.category} : dépensé <span className="font-mono text-red-700">{b.spentAmount} MAD</span> / limite {b.limitAmount} MAD.
                                             </p>
                                           </div>
                                         </div>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleSnoozeAlert(alertId);
-                                          }}
-                                          title="Masquer pendant 24h"
-                                          className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-red-600 hover:border-red-200 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0"
-                                        >
-                                          <Clock className="w-3.5 h-3.5" />
-                                        </button>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleNavigateToModule("budgets");
+                                            }}
+                                            className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1 shadow-3xs transition-all cursor-pointer"
+                                            aria-label={`Ajuster le budget de la catégorie ${b.category}`}
+                                          >
+                                            <span>Ajuster</span>
+                                            <ArrowRight className="w-3 h-3" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleSnoozeAlert(alertId);
+                                            }}
+                                            title="Masquer pendant 24h"
+                                            aria-label={`Masquer l'alerte de budget dépassé pour ${b.category} pendant 24h`}
+                                            className="p-1.5 rounded-lg bg-white border border-red-200 text-neutral-600 hover:text-red-700 hover:bg-red-50 transition-all flex items-center justify-center cursor-pointer"
+                                          >
+                                            <Clock className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
                                       </motion.div>
                                     );
                                   } else {

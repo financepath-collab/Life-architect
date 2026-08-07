@@ -286,30 +286,30 @@ export default function AlertsBanner({
     switch (urgency) {
       case "overdue":
         return {
-          container: "bg-red-50/70 hover:bg-red-50 border-red-200 text-red-950",
-          badge: "bg-red-500 text-white font-mono font-black",
-          dot: "bg-red-500 animate-ping",
-          iconColor: "text-red-600"
+          container: "bg-red-50 hover:bg-red-100/80 border-red-300 text-red-950",
+          badge: "bg-red-600 text-white font-mono font-black shadow-3xs",
+          dot: "bg-red-600 animate-ping",
+          iconColor: "text-red-700"
         };
       case "urgent":
         return {
-          container: "bg-rose-50/70 hover:bg-rose-50 border-rose-200 text-rose-950",
-          badge: "bg-rose-600 text-white font-mono font-semibold",
+          container: "bg-rose-50 hover:bg-rose-100/80 border-rose-300 text-rose-950",
+          badge: "bg-rose-700 text-white font-mono font-bold shadow-3xs",
           dot: "bg-rose-600 animate-ping",
-          iconColor: "text-rose-600"
+          iconColor: "text-rose-700"
         };
       case "warning":
         return {
-          container: "bg-amber-50/70 hover:bg-amber-50 border-amber-200 text-amber-950",
-          badge: "bg-amber-100 text-amber-800 border border-amber-200 font-medium",
+          container: "bg-amber-50 hover:bg-amber-100/80 border-amber-300 text-amber-950",
+          badge: "bg-amber-200 text-amber-950 border border-amber-300 font-bold",
           dot: "bg-amber-500",
-          iconColor: "text-amber-600"
+          iconColor: "text-amber-700"
         };
       case "info":
       default:
         return {
           container: "bg-neutral-50/50 hover:bg-neutral-50 border-neutral-200/95 text-neutral-800",
-          badge: "bg-neutral-100 text-neutral-700 border border-neutral-200 font-medium",
+          badge: "bg-neutral-100 text-neutral-800 border border-neutral-200 font-medium",
           dot: "bg-neutral-400",
           iconColor: "text-neutral-500"
         };
@@ -323,6 +323,9 @@ export default function AlertsBanner({
       <div 
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center justify-between p-5 bg-neutral-50/50 border-b border-neutral-100 cursor-pointer select-none"
+        role="button"
+        aria-expanded={isOpen}
+        aria-label="Centre d'alertes et d'échéances"
       >
         <div className="flex items-center gap-3.5">
           <div className="relative w-10 h-10 bg-neutral-900 rounded-xl flex items-center justify-center text-white shrink-0 shadow-3xs">
@@ -337,12 +340,12 @@ export default function AlertsBanner({
             <h3 className="text-sm font-black text-neutral-900 uppercase tracking-tight flex items-center gap-2">
               <span>ALERTES & ÉCHÉANCES</span>
               {totalUrgentCount > 0 && (
-                <span className="bg-rose-100 text-rose-700 text-[9px] font-bold px-2 py-0.5 rounded-full border border-rose-200/50 animate-pulse">
+                <span className="bg-rose-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full border border-rose-700 animate-pulse shadow-3xs">
                   {totalUrgentCount} URGENTS
                 </span>
               )}
             </h3>
-            <p className="text-xs text-neutral-400">
+            <p className="text-xs text-neutral-600 font-medium">
               {activeAlerts.length === 0 
                 ? "Toutes vos échéances sont à jour !" 
                 : `Surveillez vos dates d'échéances SaaS, projets et épargnes d'élite.`}
@@ -357,14 +360,18 @@ export default function AlertsBanner({
                 e.stopPropagation();
                 handleResetDismissed();
               }}
-              className="text-[10px] text-neutral-400 hover:text-neutral-900 font-bold underline transition-colors cursor-pointer"
+              className="text-[10px] text-neutral-500 hover:text-neutral-900 font-bold underline transition-colors cursor-pointer"
+              aria-label="Réactiver toutes les alertes masquées"
             >
               Réactiver les alertes masquées
             </button>
           )}
-          <div className="p-2 bg-neutral-100 rounded-xl border border-neutral-200 text-neutral-600">
+          <button 
+            className="p-2 bg-neutral-100 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-200 transition-colors cursor-pointer"
+            aria-label={isOpen ? "Masquer le détail des alertes" : "Afficher le détail des alertes"}
+          >
             {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </div>
+          </button>
         </div>
       </div>
 
@@ -506,6 +513,7 @@ export default function AlertsBanner({
                             <button
                               onClick={(e) => handleSnooze(alert.id, e)}
                               title="Répéter dans 24h (Snooze)"
+                              aria-label={`Répéter l'alerte ${alert.title} pendant 24 heures`}
                               className="p-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 text-indigo-600 hover:text-indigo-800 transition-all cursor-pointer opacity-0 group-hover:opacity-100 shadow-3xs flex items-center gap-1"
                             >
                               <Clock className="w-3.5 h-3.5" />
@@ -517,7 +525,8 @@ export default function AlertsBanner({
                           <button
                             onClick={(e) => handleDismiss(alert.id, e)}
                             title="Masquer l'alerte"
-                            className="p-1.5 bg-white/80 hover:bg-white rounded-lg border border-neutral-200 text-neutral-400 hover:text-neutral-800 transition-all cursor-pointer opacity-0 group-hover:opacity-100 shadow-3xs"
+                            aria-label={`Masquer définitivement l'alerte ${alert.title}`}
+                            className="p-1.5 bg-white/80 hover:bg-white rounded-lg border border-neutral-200 text-neutral-500 hover:text-neutral-900 transition-all cursor-pointer opacity-0 group-hover:opacity-100 shadow-3xs"
                           >
                             <EyeOff className="w-3.5 h-3.5" />
                           </button>

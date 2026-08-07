@@ -1954,8 +1954,14 @@ export default function ProjectFoldersSection({
 
                       {/* List of current objectives */}
                       {selectedFolder.customObjectives.length === 0 ? (
-                        <div className="text-center py-4 text-neutral-400 italic text-xs bg-neutral-50/50 rounded-xl border border-dashed border-neutral-200">
-                          Aucun objectif défini. Saisissez votre premier objectif ci-dessus pour le suivre.
+                        <div className="border border-dashed border-neutral-200 rounded-3xl p-6 text-center bg-neutral-50/50 flex flex-col items-center justify-center space-y-2.5">
+                          <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-3xs">
+                            <Target className="w-5 h-5" />
+                          </div>
+                          <div className="space-y-0.5 max-w-xs">
+                            <h5 className="text-xs font-black text-neutral-900 uppercase tracking-tight">Aucun objectif défini</h5>
+                            <p className="text-[11px] text-neutral-500 font-medium">Saisissez un premier objectif ou jalon ci-dessus pour le suivre dans ce projet.</p>
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
@@ -3811,8 +3817,14 @@ export default function ProjectFoldersSection({
                       </span>
                       
                       {selectedFolder.customObjectives.length === 0 ? (
-                        <div className="text-center py-6 text-neutral-400 italic text-xs">
-                          Aucun jalon interne défini pour l'instant. Utilisez la barre ci-dessus pour en ajouter !
+                        <div className="border border-dashed border-neutral-200 rounded-3xl p-6 text-center bg-neutral-50/50 flex flex-col items-center justify-center space-y-2.5">
+                          <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-3xs">
+                            <Target className="w-5 h-5" />
+                          </div>
+                          <div className="space-y-0.5 max-w-xs">
+                            <h5 className="text-xs font-black text-neutral-900 uppercase tracking-tight">Aucun jalon interne</h5>
+                            <p className="text-[11px] text-neutral-500 font-medium">Ajoutez des jalons de projet pour suivre vos livrables étape par étape.</p>
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-2">

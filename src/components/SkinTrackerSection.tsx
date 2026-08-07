@@ -895,8 +895,27 @@ export default function SkinTrackerSection({
             </div>
 
             {sortedTrackers.length === 0 ? (
-              <div className="border border-neutral-100 rounded-2xl p-10 text-center text-neutral-400 italic text-xs">
-                Aucune routine de soins enregistrée pour le moment.
+              <div className="border border-dashed border-neutral-200 rounded-3xl p-8 text-center bg-neutral-50/50 flex flex-col items-center justify-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shadow-3xs">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <div className="space-y-1 max-w-xs">
+                  <h4 className="text-xs font-black text-neutral-900 uppercase tracking-tight">Aucune routine enregistrée</h4>
+                  <p className="text-[11px] text-neutral-600 leading-relaxed font-medium">
+                    Suivez l'évolution de votre peau au quotidien pour adapter vos soins du matin et du soir.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    const formEl = document.getElementById("skin-analysis-form");
+                    formEl?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="mt-1 px-4 py-2 bg-neutral-950 hover:bg-neutral-800 text-white text-xs font-bold rounded-xl transition-all shadow-3xs flex items-center gap-1.5 cursor-pointer"
+                  aria-label="Valider votre première analyse du jour"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Enregistrer une analyse</span>
+                </button>
               </div>
             ) : (
               <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
@@ -1080,8 +1099,27 @@ export default function SkinTrackerSection({
 
               <div className="space-y-3">
                 {routineSteps.filter(s => s.period === "morning" && s.isActive).length === 0 ? (
-                  <div className="border border-dashed border-amber-200 rounded-2xl p-8 text-center text-xs text-amber-800/60 italic bg-white/50">
-                    Aucune étape pour le matin. Ajoutez-en une ci-dessous !
+                  <div className="border border-dashed border-amber-300 rounded-3xl p-6 text-center bg-amber-50/40 flex flex-col items-center justify-center space-y-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shadow-3xs">
+                      <Sun className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-0.5 max-w-xs">
+                      <h5 className="text-xs font-black text-amber-950 uppercase tracking-tight">Aucune étape pour le matin</h5>
+                      <p className="text-[11px] text-amber-900/80 font-medium">Configurez vos soins matinaux pour protéger et hydrater votre peau.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewPeriod("morning");
+                        const formEl = document.getElementById("add-skincare-step-form");
+                        formEl?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                      className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-3xs flex items-center gap-1.5 cursor-pointer"
+                      aria-label="Ajouter un produit à la routine du matin"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Ajouter un produit</span>
+                    </button>
                   </div>
                 ) : (
                   routineSteps
@@ -1194,8 +1232,27 @@ export default function SkinTrackerSection({
 
               <div className="space-y-3">
                 {routineSteps.filter(s => s.period === "evening" && s.isActive).length === 0 ? (
-                  <div className="border border-dashed border-indigo-200 rounded-2xl p-8 text-center text-xs text-indigo-800/60 italic bg-white/50">
-                    Aucune étape pour le soir. Ajoutez-en une ci-dessous !
+                  <div className="border border-dashed border-indigo-300 rounded-3xl p-6 text-center bg-indigo-50/40 flex flex-col items-center justify-center space-y-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center shadow-3xs">
+                      <Moon className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-0.5 max-w-xs">
+                      <h5 className="text-xs font-black text-indigo-950 uppercase tracking-tight">Aucune étape pour le soir</h5>
+                      <p className="text-[11px] text-indigo-900/80 font-medium">Ajoutez vos soins du soir pour favoriser la régénération cellulaire durant la nuit.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewPeriod("evening");
+                        const formEl = document.getElementById("add-skincare-step-form");
+                        formEl?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                      className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-3xs flex items-center gap-1.5 cursor-pointer"
+                      aria-label="Ajouter un produit à la routine du soir"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Ajouter un produit</span>
+                    </button>
                   </div>
                 ) : (
                   routineSteps
@@ -1309,7 +1366,7 @@ export default function SkinTrackerSection({
           </div>
 
           {/* ADD NEW STEP FORM */}
-          <div className="bg-neutral-50 border border-neutral-200/70 rounded-3xl p-6">
+          <div id="add-skincare-step-form" className="bg-neutral-50 border border-neutral-200/70 rounded-3xl p-6">
             <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-widest font-mono border-b border-neutral-200/50 pb-3 mb-4">
               Ajouter une étape personnalisée à vos routines
             </h4>
