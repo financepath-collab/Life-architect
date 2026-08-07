@@ -611,10 +611,10 @@ export default function InteractiveModuleTable({
 
   // Real-time Category Breakdown calculation for Pie Chart
   const categoryPieData = useMemo(() => {
-    if (!processedData || processedData.length === 0) return { items: [], total: 0, unit: currencySymbol, chartTitle: "Répartition des Données" };
+    if (!processedData || processedData.length === 0) return { items: [], total: 0, unit: currencySymbol, chartTitle: "Répartition des Données", valueLabel: "Montant :", isAccountModule: false };
 
     const firstItem = processedData[0];
-    if (!firstItem) return { items: [], total: 0, unit: currencySymbol, chartTitle: "Répartition des Données" };
+    if (!firstItem) return { items: [], total: 0, unit: currencySymbol, chartTitle: "Répartition des Données", valueLabel: "Montant :", isAccountModule: false };
 
     // Find numerical key (spentAmount, spent, amount, montant, limitAmount, costMonthly, subscriberCount, etc.)
     const possibleNumKeys = ["subscriberCount", "subscribers", "spentAmount", "spent", "amount", "montant", "costMonthly", "limitAmount", "cost", "price", "prix", "balance"];
@@ -624,16 +624,28 @@ export default function InteractiveModuleTable({
       if (numCol) numKey = numCol.key;
     }
 
-    // Determine unit and title based on numKey or title
+    // Determine unit, title, and valueLabel based on numKey or title
     let unit = currencySymbol;
     let chartTitle = "Répartition par Catégorie";
+    let valueLabel = "Dépense :";
+
+    const isAccountModule = title.toLowerCase().includes("compte") || 
+                            title.toLowerCase().includes("trésorerie") || 
+                            title.toLowerCase().includes("banque") || 
+                            numKey === "balance";
 
     if (numKey === "subscriberCount" || numKey === "subscribers" || title.toLowerCase().includes("canal") || title.toLowerCase().includes("médias") || title.toLowerCase().includes("media")) {
       unit = "Abonnés";
       chartTitle = "Répartition de l'Audience par Canal";
-    } else if (title.toLowerCase().includes("budget") || title.toLowerCase().includes("dépense") || title.toLowerCase().includes("achat") || title.toLowerCase().includes("compte") || title.toLowerCase().includes("financ")) {
+      valueLabel = "Audience :";
+    } else if (isAccountModule) {
+      unit = currencySymbol;
+      chartTitle = "Répartition des Liquidités par Compte";
+      valueLabel = "Solde :";
+    } else if (title.toLowerCase().includes("budget") || title.toLowerCase().includes("dépense") || title.toLowerCase().includes("achat") || title.toLowerCase().includes("financ") || title.toLowerCase().includes("transaction")) {
       unit = currencySymbol;
       chartTitle = "Répartition des Dépenses par Catégorie";
+      valueLabel = "Dépense :";
     }
 
     // Find category key
@@ -644,7 +656,7 @@ export default function InteractiveModuleTable({
       if (textCol) catKey = textCol.key;
     }
 
-    if (!numKey || !catKey) return { items: [], total: 0, unit, chartTitle };
+    if (!numKey || !catKey) return { items: [], total: 0, unit, chartTitle, valueLabel, isAccountModule };
 
     const categoryTotals: { [key: string]: number } = {};
     let totalAmount = 0;
@@ -652,10 +664,12 @@ export default function InteractiveModuleTable({
     processedData.forEach(item => {
       if (!item) return;
 
-      // Filter out pure Revenue if type field exists
-      const typeVal = String(item.type || "").toLowerCase();
-      if (typeVal && (typeVal.includes("revenu") || typeVal.includes("revenue")) && !typeVal.includes("dépense") && !typeVal.includes("depense")) {
-        return;
+      // Filter out pure Revenue if type field exists (unless it's an account/liquidity module where balance is counted)
+      if (!isAccountModule) {
+        const typeVal = String(item.type || "").toLowerCase();
+        if (typeVal && (typeVal.includes("revenu") || typeVal.includes("revenue")) && !typeVal.includes("dépense") && !typeVal.includes("depense")) {
+          return;
+        }
       }
 
       const catVal = String(item[catKey] || "Autres").trim() || "Autres";
@@ -682,8 +696,8 @@ export default function InteractiveModuleTable({
       }))
       .sort((a, b) => b.value - a.value);
 
-    return { items: sortedCategories, total: totalAmount };
-  }, [processedData, columns]);
+    return { items: sortedCategories, total: totalAmount, unit, chartTitle, valueLabel, isAccountModule };
+  }, [processedData, columns, title, currencySymbol]);
 
   // Animation key for smooth fade-in transition when date range, category or search filters change
   const filterAnimationKey = useMemo(() => {
@@ -1003,7 +1017,7 @@ export default function InteractiveModuleTable({
               {/* Center Donut Badge */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
                 <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-neutral-400">
-                  {categoryPieData.items.length} {categoryPieData.unit === "Abonnés" ? "Canaux" : "Catégories"}
+                  {categoryPieData.items.length} {categoryPieData.unit === "Abonnés" ? "Canaux" : (categoryPieData.isAccountModule ? "Comptes" : "Catégories")}
                 </span>
                 <span className="text-base font-black font-mono text-white mt-0.5">
                   {categoryPieData.total.toLocaleString("fr-FR")}
@@ -1039,7 +1053,7 @@ export default function InteractiveModuleTable({
                   </div>
 
                   <div className="flex items-center justify-between text-xs font-mono pt-0.5">
-                    <span className="text-neutral-400 text-[11px]">Dépense :</span>
+                    <span className="text-neutral-400 text-[11px]">{categoryPieData.valueLabel || "Solde :"}</span>
                     <span className="font-bold text-white">
                       {cat.value.toLocaleString("fr-FR")} {currencySymbol}
                     </span>
