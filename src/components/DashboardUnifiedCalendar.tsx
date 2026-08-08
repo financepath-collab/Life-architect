@@ -24,7 +24,8 @@ import {
   GripVertical,
   MoveRight,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  List
 } from "lucide-react";
 import {
   DailyHabit,
@@ -119,12 +120,15 @@ export default function DashboardUnifiedCalendar({
   const [dragOverDateStr, setDragOverDateStr] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<any | null>(null);
 
-  // Calendar View Mode State (MOIS vs SEMAINE)
-  const [viewMode, setViewMode] = useState<"MOIS" | "SEMAINE">("MOIS");
+  // Calendar View Mode State (MOIS vs SEMAINE vs AGENDA)
+  const [viewMode, setViewMode] = useState<"MOIS" | "SEMAINE" | "AGENDA">("MOIS");
+  const [agendaOnlyWithEvents, setAgendaOnlyWithEvents] = useState(false);
 
   // Format header title according to viewMode
   const headerTitle = useMemo(() => {
-    if (viewMode === "MOIS") {
+    if (viewMode === "AGENDA") {
+      return `Agenda • ${currentDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}`;
+    } else if (viewMode === "MOIS") {
       return currentDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
     } else {
       // Calculate start (Monday) and end (Sunday) of the active week
@@ -147,10 +151,10 @@ export default function DashboardUnifiedCalendar({
     }
   }, [currentDate, viewMode]);
 
-  // Navigate Period (Month or Week)
+  // Navigate Period (Month, Week, or Agenda Month)
   const handlePrevPeriod = () => {
     setCurrentDate(prev => {
-      if (viewMode === "MOIS") {
+      if (viewMode === "MOIS" || viewMode === "AGENDA") {
         return new Date(prev.getFullYear(), prev.getMonth() - 1, 1);
       } else {
         return new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7);
@@ -160,7 +164,7 @@ export default function DashboardUnifiedCalendar({
 
   const handleNextPeriod = () => {
     setCurrentDate(prev => {
-      if (viewMode === "MOIS") {
+      if (viewMode === "MOIS" || viewMode === "AGENDA") {
         return new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
       } else {
         return new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 7);
@@ -296,14 +300,14 @@ export default function DashboardUnifiedCalendar({
     };
   };
 
-  // Selected Date Items List
-  const selectedDayItems = useMemo(() => {
-    const isSelectedToday = selectedDateStr === todayStr;
-    const completedHabitIdsForDate = habitHistory[selectedDateStr] || [];
+  // Helper to retrieve items for any given date string
+  const getItemsForDateStr = (targetDateStr: string) => {
+    const isTargetToday = targetDateStr === todayStr;
+    const completedHabitIdsForDate = habitHistory[targetDateStr] || [];
 
     // HABITS
     const habits = dailyHabits.map(h => {
-      const isDone = isSelectedToday ? h.completed : completedHabitIdsForDate.includes(h.id);
+      const isDone = isTargetToday ? h.completed : completedHabitIdsForDate.includes(h.id);
       return {
         id: h.id,
         title: h.name,
@@ -312,7 +316,7 @@ export default function DashboardUnifiedCalendar({
         category: "HABIT" as CalendarFilterCategory,
         moduleKey: "habits",
         typeLabel: "Habitude",
-        dueDate: selectedDateStr
+        dueDate: targetDateStr
       };
     });
 
@@ -326,7 +330,7 @@ export default function DashboardUnifiedCalendar({
       moduleKey: "channels",
       typeLabel: "Objectif",
       rawType: "weekly",
-      dueDate: (o as any).dueDate || selectedDateStr
+      dueDate: (o as any).dueDate || targetDateStr
     }));
 
     const folderObjectives = folders.flatMap(f => f.customObjectives.map(o => ({
@@ -339,7 +343,7 @@ export default function DashboardUnifiedCalendar({
       moduleKey: "project_folders",
       typeLabel: "Tâche de Projet",
       rawType: "folder",
-      dueDate: o.dueDate || selectedDateStr
+      dueDate: o.dueDate || targetDateStr
     })));
 
     const sprint30Actions = actions30Jours.slice(0, 5).map(a => ({
@@ -351,11 +355,11 @@ export default function DashboardUnifiedCalendar({
       moduleKey: "actions30",
       typeLabel: "Action 30J",
       rawType: "action30",
-      dueDate: selectedDateStr
+      dueDate: targetDateStr
     }));
 
     // SKIN CARE
-    const skinLog = skinTrackers.find(s => s.date === selectedDateStr);
+    const skinLog = skinTrackers.find(s => s.date === targetDateStr);
     const skinItems = [
       {
         id: "skin_morning",
@@ -366,7 +370,7 @@ export default function DashboardUnifiedCalendar({
         moduleKey: "skin",
         typeLabel: "Soins Matin",
         rawType: "skin_morning",
-        dueDate: selectedDateStr
+        dueDate: targetDateStr
       },
       {
         id: "skin_evening",
@@ -377,7 +381,7 @@ export default function DashboardUnifiedCalendar({
         moduleKey: "skin",
         typeLabel: "Soins Soir",
         rawType: "skin_evening",
-        dueDate: selectedDateStr
+        dueDate: targetDateStr
       }
     ];
 
@@ -392,7 +396,7 @@ export default function DashboardUnifiedCalendar({
         moduleKey: "achats",
         typeLabel: "Achat Prévisible",
         rawType: "achat",
-        dueDate: (a as any).targetDate || (a as any).dueDate || selectedDateStr
+        dueDate: (a as any).targetDate || (a as any).dueDate || targetDateStr
       }))
     ];
 
@@ -407,6 +411,11 @@ export default function DashboardUnifiedCalendar({
     ];
 
     return all.filter(item => selectedCategories.has(item.category));
+  };
+
+  // Selected Date Items List
+  const selectedDayItems = useMemo(() => {
+    return getItemsForDateStr(selectedDateStr);
   }, [
     selectedDateStr,
     todayStr,
@@ -438,13 +447,14 @@ export default function DashboardUnifiedCalendar({
   }, [selectedDayItems, selectedDateStr, todayStr]);
 
   // Handle Validation directly from Calendar
-  const handleToggleItemInCalendar = (item: any) => {
+  const handleToggleItemInCalendar = (item: any, customDateStr?: string) => {
+    const targetDate = customDateStr || selectedDateStr;
     if (item.category === "HABIT") {
-      onToggleHabitForDate(item.id, selectedDateStr);
+      onToggleHabitForDate(item.id, targetDate);
       triggerToast(`Habitude "${item.title}" mise à jour !`, "success");
     } else if (item.category === "SKIN CARE") {
       const timeOfDay = item.rawType === "skin_morning" ? "morning" : "evening";
-      onToggleSkinRoutineForDate(selectedDateStr, timeOfDay);
+      onToggleSkinRoutineForDate(targetDate, timeOfDay);
       triggerToast(`Soin du visage (${timeOfDay === "morning" ? "Matin" : "Soir"}) validé !`, "success");
     } else if (item.category === "PROJET") {
       if (item.rawType === "weekly") {
@@ -688,7 +698,7 @@ export default function DashboardUnifiedCalendar({
             </div>
 
             <div className="flex items-center gap-2 self-end sm:self-auto">
-              {/* View Mode Toggle Switch (Mois vs Semaine) */}
+              {/* View Mode Toggle Switch (Mois vs Semaine vs Agenda) */}
               <div className="flex items-center gap-1 bg-neutral-200/70 dark:bg-zinc-700/60 p-1 rounded-xl border border-neutral-300/50 dark:border-zinc-600/50">
                 <button
                   type="button"
@@ -711,6 +721,18 @@ export default function DashboardUnifiedCalendar({
                   }`}
                 >
                   Semaine
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("AGENDA")}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer select-none flex items-center gap-1 ${
+                    viewMode === "AGENDA"
+                      ? "bg-white text-neutral-900 dark:bg-zinc-900 dark:text-white shadow-2xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>Agenda</span>
                 </button>
               </div>
 
@@ -736,161 +758,327 @@ export default function DashboardUnifiedCalendar({
             </div>
           </div>
 
-          {/* Weekday Names Header */}
-          <div className="grid grid-cols-7 gap-1 text-center font-mono text-[11px] font-extrabold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider py-1">
-            <span>Lun</span>
-            <span>Mar</span>
-            <span>Mer</span>
-            <span>Jeu</span>
-            <span>Ven</span>
-            <span>Sam</span>
-            <span>Dim</span>
-          </div>
-
-          {/* Days Grid */}
-          <div className="grid grid-cols-7 gap-1.5">
-            {calendarDays.map((day, idx) => {
-              const isSelected = day.dateStr === selectedDateStr;
-              const isToday = day.dateStr === todayStr;
-              const isDragOver = day.dateStr === dragOverDateStr;
-              const summary = getDaySummary(day.dateStr);
-
-              return (
+          {viewMode === "AGENDA" ? (
+            /* AGENDA VIEW: Vertical list of dates and tasks for better mobile / small screen readability */
+            <div className="space-y-3.5 max-h-[640px] overflow-y-auto pr-1 custom-scrollbar">
+              {/* Agenda Quick Filter Header */}
+              <div className="flex items-center justify-between gap-2 pb-1 text-xs text-neutral-500 dark:text-neutral-400">
+                <span className="font-mono text-[10px] uppercase font-bold tracking-wider">
+                  Vue Agenda • Liste Chronologique
+                </span>
                 <button
-                  key={`${day.dateStr}_${idx}`}
                   type="button"
-                  onClick={() => setSelectedDateStr(day.dateStr)}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "move";
-                    if (dragOverDateStr !== day.dateStr) {
-                      setDragOverDateStr(day.dateStr);
-                    }
-                  }}
-                  onDragLeave={(e) => {
-                    e.preventDefault();
-                    if (dragOverDateStr === day.dateStr) {
-                      setDragOverDateStr(null);
-                    }
-                  }}
-                  onDrop={(e) => handleDropOnDate(e, day.dateStr)}
-                  className={`${viewMode === "SEMAINE" ? "min-h-[110px]" : "min-h-[58px] sm:min-h-[64px]"} p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between text-left select-none ${
-                    isDragOver
-                      ? "bg-indigo-100/90 dark:bg-indigo-950/90 border-2 border-dashed border-indigo-600 scale-105 shadow-xl ring-2 ring-indigo-400 z-30"
-                      : isSelected
-                      ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-neutral-900 dark:border-white shadow-md ring-2 ring-indigo-500/30 z-10"
-                      : isToday
-                      ? "bg-indigo-50/80 dark:bg-indigo-950/60 border-indigo-400 text-indigo-950 dark:text-indigo-200 font-bold"
-                      : day.isCurrentMonth
-                      ? summary.hasOverdue
-                        ? "bg-rose-50/20 dark:bg-rose-950/20 border-rose-300 dark:border-rose-900/80 text-neutral-800 dark:text-neutral-200 hover:border-rose-400"
-                        : "bg-white dark:bg-zinc-900 border-neutral-200/70 dark:border-zinc-800 text-neutral-800 dark:text-neutral-200 hover:border-neutral-300 dark:hover:border-zinc-700"
-                      : "bg-neutral-100/50 dark:bg-zinc-900/30 border-transparent text-neutral-300 dark:text-zinc-700"
+                  onClick={() => setAgendaOnlyWithEvents(prev => !prev)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
+                    agendaOnlyWithEvents
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white dark:bg-zinc-900 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-zinc-700 hover:text-neutral-900"
                   }`}
                 >
-                  {/* Day Number and Today Badge / Overdue Indicator */}
-                  <div className="flex items-center justify-between w-full min-w-0">
-                    <span className={`text-xs font-mono font-extrabold shrink-0 ${isSelected ? (isSelected && isToday ? "text-amber-300 dark:text-amber-600" : "") : ""}`}>
-                      {day.dayNumber}
-                    </span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {summary.hasOverdue && !isSelected && (
-                        <>
-                          <span className="hidden sm:flex p-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 items-center gap-0.5" title="Date dépassée / Éléments non complétés en retard">
-                            <AlertCircle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
-                          </span>
-                          <span className="sm:hidden w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="Date dépassée" />
-                        </>
-                      )}
-                      {isToday && (
-                        <>
-                          <span className={`hidden sm:inline-block text-[8px] font-mono uppercase font-black px-1 rounded ${isSelected ? "bg-amber-400 text-neutral-950" : "bg-indigo-600 text-white"}`}>
-                            Auj.
-                          </span>
-                          <span className={`sm:hidden w-1.5 h-1.5 rounded-full ${isSelected ? "bg-amber-300" : "bg-indigo-600"} shrink-0`} title="Aujourd'hui" />
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Indicator Dots for Activity Categories */}
-                  <div className="flex items-center gap-1 mt-1 flex-wrap">
-                    {/* Habit dot */}
-                    {selectedCategories.has("HABIT") && summary.hasHabitActivity && (
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-indigo-300" : "bg-indigo-600"}`}
-                        title={`${summary.habitsCompleted}/${summary.habitsTotal} routines complétées`}
-                      />
-                    )}
-
-                    {/* Skincare dot */}
-                    {selectedCategories.has("SKIN CARE") && summary.hasSkinActivity && (
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-rose-300" : "bg-rose-500"}`}
-                        title="Soin de peau enregistré"
-                      />
-                    )}
-
-                    {/* Project dot */}
-                    {selectedCategories.has("PROJET") && summary.hasProjActivity && (
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-sky-300" : "bg-sky-500"}`}
-                        title="Tâches de projets"
-                      />
-                    )}
-
-                    {/* Finance dot */}
-                    {selectedCategories.has("FINANCE") && summary.hasFinanceActivity && (
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-amber-300" : "bg-amber-500"}`}
-                        title="Échéances financières"
-                      />
-                    )}
-                  </div>
-
-                  {/* Week View Detail Pills */}
-                  {viewMode === "SEMAINE" && (
-                    <div className="space-y-1 my-1 w-full text-[9px] font-bold">
-                      {selectedCategories.has("HABIT") && summary.habitsTotal > 0 && (
-                        <div className={`px-1.5 py-0.5 rounded flex items-center justify-between ${
-                          isSelected ? "bg-neutral-800 text-indigo-200 dark:bg-neutral-200 dark:text-indigo-900" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300"
-                        }`}>
-                          <span>Hab.</span>
-                          <span>{summary.habitsCompleted}/{summary.habitsTotal}</span>
-                        </div>
-                      )}
-                      {selectedCategories.has("PROJET") && summary.projTotal > 0 && (
-                        <div className={`px-1.5 py-0.5 rounded flex items-center justify-between ${
-                          isSelected ? "bg-neutral-800 text-sky-200 dark:bg-neutral-200 dark:text-sky-900" : "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300"
-                        }`}>
-                          <span>Proj.</span>
-                          <span>{summary.projPendingCount}</span>
-                        </div>
-                      )}
-                      {selectedCategories.has("FINANCE") && summary.financeCount > 0 && (
-                        <div className={`px-1.5 py-0.5 rounded flex items-center justify-between ${
-                          isSelected ? "bg-neutral-800 text-amber-200 dark:bg-neutral-200 dark:text-amber-900" : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
-                        }`}>
-                          <span>Fin.</span>
-                          <span>{summary.financeCount}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Micro Progress Bar */}
-                  {summary.habitsTotal > 0 && (
-                    <div className="w-full bg-neutral-200 dark:bg-zinc-700 h-1 rounded-full overflow-hidden mt-1">
-                      <div
-                        className={`h-full ${isSelected ? "bg-indigo-400" : "bg-indigo-600"}`}
-                        style={{ width: `${Math.round((summary.habitsCompleted / summary.habitsTotal) * 100)}%` }}
-                      />
-                    </div>
-                  )}
+                  {agendaOnlyWithEvents ? "Uniquement jours occupés" : "Afficher tous les jours"}
                 </button>
-              );
-            })}
-          </div>
+              </div>
+
+              {calendarDays
+                .filter(d => d.isCurrentMonth)
+                .filter(d => {
+                  if (!agendaOnlyWithEvents) return true;
+                  const dayItems = getItemsForDateStr(d.dateStr);
+                  return dayItems.length > 0 || d.dateStr === todayStr;
+                })
+                .map((day, idx) => {
+                  const isSelected = day.dateStr === selectedDateStr;
+                  const isToday = day.dateStr === todayStr;
+                  const dayItems = getItemsForDateStr(day.dateStr);
+                  const summary = getDaySummary(day.dateStr);
+
+                  const formattedDateLabel = day.dateObj.toLocaleDateString("fr-FR", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long"
+                  });
+
+                  return (
+                    <div
+                      key={`agenda_${day.dateStr}_${idx}`}
+                      onClick={() => setSelectedDateStr(day.dateStr)}
+                      className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer space-y-3 ${
+                        isSelected
+                          ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-neutral-900 dark:border-white shadow-md ring-2 ring-indigo-500/30"
+                          : isToday
+                          ? "bg-indigo-50/90 dark:bg-indigo-950/70 border-indigo-300 dark:border-indigo-800 text-neutral-900 dark:text-white"
+                          : "bg-white dark:bg-zinc-900 border-neutral-200/80 dark:border-zinc-800 text-neutral-900 dark:text-white hover:border-neutral-300 dark:hover:border-zinc-700"
+                      }`}
+                    >
+                      {/* Header for Day in Agenda */}
+                      <div className="flex items-center justify-between gap-2 border-b pb-2 border-neutral-200/50 dark:border-zinc-800">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs sm:text-sm font-black capitalize font-sans tracking-wide">
+                            {formattedDateLabel}
+                          </span>
+                          {isToday && (
+                            <span className={`text-[9px] font-mono uppercase font-black px-2 py-0.5 rounded-full ${
+                              isSelected
+                                ? "bg-amber-400 text-neutral-950"
+                                : "bg-indigo-600 text-white"
+                            }`}>
+                              Aujourd'hui
+                            </span>
+                          )}
+                          {summary.hasOverdue && !isSelected && (
+                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
+                              <span>En retard</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Items badge count */}
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          isSelected
+                            ? "bg-neutral-800 text-neutral-200 dark:bg-neutral-200 dark:text-neutral-800"
+                            : "bg-neutral-100 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-300"
+                        }`}>
+                          {dayItems.length} {dayItems.length > 1 ? "éléments" : "élément"}
+                        </span>
+                      </div>
+
+                      {/* List of items for this day */}
+                      {dayItems.length > 0 ? (
+                        <div className="space-y-2">
+                          {dayItems.map((item, iIdx) => {
+                            return (
+                              <div
+                                key={`agenda_item_${item.id}_${iIdx}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 transition-all ${
+                                  isSelected
+                                    ? item.completed
+                                      ? "bg-neutral-800/80 border-neutral-700 text-neutral-300 dark:bg-neutral-100 dark:border-neutral-200 dark:text-neutral-700"
+                                      : "bg-neutral-800 border-neutral-700 text-white dark:bg-neutral-100 dark:border-neutral-200 dark:text-neutral-900"
+                                    : item.completed
+                                    ? "bg-neutral-50 dark:bg-zinc-950/50 border-neutral-200/50 dark:border-zinc-800/80 text-neutral-400 dark:text-neutral-500 line-through"
+                                    : "bg-white dark:bg-zinc-900/80 border-neutral-200/80 dark:border-zinc-800 text-neutral-800 dark:text-neutral-200"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleItemInCalendar(item, day.dateStr)}
+                                    className={`p-0.5 rounded-md cursor-pointer transition-transform hover:scale-110 shrink-0 ${
+                                      item.completed
+                                        ? "text-emerald-500"
+                                        : isSelected
+                                        ? "text-neutral-400 hover:text-white dark:text-neutral-500 dark:hover:text-neutral-900"
+                                        : "text-neutral-400 hover:text-indigo-600"
+                                    }`}
+                                  >
+                                    {item.completed ? (
+                                      <CheckCircle2 className="w-4 h-4 fill-emerald-500/10 text-emerald-500" />
+                                    ) : (
+                                      <Circle className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                  <div className="min-w-0 space-y-0.5">
+                                    <span className={`text-xs font-bold block truncate ${
+                                      item.completed ? "line-through opacity-70" : ""
+                                    }`}>
+                                      {item.title}
+                                    </span>
+                                    <span className={`text-[10px] block truncate ${
+                                      isSelected ? "text-neutral-400 dark:text-neutral-500" : "text-neutral-400"
+                                    }`}>
+                                      {item.subtitle}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Tag pill */}
+                                <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                  item.category === "HABIT"
+                                    ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                                    : item.category === "SKIN CARE"
+                                    ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300"
+                                    : item.category === "PROJET"
+                                    ? "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300"
+                                    : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                }`}>
+                                  {item.typeLabel}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className={`text-[11px] font-mono text-center py-1.5 ${
+                          isSelected ? "text-neutral-400 dark:text-neutral-500" : "text-neutral-400"
+                        }`}>
+                          Aucun événement ou tâche prévu
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          ) : (
+            <>
+              {/* Weekday Names Header */}
+              <div className="grid grid-cols-7 gap-1 text-center font-mono text-[11px] font-extrabold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider py-1">
+                <span>Lun</span>
+                <span>Mar</span>
+                <span>Mer</span>
+                <span>Jeu</span>
+                <span>Ven</span>
+                <span>Sam</span>
+                <span>Dim</span>
+              </div>
+
+              {/* Days Grid */}
+              <div className="grid grid-cols-7 gap-1.5">
+                {calendarDays.map((day, idx) => {
+                  const isSelected = day.dateStr === selectedDateStr;
+                  const isToday = day.dateStr === todayStr;
+                  const isDragOver = day.dateStr === dragOverDateStr;
+                  const summary = getDaySummary(day.dateStr);
+
+                  return (
+                    <button
+                      key={`${day.dateStr}_${idx}`}
+                      type="button"
+                      onClick={() => setSelectedDateStr(day.dateStr)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        if (dragOverDateStr !== day.dateStr) {
+                          setDragOverDateStr(day.dateStr);
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        if (dragOverDateStr === day.dateStr) {
+                          setDragOverDateStr(null);
+                        }
+                      }}
+                      onDrop={(e) => handleDropOnDate(e, day.dateStr)}
+                      className={`${viewMode === "SEMAINE" ? "min-h-[110px]" : "min-h-[58px] sm:min-h-[64px]"} p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between text-left select-none ${
+                        isDragOver
+                          ? "bg-indigo-100/90 dark:bg-indigo-950/90 border-2 border-dashed border-indigo-600 scale-105 shadow-xl ring-2 ring-indigo-400 z-30"
+                          : isSelected
+                          ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-neutral-900 dark:border-white shadow-md ring-2 ring-indigo-500/30 z-10"
+                          : isToday
+                          ? "bg-indigo-50/80 dark:bg-indigo-950/60 border-indigo-400 text-indigo-950 dark:text-indigo-200 font-bold"
+                          : day.isCurrentMonth
+                          ? summary.hasOverdue
+                            ? "bg-rose-50/20 dark:bg-rose-950/20 border-rose-300 dark:border-rose-900/80 text-neutral-800 dark:text-neutral-200 hover:border-rose-400"
+                            : "bg-white dark:bg-zinc-900 border-neutral-200/70 dark:border-zinc-800 text-neutral-800 dark:text-neutral-200 hover:border-neutral-300 dark:hover:border-zinc-700"
+                          : "bg-neutral-100/50 dark:bg-zinc-900/30 border-transparent text-neutral-300 dark:text-zinc-700"
+                      }`}
+                    >
+                      {/* Day Number and Today Badge / Overdue Indicator */}
+                      <div className="flex items-center justify-between w-full min-w-0">
+                        <span className={`text-xs font-mono font-extrabold shrink-0 ${isSelected ? (isSelected && isToday ? "text-amber-300 dark:text-amber-600" : "") : ""}`}>
+                          {day.dayNumber}
+                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {summary.hasOverdue && !isSelected && (
+                            <>
+                              <span className="hidden sm:flex p-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 items-center gap-0.5" title="Date dépassée / Éléments non complétés en retard">
+                                <AlertCircle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
+                              </span>
+                              <span className="sm:hidden w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="Date dépassée" />
+                            </>
+                          )}
+                          {isToday && (
+                            <>
+                              <span className={`hidden sm:inline-block text-[8px] font-mono uppercase font-black px-1 rounded ${isSelected ? "bg-amber-400 text-neutral-950" : "bg-indigo-600 text-white"}`}>
+                                Auj.
+                              </span>
+                              <span className={`sm:hidden w-1.5 h-1.5 rounded-full ${isSelected ? "bg-amber-300" : "bg-indigo-600"} shrink-0`} title="Aujourd'hui" />
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Indicator Dots for Activity Categories */}
+                      <div className="flex items-center gap-1 mt-1 flex-wrap">
+                        {/* Habit dot */}
+                        {selectedCategories.has("HABIT") && summary.hasHabitActivity && (
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-indigo-300" : "bg-indigo-600"}`}
+                            title={`${summary.habitsCompleted}/${summary.habitsTotal} routines complétées`}
+                          />
+                        )}
+
+                        {/* Skincare dot */}
+                        {selectedCategories.has("SKIN CARE") && summary.hasSkinActivity && (
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-rose-300" : "bg-rose-500"}`}
+                            title="Soin de peau enregistré"
+                          />
+                        )}
+
+                        {/* Project dot */}
+                        {selectedCategories.has("PROJET") && summary.hasProjActivity && (
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-sky-300" : "bg-sky-500"}`}
+                            title="Tâches de projets"
+                          />
+                        )}
+
+                        {/* Finance dot */}
+                        {selectedCategories.has("FINANCE") && summary.hasFinanceActivity && (
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-amber-300" : "bg-amber-500"}`}
+                            title="Échéances financières"
+                          />
+                        )}
+                      </div>
+
+                      {/* Week View Detail Pills */}
+                      {viewMode === "SEMAINE" && (
+                        <div className="space-y-1 my-1 w-full text-[9px] font-bold">
+                          {selectedCategories.has("HABIT") && summary.habitsTotal > 0 && (
+                            <div className={`px-1.5 py-0.5 rounded flex items-center justify-between ${
+                              isSelected ? "bg-neutral-800 text-indigo-200 dark:bg-neutral-200 dark:text-indigo-900" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300"
+                            }`}>
+                              <span>Hab.</span>
+                              <span>{summary.habitsCompleted}/{summary.habitsTotal}</span>
+                            </div>
+                          )}
+                          {selectedCategories.has("PROJET") && summary.projTotal > 0 && (
+                            <div className={`px-1.5 py-0.5 rounded flex items-center justify-between ${
+                              isSelected ? "bg-neutral-800 text-sky-200 dark:bg-neutral-200 dark:text-sky-900" : "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300"
+                            }`}>
+                              <span>Proj.</span>
+                              <span>{summary.projPendingCount}</span>
+                            </div>
+                          )}
+                          {selectedCategories.has("FINANCE") && summary.financeCount > 0 && (
+                            <div className={`px-1.5 py-0.5 rounded flex items-center justify-between ${
+                              isSelected ? "bg-neutral-800 text-amber-200 dark:bg-neutral-200 dark:text-amber-900" : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                            }`}>
+                              <span>Fin.</span>
+                              <span>{summary.financeCount}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Micro Progress Bar */}
+                      {summary.habitsTotal > 0 && (
+                        <div className="w-full bg-neutral-200 dark:bg-zinc-700 h-1 rounded-full overflow-hidden mt-1">
+                          <div
+                            className={`h-full ${isSelected ? "bg-indigo-400" : "bg-indigo-600"}`}
+                            style={{ width: `${Math.round((summary.habitsCompleted / summary.habitsTotal) * 100)}%` }}
+                          />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           {/* Legend Footer */}
           <div className="pt-2 border-t border-neutral-200/60 dark:border-zinc-700/60 flex flex-wrap items-center justify-between gap-3 text-[10px] text-neutral-500 dark:text-neutral-400">
