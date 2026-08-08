@@ -4300,8 +4300,11 @@ export default function App() {
             {/* Mobile Kebab / More Actions Dropdown Button (Mobile only: sm:hidden) */}
             <div className="relative sm:hidden">
               <button
-                onClick={() => setMobileKebabOpen(!mobileKebabOpen)}
-                className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 flex items-center justify-center ${
+                onClick={() => {
+                  setSidebarOpen(false);
+                  setMobileKebabOpen(!mobileKebabOpen);
+                }}
+                className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 flex items-center justify-center min-w-[36px] min-h-[36px] ${
                   mobileKebabOpen
                     ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
                     : "bg-neutral-100 dark:bg-zinc-800 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-zinc-700 hover:bg-neutral-200 dark:hover:bg-zinc-700"
@@ -4317,12 +4320,18 @@ export default function App() {
                 <>
                   {/* Backdrop */}
                   <div 
-                    className="fixed inset-0 z-50 bg-black/20 backdrop-blur-2xs"
+                    className="fixed inset-0 z-[190] bg-black/30 backdrop-blur-2xs"
                     onClick={() => setMobileKebabOpen(false)}
                   />
                   
-                  <div className="absolute top-11 right-0 z-55 w-56 bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 rounded-2xl shadow-xl p-2 animate-in fade-in zoom-in-95 duration-150 space-y-0.5">
-                    <div className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-wider uppercase px-2.5 py-1.5 border-b border-neutral-100 dark:border-zinc-800/80 flex items-center justify-between">
+                  <div 
+                    className="fixed top-[calc(3.75rem+env(safe-area-inset-top,20px))] right-3 z-[200] w-64 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-zinc-900 border border-neutral-200/90 dark:border-zinc-800 rounded-2xl shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-150 space-y-1"
+                    style={{
+                      maxHeight: "calc(100vh - 5rem - env(safe-area-inset-top, 20px) - env(safe-area-inset-bottom, 0px))",
+                      overflowY: "auto"
+                    }}
+                  >
+                    <div className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-wider uppercase px-3 py-2 border-b border-neutral-100 dark:border-zinc-800/80 flex items-center justify-between">
                       <span>Actions Système</span>
                       <span className="text-[9px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/50">Réglages</span>
                     </div>
@@ -4333,9 +4342,9 @@ export default function App() {
                         setMobileKebabOpen(false);
                         setSettingsModalOpen(true);
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-left"
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors cursor-pointer text-left select-none"
                     >
-                      <Settings className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                      <Settings className="w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0" />
                       <span>Paramètres & Sync</span>
                     </button>
 
@@ -4345,9 +4354,9 @@ export default function App() {
                         setMobileKebabOpen(false);
                         setIsThemeModalOpen(true);
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-left"
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors cursor-pointer text-left select-none"
                     >
-                      <Palette className="w-4 h-4 text-indigo-500" />
+                      <Palette className="w-4 h-4 text-indigo-500 shrink-0" />
                       <span>Palette Couleurs</span>
                     </button>
 
@@ -4361,16 +4370,16 @@ export default function App() {
                         }
                         setIsDarkMode(!isDarkMode);
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-left"
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors cursor-pointer text-left select-none"
                     >
                       {isDarkMode ? (
                         <>
-                          <Sun className="w-4 h-4 text-amber-500 fill-amber-300" />
+                          <Sun className="w-4 h-4 text-amber-500 fill-amber-300 shrink-0" />
                           <span>Mode Clair</span>
                         </>
                       ) : (
                         <>
-                          <Moon className="w-4 h-4 text-neutral-600 fill-neutral-200" />
+                          <Moon className="w-4 h-4 text-neutral-600 fill-neutral-200 shrink-0" />
                           <span>Mode Sombre</span>
                         </>
                       )}
@@ -4384,9 +4393,9 @@ export default function App() {
                         setMobileKebabOpen(false);
                         forceManualBackup();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer text-left"
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 active:bg-emerald-100 dark:active:bg-emerald-900/60 transition-colors cursor-pointer text-left select-none"
                     >
-                      <Save className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <Save className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                       <span>Sauvegarder</span>
                     </button>
 
@@ -4396,9 +4405,9 @@ export default function App() {
                         setMobileKebabOpen(false);
                         resetDailyRoutines();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-left"
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors cursor-pointer text-left select-none"
                     >
-                      <RefreshCw className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                      <RefreshCw className="w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0" />
                       <span>Réinitialiser Jour</span>
                     </button>
 
@@ -4412,9 +4421,9 @@ export default function App() {
                         localStorage.removeItem("la_is_unlocked");
                         sessionStorage.removeItem("la_is_unlocked");
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer text-left"
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:bg-rose-100 dark:active:bg-rose-900/60 transition-colors cursor-pointer text-left select-none"
                     >
-                      <Lock className="w-4 h-4 text-rose-500" />
+                      <Lock className="w-4 h-4 text-rose-500 shrink-0" />
                       <span>Verrouiller Session</span>
                     </button>
                   </div>
@@ -4424,8 +4433,11 @@ export default function App() {
 
             {/* Responsive Main Hamburger Menu Button (ALWAYS VISIBLE & AT FAR RIGHT ON < xl) */}
             <button 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="xl:hidden p-1.5 sm:p-2 bg-neutral-100 dark:bg-zinc-800 hover:bg-neutral-200 dark:hover:bg-zinc-700 text-neutral-700 dark:text-neutral-200 rounded-lg border border-neutral-200 dark:border-zinc-700 transition-all cursor-pointer shrink-0 ml-0.5"
+              onClick={() => {
+                setMobileKebabOpen(false);
+                setSidebarOpen(!sidebarOpen);
+              }}
+              className="xl:hidden p-1.5 sm:p-2 bg-neutral-100 dark:bg-zinc-800 hover:bg-neutral-200 dark:hover:bg-zinc-700 text-neutral-700 dark:text-neutral-200 rounded-lg border border-neutral-200 dark:border-zinc-700 transition-all cursor-pointer shrink-0 ml-0.5 min-w-[36px] min-h-[36px] flex items-center justify-center"
               aria-label={sidebarOpen ? "Fermer le menu de navigation principal" : "Ouvrir le menu de navigation principal"}
             >
               {sidebarOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Menu className="w-4 h-4 sm:w-5 sm:h-5" />}
@@ -4436,13 +4448,21 @@ export default function App() {
 
         {/* MOBILE DROPDOWN DRAWER OVERLAY */}
         {sidebarOpen && (
-          <div 
-            className="xl:hidden fixed inset-x-0 bottom-0 z-45 bg-white dark:bg-zinc-900 border-t border-neutral-200 dark:border-zinc-800 overflow-y-auto animate-in slide-in-from-top duration-300"
-            style={{ 
-              top: "calc(4rem + env(safe-area-inset-top, 20px))",
-              paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))"
-            }}
-          >
+          <>
+            {/* Drawer Backdrop */}
+            <div 
+              className="xl:hidden fixed inset-0 z-[140] bg-black/40 backdrop-blur-xs"
+              onClick={() => setSidebarOpen(false)}
+              style={{ top: "calc(4rem + env(safe-area-inset-top, 20px))" }}
+            />
+
+            <div 
+              className="xl:hidden fixed inset-x-0 bottom-0 z-[150] bg-white dark:bg-zinc-900 border-t border-neutral-200 dark:border-zinc-800 overflow-y-auto animate-in slide-in-from-top duration-300 shadow-2xl"
+              style={{ 
+                top: "calc(4rem + env(safe-area-inset-top, 20px))",
+                paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))"
+              }}
+            >
             <div className="p-6 space-y-6">
               
               {/* Quick Mobile Indicators */}
@@ -4546,6 +4566,7 @@ export default function App() {
               </div>
             </div>
           </div>
+        </>
         )}
       </header>
 
