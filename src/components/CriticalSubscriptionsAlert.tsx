@@ -71,9 +71,9 @@ export default function CriticalSubscriptionsAlert({
                 <BellRing className="w-5 h-5" />
               </div>
               <div className="space-y-0.5">
-                <h3 className="text-sm font-black text-red-950 uppercase tracking-tight flex items-center gap-2">
+                <h3 className="text-sm font-black text-red-950 uppercase tracking-tight flex flex-wrap items-center gap-2">
                   <span>Prélèvements Imminents Détectés</span>
-                  <span className="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest font-mono">
+                  <span className="inline-flex items-center justify-center shrink-0 whitespace-nowrap bg-red-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
                     Urgent &lt; 3 Jours
                   </span>
                 </h3>
@@ -144,19 +144,19 @@ export default function CriticalSubscriptionsAlert({
           </div>
 
           {/* Action button */}
-          <div className="flex items-center justify-between gap-4 pt-1 border-t border-red-200/50">
-            <div className="flex items-center gap-2 text-[11px] font-black text-red-950">
-              <AlertTriangle className="w-4 h-4 text-red-600 animate-bounce" />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 pt-2 border-t border-red-200/50">
+            <div className="flex items-start sm:items-center gap-2 text-[11px] font-black text-red-950 leading-tight">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 animate-bounce mt-0.5 sm:mt-0" />
               <span>Pensez à vérifier le solde de votre compte CIH E-Commerce pour parer aux rejets.</span>
             </div>
             
             <button
               onClick={() => onNavigateToModule("abonnements")}
-              className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-3xs cursor-pointer shrink-0"
+              className="flex items-center justify-center gap-1.5 w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-3xs cursor-pointer shrink-0"
               aria-label="Accéder au module abonnements pour gérer les paiements"
             >
               <span>Gérer les abonnements</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
             </button>
           </div>
         </div>

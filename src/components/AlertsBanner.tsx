@@ -334,10 +334,10 @@ export default function AlertsBanner({
             )}
           </div>
           <div className="space-y-0.5">
-            <h3 className="text-sm font-black text-neutral-900 uppercase tracking-tight flex items-center gap-2">
+            <h3 className="text-sm font-black text-neutral-900 uppercase tracking-tight flex flex-wrap items-center gap-2">
               <span>ALERTES & ÉCHÉANCES</span>
               {totalUrgentCount > 0 && (
-                <span className="bg-rose-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full border border-rose-700 animate-pulse shadow-3xs">
+                <span className="inline-flex items-center justify-center shrink-0 whitespace-nowrap bg-rose-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full border border-rose-700 animate-pulse shadow-3xs">
                   {totalUrgentCount} URGENTS
                 </span>
               )}

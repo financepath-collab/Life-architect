@@ -785,7 +785,7 @@ export default function DashboardUnifiedCalendar({
                     }
                   }}
                   onDrop={(e) => handleDropOnDate(e, day.dateStr)}
-                  className={`${viewMode === "SEMAINE" ? "min-h-[110px]" : "min-h-[64px]"} p-2 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between text-left select-none ${
+                  className={`${viewMode === "SEMAINE" ? "min-h-[110px]" : "min-h-[58px] sm:min-h-[64px]"} p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between text-left select-none ${
                     isDragOver
                       ? "bg-indigo-100/90 dark:bg-indigo-950/90 border-2 border-dashed border-indigo-600 scale-105 shadow-xl ring-2 ring-indigo-400 z-30"
                       : isSelected
@@ -800,20 +800,26 @@ export default function DashboardUnifiedCalendar({
                   }`}
                 >
                   {/* Day Number and Today Badge / Overdue Indicator */}
-                  <div className="flex items-center justify-between w-full">
-                    <span className={`text-xs font-mono font-extrabold ${isSelected ? (isSelected && isToday ? "text-amber-300 dark:text-amber-600" : "") : ""}`}>
+                  <div className="flex items-center justify-between w-full min-w-0">
+                    <span className={`text-xs font-mono font-extrabold shrink-0 ${isSelected ? (isSelected && isToday ? "text-amber-300 dark:text-amber-600" : "") : ""}`}>
                       {day.dayNumber}
                     </span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       {summary.hasOverdue && !isSelected && (
-                        <span className="p-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 flex items-center gap-0.5" title="Date dépassée / Éléments non complétés en retard">
-                          <AlertCircle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
-                        </span>
+                        <>
+                          <span className="hidden sm:flex p-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 items-center gap-0.5" title="Date dépassée / Éléments non complétés en retard">
+                            <AlertCircle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
+                          </span>
+                          <span className="sm:hidden w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" title="Date dépassée" />
+                        </>
                       )}
                       {isToday && (
-                        <span className={`text-[8px] font-mono uppercase font-black px-1 rounded ${isSelected ? "bg-amber-400 text-neutral-950" : "bg-indigo-600 text-white"}`}>
-                          Auj.
-                        </span>
+                        <>
+                          <span className={`hidden sm:inline-block text-[8px] font-mono uppercase font-black px-1 rounded ${isSelected ? "bg-amber-400 text-neutral-950" : "bg-indigo-600 text-white"}`}>
+                            Auj.
+                          </span>
+                          <span className={`sm:hidden w-1.5 h-1.5 rounded-full ${isSelected ? "bg-amber-300" : "bg-indigo-600"} shrink-0`} title="Aujourd'hui" />
+                        </>
                       )}
                     </div>
                   </div>

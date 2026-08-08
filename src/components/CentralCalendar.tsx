@@ -680,7 +680,7 @@ export default function CentralCalendar({
                 <div
                   key={`${dayItem.dateStr}_${idx}`}
                   onClick={() => setSelectedDayStr(dayItem.dateStr)}
-                  className={`min-h-[90px] sm:min-h-[115px] p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between overflow-hidden relative group ${
+                  className={`min-h-[56px] sm:min-h-[115px] p-1 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between overflow-hidden relative group ${
                     !dayItem.isCurrentMonth
                       ? "bg-neutral-50/50 dark:bg-zinc-950/30 border-transparent text-neutral-300 dark:text-zinc-700"
                       : isToday
@@ -691,8 +691,8 @@ export default function CentralCalendar({
                   }`}
                 >
                   {/* Top Bar inside cell */}
-                  <div className="flex items-center justify-between w-full">
-                    <span className={`text-xs font-black font-mono w-6 h-6 rounded-full flex items-center justify-center ${
+                  <div className="flex items-center justify-between w-full min-w-0">
+                    <span className={`text-[10px] sm:text-xs font-black font-mono w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center shrink-0 ${
                       isToday 
                         ? "bg-indigo-600 text-white shadow-2xs" 
                         : !dayItem.isCurrentMonth 
@@ -703,14 +703,14 @@ export default function CentralCalendar({
                     </span>
 
                     {dateEvents.length > 0 && (
-                      <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 bg-neutral-100 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-400 rounded-full border border-neutral-200/60 dark:border-zinc-700/60">
+                      <span className="text-[8px] sm:text-[9px] font-bold font-mono px-1 sm:px-1.5 py-0.2 sm:py-0.5 bg-neutral-100 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-400 rounded-full border border-neutral-200/60 dark:border-zinc-700/60 shrink-0">
                         {dateEvents.length}
                       </span>
                     )}
                   </div>
 
-                  {/* Badges preview */}
-                  <div className="space-y-1 my-1 flex-1 overflow-hidden">
+                  {/* Badges preview - Desktop */}
+                  <div className="hidden sm:block space-y-1 my-1 flex-1 overflow-hidden">
                     {dateEvents.slice(0, 3).map((ev, eIdx) => (
                       <div
                         key={`${ev.id}_${eIdx}`}
@@ -733,8 +733,21 @@ export default function CentralCalendar({
                     )}
                   </div>
 
+                  {/* Badges preview - Mobile (clean dots) */}
+                  {dateEvents.length > 0 && (
+                    <div className="flex sm:hidden items-center justify-center gap-1 mt-1 flex-wrap">
+                      {dateEvents.slice(0, 3).map((ev, eIdx) => (
+                        <span
+                          key={`mob_dot_${ev.id}_${eIdx}`}
+                          className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0"
+                          title={ev.title}
+                        />
+                      ))}
+                    </div>
+                  )}
+
                   {/* Add action shortcut on hover */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center justify-center gap-0.5 pt-0.5 border-t border-neutral-100 dark:border-zinc-800">
+                  <div className="hidden sm:flex opacity-0 group-hover:opacity-100 transition-opacity text-[9px] text-indigo-600 dark:text-indigo-400 font-bold items-center justify-center gap-0.5 pt-0.5 border-t border-neutral-100 dark:border-zinc-800">
                     <Plus className="w-3 h-3" />
                     <span>Détails</span>
                   </div>
