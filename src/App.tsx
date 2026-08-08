@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   DailyHabit, 
@@ -4334,20 +4335,17 @@ export default function App() {
         </div>
 
         {/* MOBILE BOTTOM SHEET OVERLAY (< xl / < sm) */}
-        {isMobileSheetOpen && (
-          <div className="xl:hidden fixed inset-0 z-[300] flex flex-col justify-end">
+        {isMobileSheetOpen && createPortal(
+          <div className="xl:hidden fixed inset-0 z-[99999] flex flex-col justify-end pointer-events-auto">
             {/* Semi-transparent Backdrop Overlay */}
             <div 
-              className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 cursor-pointer"
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-200 cursor-pointer"
               onClick={() => setIsMobileSheetOpen(false)}
             />
 
             {/* Bottom Sheet Card Sliding Up from Bottom */}
             <div 
-              className="relative w-full max-h-[85vh] bg-white dark:bg-zinc-900 border-t border-neutral-200 dark:border-zinc-800 rounded-t-3xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-250 z-[310]"
-              style={{
-                paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))"
-              }}
+              className="relative w-full max-h-[85vh] h-[85vh] sm:h-auto bg-white dark:bg-zinc-900 border-t border-neutral-200 dark:border-zinc-800 rounded-t-3xl shadow-2xl flex flex-col z-[100000] overflow-hidden animate-in slide-in-from-bottom duration-250"
             >
               {/* Visual Drag Handle Pill */}
               <div className="pt-3 pb-1 flex justify-center shrink-0">
@@ -4390,7 +4388,12 @@ export default function App() {
               </div>
 
               {/* Sheet Body Content */}
-              <div className="p-5 overflow-y-auto space-y-4 flex-1">
+              <div 
+                className="p-5 overflow-y-auto space-y-4 flex-1 min-h-0"
+                style={{
+                  paddingBottom: "calc(4rem + env(safe-area-inset-bottom, 24px))"
+                }}
+              >
                 {mobileSheetTab === 'actions' ? (
                   <div className="space-y-2">
                     <div className="text-[10px] font-black uppercase tracking-wider text-neutral-400 dark:text-neutral-500 px-2 py-1">
@@ -4601,7 +4604,8 @@ export default function App() {
                 )}
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </header>
 
