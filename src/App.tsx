@@ -215,6 +215,8 @@ export default function App() {
   });
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [mobileKebabOpen, setMobileKebabOpen] = useState(false);
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+  const [mobileSheetTab, setMobileSheetTab] = useState<'navigation' | 'actions'>('navigation');
   const [autoDarkTheme, setAutoDarkTheme] = useState<boolean>(() => {
     return localStorage.getItem("la_auto_dark_theme") === "true";
   });
@@ -4297,276 +4299,309 @@ export default function App() {
               <Lock className="w-3.5 h-3.5" />
             </button>
 
-            {/* Mobile Kebab / More Actions Dropdown Button (Mobile only: sm:hidden) */}
+            {/* Mobile Kebab / More Actions Button (Mobile only: sm:hidden) */}
             <div className="relative sm:hidden">
               <button
                 onClick={() => {
-                  setSidebarOpen(false);
-                  setMobileKebabOpen(!mobileKebabOpen);
+                  setMobileSheetTab('actions');
+                  setIsMobileSheetOpen(true);
                 }}
-                className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 flex items-center justify-center min-w-[36px] min-h-[36px] ${
-                  mobileKebabOpen
+                className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 flex items-center justify-center min-w-[38px] min-h-[38px] ${
+                  isMobileSheetOpen && mobileSheetTab === 'actions'
                     ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
                     : "bg-neutral-100 dark:bg-zinc-800 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-zinc-700 hover:bg-neutral-200 dark:hover:bg-zinc-700"
                 }`}
                 title="Plus d'options système"
                 aria-label="Menu d'options secondaires"
               >
-                <MoreVertical className="w-4 h-4" />
+                <MoreVertical className="w-4.5 h-4.5" />
               </button>
+            </div>
 
-              {/* Mobile Kebab Popup Dropdown Card */}
-              {mobileKebabOpen && (
-                <>
-                  {/* Backdrop */}
-                  <div 
-                    className="fixed inset-0 z-[190] bg-black/30 backdrop-blur-2xs"
-                    onClick={() => setMobileKebabOpen(false)}
-                  />
-                  
-                  <div 
-                    className="fixed top-[calc(3.75rem+env(safe-area-inset-top,20px))] right-3 z-[200] w-64 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-zinc-900 border border-neutral-200/90 dark:border-zinc-800 rounded-2xl shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-150 space-y-1"
-                    style={{
-                      maxHeight: "calc(100vh - 5rem - env(safe-area-inset-top, 20px) - env(safe-area-inset-bottom, 0px))",
-                      overflowY: "auto"
-                    }}
+            {/* Responsive Main Hamburger Menu Button (ALWAYS VISIBLE & AT FAR RIGHT ON < xl) */}
+            <button 
+              onClick={() => {
+                setMobileSheetTab('navigation');
+                setIsMobileSheetOpen(true);
+              }}
+              className="xl:hidden p-1.5 sm:p-2 bg-neutral-100 dark:bg-zinc-800 hover:bg-neutral-200 dark:hover:bg-zinc-700 text-neutral-700 dark:text-neutral-200 rounded-lg border border-neutral-200 dark:border-zinc-700 transition-all cursor-pointer shrink-0 ml-0.5 min-w-[38px] min-h-[38px] flex items-center justify-center"
+              aria-label={isMobileSheetOpen ? "Fermer le menu de navigation principal" : "Ouvrir le menu de navigation principal"}
+            >
+              <Menu className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+            </button>
+          </div>
+
+        </div>
+
+        {/* MOBILE BOTTOM SHEET OVERLAY (< xl / < sm) */}
+        {isMobileSheetOpen && (
+          <div className="xl:hidden fixed inset-0 z-[300] flex flex-col justify-end">
+            {/* Semi-transparent Backdrop Overlay */}
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 cursor-pointer"
+              onClick={() => setIsMobileSheetOpen(false)}
+            />
+
+            {/* Bottom Sheet Card Sliding Up from Bottom */}
+            <div 
+              className="relative w-full max-h-[85vh] bg-white dark:bg-zinc-900 border-t border-neutral-200 dark:border-zinc-800 rounded-t-3xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-250 z-[310]"
+              style={{
+                paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))"
+              }}
+            >
+              {/* Visual Drag Handle Pill */}
+              <div className="pt-3 pb-1 flex justify-center shrink-0">
+                <div className="w-12 h-1.5 bg-neutral-300 dark:bg-zinc-700 rounded-full" />
+              </div>
+
+              {/* Sheet Header with Tab Selector and Explicit Close Button (X) */}
+              <div className="px-5 py-3 border-b border-neutral-100 dark:border-zinc-800/80 flex items-center justify-between shrink-0 gap-2">
+                <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-zinc-800 p-1 rounded-2xl">
+                  <button
+                    onClick={() => setMobileSheetTab('navigation')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      mobileSheetTab === 'navigation'
+                        ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-xs"
+                        : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
+                    }`}
                   >
-                    <div className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-wider uppercase px-3 py-2 border-b border-neutral-100 dark:border-zinc-800/80 flex items-center justify-between">
-                      <span>Actions Système</span>
-                      <span className="text-[9px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/50">Réglages</span>
+                    Navigation
+                  </button>
+                  <button
+                    onClick={() => setMobileSheetTab('actions')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                      mobileSheetTab === 'actions'
+                        ? "bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-xs"
+                        : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200"
+                    }`}
+                  >
+                    Actions & Réglages
+                  </button>
+                </div>
+
+                {/* Explicit Close Button (X) - 44x44px target */}
+                <button
+                  onClick={() => setIsMobileSheetOpen(false)}
+                  className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-zinc-800 text-neutral-600 dark:text-neutral-300 flex items-center justify-center cursor-pointer hover:bg-neutral-200 dark:hover:bg-zinc-700 transition-colors shrink-0"
+                  aria-label="Fermer le menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Sheet Body Content */}
+              <div className="p-5 overflow-y-auto space-y-4 flex-1">
+                {mobileSheetTab === 'actions' ? (
+                  <div className="space-y-2">
+                    <div className="text-[10px] font-black uppercase tracking-wider text-neutral-400 dark:text-neutral-500 px-2 py-1">
+                      Options & Outils Système
                     </div>
 
                     {/* System Settings */}
                     <button
                       onClick={() => {
-                        setMobileKebabOpen(false);
+                        setIsMobileSheetOpen(false);
                         setSettingsModalOpen(true);
                       }}
-                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors cursor-pointer text-left select-none"
+                      className="w-full min-h-[48px] flex items-center gap-3.5 px-4 py-3 rounded-2xl bg-neutral-50 dark:bg-zinc-800/60 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 text-neutral-800 dark:text-neutral-100 text-sm font-semibold transition-colors text-left cursor-pointer select-none"
                     >
-                      <Settings className="w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0" />
-                      <span>Paramètres & Sync</span>
+                      <Settings className="w-5 h-5 text-neutral-500 dark:text-neutral-400 shrink-0" />
+                      <span className="flex-1">Paramètres & Sync</span>
                     </button>
 
-                    {/* Theme Selector Palette */}
+                    {/* Theme Palette */}
                     <button
                       onClick={() => {
-                        setMobileKebabOpen(false);
+                        setIsMobileSheetOpen(false);
                         setIsThemeModalOpen(true);
                       }}
-                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors cursor-pointer text-left select-none"
+                      className="w-full min-h-[48px] flex items-center gap-3.5 px-4 py-3 rounded-2xl bg-neutral-50 dark:bg-zinc-800/60 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 text-neutral-800 dark:text-neutral-100 text-sm font-semibold transition-colors text-left cursor-pointer select-none"
                     >
-                      <Palette className="w-4 h-4 text-indigo-500 shrink-0" />
-                      <span>Palette Couleurs</span>
+                      <Palette className="w-5 h-5 text-indigo-500 shrink-0" />
+                      <span className="flex-1">Palette Couleurs</span>
                     </button>
 
-                    {/* Dark Mode Toggle */}
+                    {/* Dark Mode */}
                     <button
                       onClick={() => {
-                        setMobileKebabOpen(false);
+                        setIsMobileSheetOpen(false);
                         if (autoDarkTheme) {
                           setAutoDarkTheme(false);
                           triggerToast("Mode automatique désactivé", "info");
                         }
                         setIsDarkMode(!isDarkMode);
                       }}
-                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors cursor-pointer text-left select-none"
+                      className="w-full min-h-[48px] flex items-center gap-3.5 px-4 py-3 rounded-2xl bg-neutral-50 dark:bg-zinc-800/60 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 text-neutral-800 dark:text-neutral-100 text-sm font-semibold transition-colors text-left cursor-pointer select-none"
                     >
                       {isDarkMode ? (
                         <>
-                          <Sun className="w-4 h-4 text-amber-500 fill-amber-300 shrink-0" />
-                          <span>Mode Clair</span>
+                          <Sun className="w-5 h-5 text-amber-500 fill-amber-300 shrink-0" />
+                          <span className="flex-1">Basculer en Mode Clair</span>
                         </>
                       ) : (
                         <>
-                          <Moon className="w-4 h-4 text-neutral-600 fill-neutral-200 shrink-0" />
-                          <span>Mode Sombre</span>
+                          <Moon className="w-5 h-5 text-neutral-600 fill-neutral-200 shrink-0" />
+                          <span className="flex-1">Basculer en Mode Sombre</span>
                         </>
                       )}
                     </button>
 
-                    <div className="my-1 border-t border-neutral-100 dark:border-zinc-800" />
+                    <div className="my-2 border-t border-neutral-100 dark:border-zinc-800" />
 
-                    {/* Manual Save */}
+                    {/* Save */}
                     <button
                       onClick={() => {
-                        setMobileKebabOpen(false);
+                        setIsMobileSheetOpen(false);
                         forceManualBackup();
                       }}
-                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 active:bg-emerald-100 dark:active:bg-emerald-900/60 transition-colors cursor-pointer text-left select-none"
+                      className="w-full min-h-[48px] flex items-center gap-3.5 px-4 py-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 active:bg-emerald-200 text-emerald-800 dark:text-emerald-300 text-sm font-semibold transition-colors text-left cursor-pointer select-none"
                     >
-                      <Save className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span>Sauvegarder</span>
+                      <Save className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span className="flex-1">Sauvegarder les Données</span>
                     </button>
 
-                    {/* New Day / Reset Routines */}
+                    {/* Reset Routines */}
                     <button
                       onClick={() => {
-                        setMobileKebabOpen(false);
+                        setIsMobileSheetOpen(false);
                         resetDailyRoutines();
                       }}
-                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 transition-colors cursor-pointer text-left select-none"
+                      className="w-full min-h-[48px] flex items-center gap-3.5 px-4 py-3 rounded-2xl bg-neutral-50 dark:bg-zinc-800/60 hover:bg-neutral-100 dark:hover:bg-zinc-800 active:bg-neutral-200 dark:active:bg-zinc-700 text-neutral-800 dark:text-neutral-100 text-sm font-semibold transition-colors text-left cursor-pointer select-none"
                     >
-                      <RefreshCw className="w-4 h-4 text-neutral-500 dark:text-neutral-400 shrink-0" />
-                      <span>Réinitialiser Jour</span>
+                      <RefreshCw className="w-5 h-5 text-neutral-500 dark:text-neutral-400 shrink-0" />
+                      <span className="flex-1">Réinitialiser la Journée</span>
                     </button>
 
-                    <div className="my-1 border-t border-neutral-100 dark:border-zinc-800" />
+                    <div className="my-2 border-t border-neutral-100 dark:border-zinc-800" />
 
-                    {/* Logout / Lock Session */}
+                    {/* Lock Session */}
                     <button
                       onClick={() => {
-                        setMobileKebabOpen(false);
+                        setIsMobileSheetOpen(false);
                         setIsUnlocked(false);
                         localStorage.removeItem("la_is_unlocked");
                         sessionStorage.removeItem("la_is_unlocked");
                       }}
-                      className="w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 active:bg-rose-100 dark:active:bg-rose-900/60 transition-colors cursor-pointer text-left select-none"
+                      className="w-full min-h-[48px] flex items-center gap-3.5 px-4 py-3 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 active:bg-rose-200 text-rose-700 dark:text-rose-300 text-sm font-semibold transition-colors text-left cursor-pointer select-none"
                     >
-                      <Lock className="w-4 h-4 text-rose-500 shrink-0" />
-                      <span>Verrouiller Session</span>
+                      <Lock className="w-5 h-5 text-rose-500 shrink-0" />
+                      <span className="flex-1">Verrouiller la Session</span>
                     </button>
                   </div>
-                </>
-              )}
-            </div>
-
-            {/* Responsive Main Hamburger Menu Button (ALWAYS VISIBLE & AT FAR RIGHT ON < xl) */}
-            <button 
-              onClick={() => {
-                setMobileKebabOpen(false);
-                setSidebarOpen(!sidebarOpen);
-              }}
-              className="xl:hidden p-1.5 sm:p-2 bg-neutral-100 dark:bg-zinc-800 hover:bg-neutral-200 dark:hover:bg-zinc-700 text-neutral-700 dark:text-neutral-200 rounded-lg border border-neutral-200 dark:border-zinc-700 transition-all cursor-pointer shrink-0 ml-0.5 min-w-[36px] min-h-[36px] flex items-center justify-center"
-              aria-label={sidebarOpen ? "Fermer le menu de navigation principal" : "Ouvrir le menu de navigation principal"}
-            >
-              {sidebarOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Menu className="w-4 h-4 sm:w-5 sm:h-5" />}
-            </button>
-          </div>
-
-        </div>
-
-        {/* MOBILE DROPDOWN DRAWER OVERLAY */}
-        {sidebarOpen && (
-          <>
-            {/* Drawer Backdrop */}
-            <div 
-              className="xl:hidden fixed inset-0 z-[140] bg-black/40 backdrop-blur-xs"
-              onClick={() => setSidebarOpen(false)}
-              style={{ top: "calc(4rem + env(safe-area-inset-top, 20px))" }}
-            />
-
-            <div 
-              className="xl:hidden fixed inset-x-0 bottom-0 z-[150] bg-white dark:bg-zinc-900 border-t border-neutral-200 dark:border-zinc-800 overflow-y-auto animate-in slide-in-from-top duration-300 shadow-2xl"
-              style={{ 
-                top: "calc(4rem + env(safe-area-inset-top, 20px))",
-                paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))"
-              }}
-            >
-            <div className="p-6 space-y-6">
-              
-              {/* Quick Mobile Indicators */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-neutral-50 border border-neutral-200/80 p-3.5 rounded-xl flex items-center gap-2.5">
-                  <Flame className="w-4 h-4 text-neutral-800 fill-neutral-400 shrink-0" />
-                  <div>
-                    <span className="text-[8px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">DISCIPLINE</span>
-                    <span className="text-xs font-black text-neutral-900 block leading-none">{streakCount} Jours</span>
-                  </div>
-                </div>
-                <div className="bg-neutral-50 border border-neutral-200/80 p-3.5 rounded-xl flex items-center gap-2.5">
-                  <Coins className="w-4 h-4 text-neutral-800 shrink-0" />
-                  <div>
-                    <span className="text-[8px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">PATRIMOINE</span>
-                    <span className="text-xs font-black text-neutral-900 block leading-none truncate">{dashboardStats.netWorth.toLocaleString("fr-FR")} MAD</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation Actions */}
-              <div className="space-y-4">
-                <button
-                  onClick={() => handleMenuClick("dashboard")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-extrabold tracking-wide transition-all cursor-pointer ${
-                    activeMenu === "dashboard"
-                      ? "bg-neutral-900 text-white font-extrabold shadow-md"
-                      : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
-                  }`}
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  <span>TABLEAU DE BORD</span>
-                </button>
-
-                {/* Focus Mode Toggle Mobile */}
-                <button
-                  onClick={() => {
-                    handleToggleFocusMode();
-                  }}
-                  className={`w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl border font-black text-xs uppercase tracking-wider transition-all cursor-pointer select-none ${
-                    focusMode
-                      ? "bg-red-600 border-red-600 text-white shadow-md animate-pulse"
-                      : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50"
-                  }`}
-                >
-                  <Flame className={`w-4 h-4 shrink-0 ${focusMode ? "text-white fill-white" : "text-neutral-500"}`} />
-                  <span>{focusMode ? "CONCENTRATION ACTIVE" : "ACTIVER LE MODE FOCUS"}</span>
-                </button>
-
-                {/* Collapsible Sectors */}
-                <div className="space-y-2">
-                  {visibleCategories.map(cat => {
-                    const isExpanded = !!expandedCategories[cat.id];
-                    const CatIcon = cat.icon;
-                    const isCatActive = activeCategoryObj?.id === cat.id;
-
-                    return (
-                      <div key={cat.id} className="space-y-1">
-                        <button
-                          onClick={() => handleCategoryClick(cat.id)}
-                          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-left transition-all cursor-pointer ${
-                            isCatActive
-                              ? "bg-neutral-900 text-white shadow-xs"
-                              : "text-neutral-500 hover:text-neutral-950 hover:bg-neutral-50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <CatIcon className="w-4 h-4" />
-                            <span>{cat.label}</span>
-                          </div>
-                          {isExpanded ? <ChevronDown className="w-3.5 h-3.5 opacity-80" /> : <ChevronRight className="w-3.5 h-3.5 opacity-80" />}
-                        </button>
-
-                        {isExpanded && (
-                          <div className="space-y-1 pl-3 border-l border-neutral-200 ml-5 mt-1">
-                            {cat.items.map(sub => {
-                              const SubIcon = sub.icon;
-                              const isSubActive = activeMenu === sub.id;
-
-                              return (
-                                <button
-                                  key={sub.id}
-                                  onClick={() => handleMenuClick(sub.id)}
-                                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
-                                    isSubActive
-                                      ? "bg-neutral-100 text-neutral-900 font-extrabold"
-                                      : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/50"
-                                  }`}
-                                >
-                                  <SubIcon className="w-3.5 h-3.5 text-neutral-400" />
-                                  <span className="truncate">{sub.label}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
+                ) : (
+                  /* NAVIGATION CONTENT */
+                  <div className="space-y-4">
+                    {/* Quick Metrics */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-neutral-50 dark:bg-zinc-800/60 border border-neutral-200/80 dark:border-zinc-800 p-3.5 rounded-2xl flex items-center gap-3">
+                        <Flame className="w-5 h-5 text-neutral-800 dark:text-neutral-200 fill-neutral-400 shrink-0" />
+                        <div>
+                          <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">DISCIPLINE</span>
+                          <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 block">{streakCount} Jours</span>
+                        </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="bg-neutral-50 dark:bg-zinc-800/60 border border-neutral-200/80 dark:border-zinc-800 p-3.5 rounded-2xl flex items-center gap-3">
+                        <Coins className="w-5 h-5 text-neutral-800 dark:text-neutral-200 shrink-0" />
+                        <div>
+                          <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wider block font-mono">PATRIMOINE</span>
+                          <span className="text-sm font-black text-neutral-900 dark:text-neutral-100 block truncate">{dashboardStats.netWorth.toLocaleString("fr-FR")} MAD</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dashboard Link */}
+                    <button
+                      onClick={() => {
+                        setIsMobileSheetOpen(false);
+                        handleMenuClick("dashboard");
+                      }}
+                      className={`w-full min-h-[50px] flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-extrabold tracking-wide transition-all cursor-pointer ${
+                        activeMenu === "dashboard"
+                          ? "bg-neutral-900 dark:bg-indigo-600 text-white shadow-md"
+                          : "bg-neutral-100 dark:bg-zinc-800 text-neutral-800 dark:text-neutral-100 hover:bg-neutral-200"
+                      }`}
+                    >
+                      <LayoutDashboard className="w-5 h-5 shrink-0" />
+                      <span className="flex-1 text-left">TABLEAU DE BORD</span>
+                    </button>
+
+                    {/* Focus Mode Toggle */}
+                    <button
+                      onClick={() => {
+                        handleToggleFocusMode();
+                      }}
+                      className={`w-full min-h-[50px] flex items-center gap-3.5 px-4 py-3 rounded-2xl border text-sm font-extrabold tracking-wide transition-all cursor-pointer ${
+                        focusMode
+                          ? "bg-red-600 border-red-600 text-white shadow-md animate-pulse"
+                          : "bg-white dark:bg-zinc-800/80 border-neutral-200 dark:border-zinc-700 text-neutral-700 dark:text-neutral-200"
+                      }`}
+                    >
+                      <Flame className={`w-5 h-5 shrink-0 ${focusMode ? "text-white fill-white" : "text-neutral-500"}`} />
+                      <span className="flex-1 text-left">{focusMode ? "CONCENTRATION ACTIVE" : "ACTIVER LE MODE FOCUS"}</span>
+                    </button>
+
+                    {/* Categories & Sectors */}
+                    <div className="space-y-2 pt-2">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-neutral-400 dark:text-neutral-500 px-2">
+                        Secteurs de Vie
+                      </div>
+                      {visibleCategories.map(cat => {
+                        const isExpanded = !!expandedCategories[cat.id];
+                        const CatIcon = cat.icon;
+                        const isCatActive = activeCategoryObj?.id === cat.id;
+
+                        return (
+                          <div key={cat.id} className="space-y-1">
+                            <button
+                              onClick={() => handleCategoryClick(cat.id)}
+                              className={`w-full min-h-[48px] flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold uppercase tracking-wider text-left transition-all cursor-pointer ${
+                                isCatActive
+                                  ? "bg-neutral-900 dark:bg-zinc-800 text-white shadow-xs"
+                                  : "bg-neutral-50 dark:bg-zinc-800/50 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <CatIcon className="w-4 h-4 shrink-0" />
+                                <span>{cat.label}</span>
+                              </div>
+                              {isExpanded ? <ChevronDown className="w-4 h-4 opacity-80" /> : <ChevronRight className="w-4 h-4 opacity-80" />}
+                            </button>
+
+                            {isExpanded && (
+                              <div className="space-y-1 pl-3 border-l-2 border-neutral-200 dark:border-zinc-700 ml-5 my-1">
+                                {cat.items.map(sub => {
+                                  const SubIcon = sub.icon;
+                                  const isSubActive = activeMenu === sub.id;
+
+                                  return (
+                                    <button
+                                      key={sub.id}
+                                      onClick={() => {
+                                        setIsMobileSheetOpen(false);
+                                        handleMenuClick(sub.id);
+                                      }}
+                                      className={`w-full min-h-[48px] flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all text-left cursor-pointer ${
+                                        isSubActive
+                                          ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-extrabold"
+                                          : "text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-zinc-800"
+                                      }`}
+                                    >
+                                      <SubIcon className="w-4 h-4 text-neutral-400 shrink-0" />
+                                      <span className="truncate flex-1">{sub.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </>
         )}
       </header>
 
