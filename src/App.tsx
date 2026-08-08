@@ -3991,7 +3991,10 @@ export default function App() {
     <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] flex flex-col font-sans antialiased overflow-x-hidden w-full max-w-full">
       
       {/* UNIFIED STICKY TOP NAVIGATION BAR */}
-      <header className="sticky top-0 z-50 w-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-neutral-200/80 dark:border-zinc-800 shadow-xs">
+      <header 
+        className="sticky top-0 z-50 w-full bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border-b border-neutral-200/80 dark:border-zinc-800 shadow-xs"
+        style={{ paddingTop: "env(safe-area-inset-top, 20px)" }}
+      >
         <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 xl:gap-4">
           
           {/* Logo & Brand (Left) */}
@@ -4307,7 +4310,13 @@ export default function App() {
 
         {/* MOBILE DROPDOWN DRAWER OVERLAY */}
         {sidebarOpen && (
-          <div className="xl:hidden fixed inset-x-0 top-16 bottom-0 z-45 bg-white border-t border-neutral-200 overflow-y-auto animate-in slide-in-from-top duration-300">
+          <div 
+            className="xl:hidden fixed inset-x-0 bottom-0 z-45 bg-white dark:bg-zinc-900 border-t border-neutral-200 dark:border-zinc-800 overflow-y-auto animate-in slide-in-from-top duration-300"
+            style={{ 
+              top: "calc(4rem + env(safe-area-inset-top, 20px))",
+              paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))"
+            }}
+          >
             <div className="p-6 space-y-6">
               
               {/* Quick Mobile Indicators */}
@@ -5884,7 +5893,8 @@ export default function App() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
-            className="fixed bottom-6 right-6 z-[200] max-w-sm bg-neutral-900 text-white border border-neutral-800 shadow-2xl rounded-2xl overflow-hidden p-4 flex items-center gap-3.5"
+            className="fixed right-6 z-[200] max-w-sm bg-neutral-900 text-white border border-neutral-800 shadow-2xl rounded-2xl overflow-hidden p-4 flex items-center gap-3.5"
+            style={{ bottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
           >
             <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 shrink-0">
               <ClipboardCheck className="w-5 h-5" />

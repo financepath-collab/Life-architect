@@ -7,7 +7,7 @@
   --font-mono: "JetBrains Mono", monospace;
 }
 
-/* Base Root Variables */
+/* Base Root Variables & iOS Safe Area Defaults */
 :root {
   --bg-app: #f8fafc;
   --text-main: #0f172a;
@@ -16,6 +16,8 @@
   --accent-primary: #4f46e5;
   --accent-hover: #4338ca;
   --accent-light: #e0e7ff;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* --- THEME PRESETS IN LIGHT MODE --- */
