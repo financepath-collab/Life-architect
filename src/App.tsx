@@ -178,7 +178,8 @@ import {
   CloudOff,
   AlertTriangle,
   Database,
-  Palette
+  Palette,
+  MoreVertical
 } from "lucide-react";
 
 function Logo({ className = "w-8 h-8 text-indigo-500" }: { className?: string }) {
@@ -213,6 +214,7 @@ export default function App() {
     return (localStorage.getItem("la_theme_preset") as ThemePresetId) || "indigo";
   });
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [mobileKebabOpen, setMobileKebabOpen] = useState(false);
   const [autoDarkTheme, setAutoDarkTheme] = useState<boolean>(() => {
     return localStorage.getItem("la_auto_dark_theme") === "true";
   });
@@ -4122,23 +4124,23 @@ export default function App() {
           </nav>
 
           {/* Quick Metrics & Actions (Right) */}
-          <div className="flex items-center gap-1 xl:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 xl:gap-2.5 shrink-0">
             
             {/* Discipline Streak Count */}
             <div 
-              className="hidden xl:flex items-center gap-1 bg-neutral-100 border border-neutral-200 px-2 py-1 rounded-lg text-[9.5px] 2xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
+              className="hidden xl:flex items-center gap-1 bg-neutral-100 dark:bg-zinc-800 border border-neutral-200 dark:border-zinc-700 px-2 py-1 rounded-lg text-[9.5px] 2xl:text-[11px] font-bold text-neutral-800 dark:text-neutral-200 shadow-3xs"
               title="Votre série de discipline quotidienne"
             >
-              <Flame className="w-3.5 h-3.5 text-neutral-800 fill-neutral-400 shrink-0" />
+              <Flame className="w-3.5 h-3.5 text-neutral-800 dark:text-neutral-200 fill-neutral-400 shrink-0" />
               <span className="font-mono whitespace-nowrap">{streakCount}j</span>
             </div>
 
             {/* Total Patrimoine Estimate */}
             <div 
-              className="hidden xl:flex items-center gap-1 bg-neutral-50 border border-neutral-200/80 px-2 py-1 rounded-lg text-[9.5px] 2xl:text-[11px] font-bold text-neutral-800 shadow-3xs"
+              className="hidden xl:flex items-center gap-1 bg-neutral-50 dark:bg-zinc-800/80 border border-neutral-200/80 dark:border-zinc-700 px-2 py-1 rounded-lg text-[9.5px] 2xl:text-[11px] font-bold text-neutral-800 dark:text-neutral-200 shadow-3xs"
               title={focusMode ? "Patrimoine masqué en mode Concentration" : "Estimation totale du Patrimoine (Comptes + Actions)"}
             >
-              <Coins className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
+              <Coins className="w-3.5 h-3.5 text-neutral-500 dark:text-neutral-400 shrink-0" />
               {focusMode ? (
                 <span className="font-mono text-[9px] tracking-widest text-neutral-400 select-none">•••••• MAD</span>
               ) : (
@@ -4146,38 +4148,18 @@ export default function App() {
               )}
             </div>
 
-            {/* Focus Mode Toggle (Main Menu) */}
+            {/* Focus Mode Toggle */}
             <button
               onClick={handleToggleFocusMode}
-              className={`text-[9.5px] 2xl:text-[11px] px-2 xl:px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1.5 border ${
+              className={`text-[9.5px] 2xl:text-[11px] p-1.5 sm:px-2 xl:px-2.5 sm:py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1 border ${
                 focusMode
                   ? "bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-sm animate-pulse"
-                  : "bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+                  : "bg-white dark:bg-zinc-800 border-neutral-200 dark:border-zinc-700 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-zinc-700"
               }`}
-              title="Activer/Désactiver le mode concentration pour masquer les flux financiers et écrans de divertissement"
+              title="Activer/Désactiver le mode concentration"
             >
-              <Flame className={`w-3.5 h-3.5 shrink-0 ${focusMode ? "text-white fill-white" : "text-neutral-500"}`} />
-              <span>{focusMode ? "Focus Actif" : "Mode Focus"}</span>
-            </button>
-
-            {/* Daily Reset Routine Button */}
-            <button
-              onClick={resetDailyRoutines}
-              className="text-[9.5px] 2xl:text-[11px] bg-neutral-900 hover:bg-neutral-800 text-white px-2 xl:px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1"
-              title="Réinitialiser les routines quotidiennes pour un nouveau jour"
-            >
-              <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden min-[1650px]:inline">Nouveau Jour</span>
-            </button>
-
-            {/* Manual Save Button */}
-            <button
-              onClick={forceManualBackup}
-              className="text-[9.5px] 2xl:text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white px-2 xl:px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap flex items-center gap-1"
-              title="Forcer la sauvegarde manuelle et la synchronisation locale de toutes les données"
-            >
-              <Save className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden min-[1650px]:inline">Sauvegarder</span>
+              <Flame className={`w-3.5 h-3.5 shrink-0 ${focusMode ? "text-white fill-white" : "text-neutral-500 dark:text-neutral-400"}`} />
+              <span className="hidden min-[380px]:inline">{focusMode ? "Focus Actif" : "Focus"}</span>
             </button>
 
             {/* Google Drive Cloud Sync Status Indicator */}
@@ -4189,14 +4171,14 @@ export default function App() {
                   handleBackupToDrive(false);
                 }
               }}
-              className={`p-1.5 px-2 xl:px-2.5 rounded-lg border text-[9.5px] 2xl:text-[11px] font-bold transition-all cursor-pointer select-none flex items-center gap-1.5 shrink-0 ${
+              className={`p-1.5 sm:px-2 xl:px-2.5 rounded-lg border text-[9.5px] 2xl:text-[11px] font-bold transition-all cursor-pointer select-none flex items-center gap-1 shrink-0 ${
                 driveSyncState === "syncing" || isDriveLoading
                   ? "bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300"
                   : driveSyncState === "error"
                   ? "bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 animate-pulse"
                   : driveAccessToken
                   ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300"
-                  : "bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border-neutral-200 dark:border-zinc-700 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400"
+                  : "bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border-neutral-200 dark:border-zinc-700 text-neutral-500 dark:text-neutral-400"
               }`}
               title={
                 driveSyncState === "syncing" || isDriveLoading
@@ -4237,10 +4219,30 @@ export default function App() {
               )}
             </button>
 
-            {/* System Settings Button */}
+            {/* Daily Reset Routine Button (Desktop only: hidden sm:flex) */}
+            <button
+              onClick={resetDailyRoutines}
+              className="hidden sm:flex text-[9.5px] 2xl:text-[11px] bg-neutral-900 hover:bg-neutral-800 text-white px-2 xl:px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap items-center gap-1"
+              title="Réinitialiser les routines quotidiennes pour un nouveau jour"
+            >
+              <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden min-[1650px]:inline">Nouveau Jour</span>
+            </button>
+
+            {/* Manual Save Button (Desktop only: hidden sm:flex) */}
+            <button
+              onClick={forceManualBackup}
+              className="hidden sm:flex text-[9.5px] 2xl:text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white px-2 xl:px-2.5 py-1.5 rounded-lg font-bold transition-all shadow-2xs cursor-pointer select-none whitespace-nowrap items-center gap-1"
+              title="Forcer la sauvegarde manuelle et la synchronisation locale"
+            >
+              <Save className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden min-[1650px]:inline">Sauvegarder</span>
+            </button>
+
+            {/* System Settings Button (Desktop only: hidden sm:flex) */}
             <button
               onClick={() => setSettingsModalOpen(true)}
-              className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0 relative"
+              className="hidden sm:flex p-1.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 rounded-lg border border-neutral-200 dark:border-zinc-700 transition-all cursor-pointer shrink-0 relative"
               title="Paramètres de synchronisation et du système"
               aria-label="Ouvrir les paramètres de synchronisation et du système"
             >
@@ -4250,19 +4252,18 @@ export default function App() {
               )}
             </button>
 
-
-            {/* Theme Selector Palette Button */}
+            {/* Theme Selector Palette Button (Desktop only: hidden sm:flex) */}
             <button
               onClick={() => setIsThemeModalOpen(true)}
-              className="p-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-600 dark:text-indigo-400 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-all cursor-pointer shrink-0 flex items-center gap-1.5 px-2.5"
-              title="Changer la palette de couleurs du site (Émeraude, Indigo, Ambre, Violet, Corail...)"
+              className="hidden sm:flex p-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 text-indigo-600 dark:text-indigo-400 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-all cursor-pointer shrink-0 items-center gap-1.5 px-2.5"
+              title="Changer la palette de couleurs du site"
               aria-label="Ouvrir le sélecteur de thème et palette de couleurs"
             >
               <Palette className="w-3.5 h-3.5" />
               <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wider">Thème</span>
             </button>
 
-            {/* Theme Toggle Button */}
+            {/* Theme Toggle Button (Desktop only: hidden sm:flex) */}
             <button
               onClick={() => {
                 if (autoDarkTheme) {
@@ -4271,8 +4272,8 @@ export default function App() {
                 }
                 setIsDarkMode(!isDarkMode);
               }}
-              className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0"
-              title={isDarkMode ? "Passer au mode clair" : "Passer au mode sombre professionnel"}
+              className="hidden sm:flex p-1.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 rounded-lg border border-neutral-200 dark:border-zinc-700 transition-all cursor-pointer shrink-0"
+              title={isDarkMode ? "Passer au mode clair" : "Passer au mode sombre"}
               aria-label={isDarkMode ? "Passer au mode clair" : "Passer au mode sombre"}
             >
               {isDarkMode ? (
@@ -4282,27 +4283,152 @@ export default function App() {
               )}
             </button>
 
-            {/* Logout Button */}
+            {/* Logout Button (Desktop only: hidden sm:flex) */}
             <button
               onClick={() => {
                 setIsUnlocked(false);
                 localStorage.removeItem("la_is_unlocked");
                 sessionStorage.removeItem("la_is_unlocked");
               }}
-              className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-all cursor-pointer shrink-0"
+              className="hidden sm:flex p-1.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 rounded-lg border border-neutral-200 dark:border-zinc-700 transition-all cursor-pointer shrink-0"
               title="Se déconnecter de la session"
               aria-label="Verrouiller la session"
             >
               <Lock className="w-3.5 h-3.5" />
             </button>
 
-            {/* Responsive Mobile Menu Button */}
+            {/* Mobile Kebab / More Actions Dropdown Button (Mobile only: sm:hidden) */}
+            <div className="relative sm:hidden">
+              <button
+                onClick={() => setMobileKebabOpen(!mobileKebabOpen)}
+                className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 flex items-center justify-center ${
+                  mobileKebabOpen
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                    : "bg-neutral-100 dark:bg-zinc-800 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-zinc-700 hover:bg-neutral-200 dark:hover:bg-zinc-700"
+                }`}
+                title="Plus d'options système"
+                aria-label="Menu d'options secondaires"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {/* Mobile Kebab Popup Dropdown Card */}
+              {mobileKebabOpen && (
+                <>
+                  {/* Backdrop */}
+                  <div 
+                    className="fixed inset-0 z-50 bg-black/20 backdrop-blur-2xs"
+                    onClick={() => setMobileKebabOpen(false)}
+                  />
+                  
+                  <div className="absolute top-11 right-0 z-55 w-56 bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-800 rounded-2xl shadow-xl p-2 animate-in fade-in zoom-in-95 duration-150 space-y-0.5">
+                    <div className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 tracking-wider uppercase px-2.5 py-1.5 border-b border-neutral-100 dark:border-zinc-800/80 flex items-center justify-between">
+                      <span>Actions Système</span>
+                      <span className="text-[9px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-900/50">Réglages</span>
+                    </div>
+
+                    {/* System Settings */}
+                    <button
+                      onClick={() => {
+                        setMobileKebabOpen(false);
+                        setSettingsModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-left"
+                    >
+                      <Settings className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                      <span>Paramètres & Sync</span>
+                    </button>
+
+                    {/* Theme Selector Palette */}
+                    <button
+                      onClick={() => {
+                        setMobileKebabOpen(false);
+                        setIsThemeModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-left"
+                    >
+                      <Palette className="w-4 h-4 text-indigo-500" />
+                      <span>Palette Couleurs</span>
+                    </button>
+
+                    {/* Dark Mode Toggle */}
+                    <button
+                      onClick={() => {
+                        setMobileKebabOpen(false);
+                        if (autoDarkTheme) {
+                          setAutoDarkTheme(false);
+                          triggerToast("Mode automatique désactivé", "info");
+                        }
+                        setIsDarkMode(!isDarkMode);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-left"
+                    >
+                      {isDarkMode ? (
+                        <>
+                          <Sun className="w-4 h-4 text-amber-500 fill-amber-300" />
+                          <span>Mode Clair</span>
+                        </>
+                      ) : (
+                        <>
+                          <Moon className="w-4 h-4 text-neutral-600 fill-neutral-200" />
+                          <span>Mode Sombre</span>
+                        </>
+                      )}
+                    </button>
+
+                    <div className="my-1 border-t border-neutral-100 dark:border-zinc-800" />
+
+                    {/* Manual Save */}
+                    <button
+                      onClick={() => {
+                        setMobileKebabOpen(false);
+                        forceManualBackup();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors cursor-pointer text-left"
+                    >
+                      <Save className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span>Sauvegarder</span>
+                    </button>
+
+                    {/* New Day / Reset Routines */}
+                    <button
+                      onClick={() => {
+                        setMobileKebabOpen(false);
+                        resetDailyRoutines();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer text-left"
+                    >
+                      <RefreshCw className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                      <span>Réinitialiser Jour</span>
+                    </button>
+
+                    <div className="my-1 border-t border-neutral-100 dark:border-zinc-800" />
+
+                    {/* Logout / Lock Session */}
+                    <button
+                      onClick={() => {
+                        setMobileKebabOpen(false);
+                        setIsUnlocked(false);
+                        localStorage.removeItem("la_is_unlocked");
+                        sessionStorage.removeItem("la_is_unlocked");
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer text-left"
+                    >
+                      <Lock className="w-4 h-4 text-rose-500" />
+                      <span>Verrouiller Session</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Responsive Main Hamburger Menu Button (ALWAYS VISIBLE & AT FAR RIGHT ON < xl) */}
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="xl:hidden p-2 bg-neutral-50 hover:bg-neutral-100 rounded-xl border border-neutral-200 text-neutral-800 focus:outline-none cursor-pointer"
+              className="xl:hidden p-1.5 sm:p-2 bg-neutral-100 dark:bg-zinc-800 hover:bg-neutral-200 dark:hover:bg-zinc-700 text-neutral-700 dark:text-neutral-200 rounded-lg border border-neutral-200 dark:border-zinc-700 transition-all cursor-pointer shrink-0 ml-0.5"
               aria-label={sidebarOpen ? "Fermer le menu de navigation principal" : "Ouvrir le menu de navigation principal"}
             >
-              {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              {sidebarOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Menu className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
           </div>
 
