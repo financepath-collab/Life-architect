@@ -121,35 +121,7 @@ export default function AlertsBanner({
   // Compile alerts from states
   const alertsList: AlertItem[] = [];
 
-  // 1. Process active subscriptions
-  abonnements
-    .filter(sub => sub.status === "Actif")
-    .forEach(sub => {
-      const days = getDaysRemaining(sub.nextBillingDate);
-      let urgency: AlertItem["urgency"] = "info";
-      if (days < 0) urgency = "overdue";
-      else if (days <= 5) urgency = "urgent";
-      else if (days <= 15) urgency = "warning";
-
-      alertsList.push({
-        id: `sub_${sub.id}`,
-        title: sub.serviceName,
-        subtitle: `Facturation récurrente (${sub.billingPeriod === "Mensuel" ? "mensuelle" : "annuelle"})`,
-        type: "subscription",
-        statusText: days < 0 
-          ? `Échue depuis ${Math.abs(days)} jours` 
-          : days === 0 
-            ? "Aujourd'hui !" 
-            : `Dans ${days} jours`,
-        targetDate: sub.nextBillingDate,
-        daysRemaining: days,
-        urgency,
-        moduleId: "abonnements",
-        amountText: `${sub.costMonthly.toLocaleString("fr-FR")} MAD`
-      });
-    });
-
-  // 2. Process active project competencies (profilAmeliorations)
+  // 1. Process active project competencies (profilAmeliorations)
   profilAmeliorations
     .filter(p => p.status !== "Maîtrisé")
     .forEach(p => {
@@ -544,7 +516,7 @@ export default function AlertsBanner({
                 <div className="bg-neutral-50 border border-neutral-150 rounded-2xl p-4 flex items-center gap-3 text-xs text-neutral-500 shadow-3xs">
                   <Sparkles className="w-5 h-5 text-neutral-900 shrink-0" />
                   <p className="leading-relaxed">
-                    <span className="font-bold text-neutral-800">Conseil d'organisation</span> : Les abonnements SaaS impactent directement vos budgets. Gardez un œil sur les renouvellements pour éviter les prélèvements inutiles sur votre compte <span className="font-semibold text-neutral-800">CIH E-Commerce</span>.
+                    <span className="font-bold text-neutral-800">Conseil d'organisation</span> : Anticipez vos échéances clés et révisez régulièrement vos objectifs pour maintenir une gestion optimale.
                   </p>
                 </div>
               )}

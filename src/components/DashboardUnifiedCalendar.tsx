@@ -269,8 +269,8 @@ export default function DashboardUnifiedCalendar({
     const projPendingCount = folderObjs.filter(o => !o.completed).length + weeklyObjectives.filter(o => !o.completed).length;
     const projTotal = folderObjs.length + weeklyObjectives.length + actions30Jours.length;
 
-    // 4. FINANCE (Abonnements + Achats due)
-    const financeCount = abonnements.filter(a => a.status === "Actif").length + achatsMensuels.length;
+    // 4. FINANCE (Achats due)
+    const financeCount = achatsMensuels.length;
 
     const isPastDay = dateStr < todayStr;
     const hasOverdue = isPastDay && (
@@ -383,17 +383,6 @@ export default function DashboardUnifiedCalendar({
 
     // FINANCE
     const financeItems = [
-      ...abonnements.map(a => ({
-        id: a.id,
-        title: `Abonnement ${a.serviceName} (${a.costMonthly} MAD)`,
-        subtitle: `Facturation ${a.billingPeriod} • Échéance: ${a.nextBillingDate || "Mensuelle"}`,
-        completed: a.status === "Actif",
-        category: "FINANCE" as CalendarFilterCategory,
-        moduleKey: "abonnements",
-        typeLabel: "Abonnement",
-        rawType: "abonnement",
-        dueDate: a.nextBillingDate || selectedDateStr
-      })),
       ...achatsMensuels.map(a => ({
         id: a.id,
         title: `Achat prévisionnel: ${a.itemName} (${a.amount} MAD)`,
@@ -473,7 +462,7 @@ export default function DashboardUnifiedCalendar({
         onToggleAchatStatus(item.id);
         triggerToast(`Statut d'achat mis à jour !`, "success");
       } else {
-        triggerToast(`Consultez le module Finance pour modifier les abonnements récurrents`, "info");
+        triggerToast(`Consultez le module Finance pour modifier les échéances financières`, "info");
       }
     }
   };
@@ -652,7 +641,7 @@ export default function DashboardUnifiedCalendar({
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
               selectedCategories.has("FINANCE") ? "bg-amber-700/80 text-white" : "bg-neutral-100 text-neutral-500 dark:bg-zinc-800"
             }`}>
-              {abonnements.length + achatsMensuels.length}
+              {achatsMensuels.length}
             </span>
           </button>
 

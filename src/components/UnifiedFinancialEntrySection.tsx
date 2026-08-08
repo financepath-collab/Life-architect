@@ -800,7 +800,7 @@ export default function UnifiedFinancialEntrySection({
             Saisie Unifiée des Flux Financials
           </h2>
           <p className="text-xs text-neutral-300 leading-relaxed">
-            Saisissez ici l'ensemble de vos opérations (salaires, charges, abonnements, courses, épargne). Choisissez la <strong className="text-indigo-300">Catégorie Principale</strong> et la <strong className="text-emerald-300">Sous-catégorie Détaillée</strong> : le système dispatchera automatiquement vos données vers tous les sous-modules de l'application !
+            Saisissez ici l'ensemble de vos opérations (salaires, charges, courses, épargne). Choisissez la <strong className="text-indigo-300">Catégorie Principale</strong> et la <strong className="text-emerald-300">Sous-catégorie Détaillée</strong> : le système dispatchera automatiquement vos données vers tous les sous-modules de l'application !
           </p>
         </div>
 

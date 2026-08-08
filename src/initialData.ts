@@ -36,7 +36,7 @@ export const INITIAL_HABITS: DailyHabit[] = [
   { id: "h5", name: "Bilan comptable & financier mensuel", description: "Vérifier le solde des comptes, le budget et l'épargne", completed: false, category: "Finance", isImportant: true, dueTime: "", frequency: "Mensuel" },
   { id: "h6", name: "Routine de soins (Skin care)", description: "Nettoyage, hydratation et protection solaire", completed: false, category: "Health", isImportant: true, dueTime: "09:00", frequency: "Quotidien" },
   { id: "h7", name: "Grande session de ménage & tri", description: "Ménage approfondi et réorganisation de l'espace de vie", completed: false, category: "Personal", isImportant: false, dueTime: "", frequency: "Hebdomadaire" },
-  { id: "h8", name: "Révision des abonnements & charges", description: "Analyser les préélèvements et résilier les services inutiles", completed: false, category: "Finance", isImportant: false, dueTime: "", frequency: "Mensuel" },
+  { id: "h8", name: "Révision des charges fixes", description: "Analyser les dépenses récurrentes et optimiser le budget", completed: false, category: "Finance", isImportant: false, dueTime: "", frequency: "Mensuel" },
 ];
 
 export const INITIAL_WEEKLY_OBJECTIVES: WeeklyObjective[] = [

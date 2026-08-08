@@ -199,7 +199,7 @@ export default function QuickCaptureInbox({
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Un flash d'esprit ? Notez-le ici (ex: Payer 120 DH abonnement, Idée vidéo, Tâche pro...)"
+          placeholder="Un flash d'esprit ? Notez-le ici (ex: Facture 120 DH, Idée vidéo, Tâche pro...)"
           className="w-full bg-neutral-50 dark:bg-zinc-950 border border-neutral-200/80 dark:border-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-700/80 rounded-2xl px-4 py-3.5 pr-12 text-xs font-medium text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 focus:outline-none focus:border-neutral-900 dark:focus:border-neutral-400 transition-all font-sans"
         />
         <button

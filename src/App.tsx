@@ -2789,7 +2789,7 @@ export default function App() {
       label: "Finance",
       icon: Coins,
       items: [
-        { id: "saisie_unifiee", label: "Saisie Unifiée des Flux", icon: Layers, desc: "Guichet unique de saisie avec catégories & sous-catégories détaillées, dispatch automatique vers salaires, abonnements, charges et comptes." },
+        { id: "saisie_unifiee", label: "Saisie Unifiée des Flux", icon: Layers, desc: "Guichet unique de saisie avec catégories & sous-catégories détaillées, dispatch automatique vers salaires, charges et comptes." },
         { id: "finance_dash", label: "Dashboard Finance", icon: LayoutDashboard, desc: "Indicateurs financiers clés, suivi des flux et synthèses." },
         { id: "comptes", label: "Comptes Bancaires & Trésorerie", icon: Landmark, desc: "Gestion et suivi des soldes réels de vos comptes pro, perso et liquidités." },
         { id: "epargnes", label: "Objectifs Épargne & Wishlist", icon: PiggyBank, desc: "Progression vers vos grands projets de vie, rêves, envies d'achats et objectifs d'épargne." },
@@ -3489,9 +3489,9 @@ export default function App() {
 
     switch (catId) {
       case "finance":
-        if (["achats", "abonnements", "wishlist", "achats_couteux"].includes(activeMenu)) {
+        if (["achats", "wishlist", "achats_couteux"].includes(activeMenu)) {
           return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in duration-300">
               <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
                 <div className="space-y-0.5">
                   <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Achats Mensuels</span>
@@ -3501,22 +3501,15 @@ export default function App() {
               </div>
               <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Abonnements Actifs</span>
-                  <span className="text-base font-extrabold font-mono text-neutral-900 block">{abonnements.filter(a => a.status === "Actif").length} Services</span>
-                </div>
-                <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Bell className="w-4 h-4" /></div>
-              </div>
-              <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Frais Récurrents</span>
-                  <span className="text-base font-extrabold font-mono text-neutral-800 block">-{totalMonthlyAbonnements.toLocaleString("fr-FR")} MAD / m</span>
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Achats à Traiter</span>
+                  <span className="text-base font-extrabold font-mono text-neutral-800 block">{achatsMensuels.filter(a => a.status === "À acheter").length} Reste à acheter</span>
                 </div>
                 <div className="p-2 bg-neutral-100 rounded-lg text-neutral-700 border border-neutral-200"><TrendingDown className="w-4 h-4" /></div>
               </div>
               <div className="bg-white border border-neutral-200/80 rounded-2xl p-4 shadow-3xs flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Frais Annuels</span>
-                  <span className="text-base font-extrabold font-mono text-neutral-900 block">{(totalMonthlyAbonnements * 12).toLocaleString("fr-FR")} MAD / an</span>
+                  <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block">Commandes Effectuées</span>
+                  <span className="text-base font-extrabold font-mono text-neutral-900 block">{achatsMensuels.filter(a => a.status === "Acheté").length} Validées</span>
                 </div>
                 <div className="p-2 bg-neutral-50 rounded-lg text-neutral-900 border border-neutral-200"><Coins className="w-4 h-4" /></div>
               </div>
@@ -4969,46 +4962,7 @@ export default function App() {
                                   }
                                 });
 
-                                // 3. Imminent Subscriptions
-                                const today = new Date();
-                                abonnements.forEach(ab => {
-                                  const alertId = `sub_${ab.id}`;
-                                  if (snoozedAlerts[alertId] && snoozedAlerts[alertId] > nowMs) return;
 
-                                  if (ab.status === "Actif" && ab.nextBillingDate) {
-                                    const bDate = new Date(ab.nextBillingDate);
-                                    const diffDays = Math.ceil((bDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
-                                    if (diffDays >= 0 && diffDays <= 7) {
-                                      alerts.push(
-                                        <div 
-                                          key={alertId}
-                                          onClick={() => handleNavigateToModule("abonnements")}
-                                          className="group relative p-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl flex items-center justify-between gap-2.5 cursor-pointer transition-all"
-                                        >
-                                          <div className="flex gap-2.5">
-                                            <Bell className="w-4 h-4 text-neutral-600 shrink-0 mt-0.5" />
-                                            <div className="space-y-0.5">
-                                              <span className="text-[10px] font-black text-neutral-500 uppercase block tracking-wider font-mono">Facture Imminente</span>
-                                              <p className="text-xs font-bold text-neutral-850 leading-snug">
-                                                {ab.serviceName} prélevé de {ab.costMonthly} MAD dans {diffDays} jours.
-                                              </p>
-                                            </div>
-                                          </div>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleSnoozeAlert(alertId);
-                                            }}
-                                            title="Snoozer pendant 24h"
-                                            className="p-1 rounded-lg bg-white border border-neutral-200 text-neutral-400 hover:text-indigo-600 hover:border-indigo-250 transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center shrink-0 animate-in fade-in"
-                                          >
-                                            <Clock className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-                                      );
-                                    }
-                                  }
-                                });
 
                                 if (alerts.length === 0) {
                                   return (
@@ -5194,17 +5148,7 @@ export default function App() {
 
                 {/* Interactive Content Card */}
                 <div className="bg-white border border-neutral-200 rounded-3xl p-6 shadow-xs min-h-[420px]">
-                  {activeMenu === "abonnements" ? (
-                    <SubscriptionManagerModule
-                      abonnements={abonnements}
-                      setAbonnements={setAbonnements}
-                      transactions={transactions}
-                      setTransactions={setTransactions}
-                      accounts={accounts}
-                      setAccounts={setAccounts}
-                      triggerToast={triggerToast}
-                    />
-                  ) : (activeMenu === "saisie_unifiee" || activeMenu === "transactions" || activeMenu === "salaires" || activeMenu === "achats") ? (
+                  {(activeMenu === "saisie_unifiee" || activeMenu === "transactions" || activeMenu === "salaires" || activeMenu === "achats") ? (
                     <UnifiedFinancialEntrySection
                       transactions={transactions}
                       setTransactions={setTransactions}

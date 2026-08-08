@@ -724,44 +724,6 @@ export function FinanceSectionDashboard({
                 </button>
               </div>
 
-              {/* Prochains Prélèvements SaaS */}
-              <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-                    <h3 className="text-xs font-black text-neutral-950 uppercase tracking-wider flex items-center gap-2">
-                      <Bell className="w-4 h-4 text-neutral-700" />
-                      <span>SaaS & Factures</span>
-                    </h3>
-                    <span className="text-[10px] bg-neutral-100 border border-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full font-mono">
-                      {abonnements.filter(a => a.status === "Actif").length} SaaS Actifs
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {abonnements.filter(a => a.status === "Actif").slice(0, 3).map((ab) => (
-                      <div key={ab.id} className="p-3 bg-neutral-50 border border-neutral-200/50 rounded-xl flex items-center justify-between">
-                        <div>
-                          <span className="text-xs font-bold text-neutral-900 block">{ab.serviceName}</span>
-                          <span className="text-[10px] text-neutral-400 font-medium">Facturation {ab.billingPeriod}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs font-bold font-mono text-neutral-850 block">{ab.costMonthly} MAD/m</span>
-                          <span className="text-[9px] text-neutral-500 font-bold">Le {new Date(ab.nextBillingDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => onNavigate("abonnements")}
-                  className="w-full mt-4 py-2.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>Voir tous les abonnements</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
               {/* Anticiper les Dépenses & Projections de fin de mois */}
               <div className="bg-white border border-neutral-200 rounded-2xl p-5 space-y-4 shadow-3xs flex flex-col justify-between">
                 <div className="space-y-3">
