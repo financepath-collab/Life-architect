@@ -58,6 +58,8 @@ interface SettingsModalProps {
   driveLastSynced: Date | null;
   driveAutoSync?: boolean;
   onToggleDriveAutoSync?: (enabled: boolean) => void;
+  driveSyncState?: "synced" | "syncing" | "error" | "offline";
+  driveSyncError?: string | null;
   autoDarkTheme: boolean;
   onToggleAutoDarkTheme: (enabled: boolean) => void;
   currentTheme?: ThemePresetId;
@@ -103,8 +105,8 @@ const TABS: TabItem[] = [
   },
   {
     id: "drive_backup",
-    label: "Google Drive",
-    description: "Sauvegardes & Auto-Import",
+    label: "Synchronisation Drive",
+    description: "Multi-appareils & Auto-Sync",
     icon: Database,
   },
   {
@@ -146,6 +148,8 @@ export default function SettingsModal({
   driveLastSynced,
   driveAutoSync = false,
   onToggleDriveAutoSync = () => {},
+  driveSyncState = "offline",
+  driveSyncError = null,
   autoDarkTheme,
   onToggleAutoDarkTheme,
   currentTheme = "indigo",
@@ -670,100 +674,122 @@ export default function SettingsModal({
                   </div>
                 )}
 
-                {/* TAB 3: GOOGLE DRIVE BACKUP */}
+                {/* TAB 3: GOOGLE DRIVE BACKUP & AUTO SYNC */}
                 {activeTab === "drive_backup" && (
                   <div className="space-y-5">
                     <div>
                       <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                         <Database className="w-4 h-4 text-amber-500" />
-                        Stockage & Sauvegarde Google Drive
+                        Synchronisation Google Drive
                       </h4>
                       <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                        Importation automatique et sauvegardes au format JSON dans votre propre espace Google Drive.
+                        Synchronisez vos données (habitudes, transactions, budgets, tâches) automatiquement entre tous vos appareils via votre espace Google Drive.
                       </p>
                     </div>
 
                     <div className="p-5 bg-neutral-50 dark:bg-zinc-800/40 border border-neutral-200/80 dark:border-zinc-700/60 rounded-2xl space-y-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="space-y-0.5">
-                          <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
-                            Connexion à Google Drive
-                          </span>
+                      {/* Connection Status Box */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-xl shadow-xs">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                              Statut de connexion :
+                            </span>
+                            {isDriveConnected && driveSyncState !== "error" ? (
+                              <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 rounded-full text-xs font-bold flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                Connecté à Google Drive
+                              </span>
+                            ) : driveSyncState === "error" ? (
+                              <span className="px-2.5 py-0.5 bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 rounded-full text-xs font-bold flex items-center gap-1.5 animate-pulse">
+                                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                                Session expirée ou erreur
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-0.5 bg-neutral-200 dark:bg-zinc-700 text-neutral-700 dark:text-neutral-300 rounded-full text-xs font-bold">
+                                Non connecté
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                            Crée un dossier de sauvegarde privé dans votre Drive.
+                            {isDriveConnected 
+                              ? "Espace de sauvegarde privé configuré dans votre Google Drive." 
+                              : "Connectez votre compte Google pour autoriser la synchronisation automatique."}
                           </p>
                         </div>
 
-                        {isDriveConnected ? (
+                        {isDriveConnected && driveSyncState !== "error" ? (
                           <button
                             onClick={onDisconnectDrive}
-                            className="px-3.5 py-1.5 bg-neutral-200 hover:bg-neutral-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-neutral-700 dark:text-neutral-200 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0"
+                            className="px-3.5 py-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-neutral-700 dark:text-neutral-200 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 border border-neutral-200 dark:border-zinc-700"
                           >
-                            Déconnecter Drive
+                            Se déconnecter
                           </button>
                         ) : (
                           <button
                             disabled={isDriveLoading}
                             onClick={onConnectDrive}
-                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 shadow-xs flex items-center gap-1.5"
+                            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 shadow-xs flex items-center gap-2"
                           >
-                            <HardDrive className="w-3.5 h-3.5" />
-                            Connecter Drive
+                            <HardDrive className="w-4 h-4" />
+                            {driveSyncState === "error" ? "Se reconnecter à Google Drive" : "Se connecter à Google Drive"}
                           </button>
                         )}
                       </div>
 
-                      {/* Auto Import Banner */}
-                      <div className="p-3 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-xl flex items-center justify-between text-xs shadow-xs">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                          <div>
-                            <p className="font-bold text-neutral-800 dark:text-neutral-200">
-                              Auto-Import au Lancement
-                            </p>
-                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                              Restaure automatiquement la version la plus récente au démarrage.
-                            </p>
-                          </div>
+                      {/* Expired Token Error Alert */}
+                      {driveSyncState === "error" && (
+                        <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-xl text-xs text-rose-800 dark:text-rose-200 space-y-1">
+                          <p className="font-bold flex items-center gap-1.5">
+                            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                            Erreur de synchronisation Google Drive
+                          </p>
+                          <p className="text-[11px] text-rose-700 dark:text-rose-300">
+                            {driveSyncError || "Le jeton d'accès a expiré ou est invalide. Veuillez cliquer sur 'Se reconnecter à Google Drive' ci-dessus."}
+                          </p>
                         </div>
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-900/50 shrink-0">
-                          ACTIF
-                        </span>
+                      )}
+
+                      {/* Last Successful Sync Indicator Box */}
+                      <div className="p-4 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-xl space-y-2 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
+                            <RefreshCw className={`w-3.5 h-3.5 text-indigo-500 ${isDriveLoading ? "animate-spin" : ""}`} />
+                            Dernière synchronisation réussie
+                          </span>
+                          <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2.5 py-1 rounded-md border border-indigo-200 dark:border-indigo-900/50">
+                            {driveLastSynced 
+                              ? driveLastSynced.toLocaleString([], { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                              : "Aucune synchronisation récente"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[11px] text-neutral-500 dark:text-neutral-400 pt-1 border-t border-neutral-100 dark:border-zinc-800">
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                          <span>
+                            Synchronisation automatique active : chaque modification importante est sauvegardée automatiquement et fusionnée en tâche de fond.
+                          </span>
+                        </div>
                       </div>
 
+                      {/* Manual Trigger Buttons */}
                       {isDriveConnected && (
-                        <div className="p-4 bg-white dark:bg-zinc-900 border border-neutral-200/80 dark:border-zinc-800 rounded-xl space-y-3 shadow-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                              Sauvegarde auto régulière (Intervalle 15s)
-                            </span>
-                            <button
-                              onClick={() => onToggleDriveAutoSync(!driveAutoSync)}
-                              className={`w-11 h-6 rounded-full p-1 transition-colors duration-200 cursor-pointer ${
-                                driveAutoSync ? "bg-amber-500" : "bg-neutral-300 dark:bg-zinc-700"
-                              }`}
-                            >
-                              <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${driveAutoSync ? "translate-x-5" : "translate-x-0"}`} />
-                            </button>
-                          </div>
-
-                          <div className="flex gap-2.5 pt-2 border-t border-neutral-100 dark:border-zinc-800">
-                            <button
-                              disabled={isDriveLoading}
-                              onClick={onBackupToDrive}
-                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
-                            >
-                              <RefreshCw className={`w-3.5 h-3.5 ${isDriveLoading ? "animate-spin" : ""}`} />
-                              Sauvegarder dans Drive
-                            </button>
-                            <button
-                              disabled={isDriveLoading}
-                              onClick={onRestoreFromDrive}
-                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-200/80 dark:border-amber-900/50 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
-                            >
-                              Importer de Drive
-                            </button>
-                          </div>
+                        <div className="flex gap-2.5 pt-1">
+                          <button
+                            disabled={isDriveLoading}
+                            onClick={onBackupToDrive}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${isDriveLoading ? "animate-spin" : ""}`} />
+                            Synchroniser maintenant (Push + Merge)
+                          </button>
+                          <button
+                            disabled={isDriveLoading}
+                            onClick={onRestoreFromDrive}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-200 border border-amber-200/80 dark:border-amber-900/50 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                          >
+                            Importer de Drive
+                          </button>
                         </div>
                       )}
                     </div>

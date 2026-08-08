@@ -102,7 +102,7 @@ self.onmessage = async (e: MessageEvent) => {
       if (driveTimeoutId) clearTimeout(driveTimeoutId);
       driveTimeoutId = setTimeout(() => {
         executeBackup("drive", true);
-      }, 15000); // 15 seconds debounce
+      }, 3000); // 3 seconds debounce for responsive background auto-sync
     }
   } else if (type === "FORCE_BACKUP") {
     const { target = "drive" } = data || {};

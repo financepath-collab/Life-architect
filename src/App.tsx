@@ -239,8 +239,14 @@ export default function App() {
     return saved ? new Date(saved) : null;
   });
   const [driveAutoSync, setDriveAutoSync] = useState<boolean>(() => {
-    return localStorage.getItem("la_drive_auto_sync") === "true";
+    const stored = localStorage.getItem("la_drive_auto_sync");
+    return stored !== null ? stored === "true" : true; // Default to true for seamless multi-device sync
   });
+  const [driveSyncState, setDriveSyncState] = useState<"synced" | "syncing" | "error" | "offline">(() => {
+    const token = getDriveAccessToken();
+    return token ? "synced" : "offline";
+  });
+  const [driveSyncError, setDriveSyncError] = useState<string | null>(null);
 
   // Web Worker for non-blocking backup processes
   const workerRef = useRef<Worker | null>(null);
@@ -253,27 +259,42 @@ export default function App() {
     workerRef.current = worker;
 
     worker.onmessage = (e: MessageEvent) => {
-      const { type, target, timestamp, error, isSilent } = e.data;
+      const { type, target, timestamp, error, isSilent, mergedPayload, mergedModules } = e.data;
 
       if (type === "SYNC_START") {
-        if (!isSilent) {
-          if (target === "drive") setIsDriveLoading(true);
+        if (target === "drive") {
+          setDriveSyncState("syncing");
+          if (!isSilent) setIsDriveLoading(true);
         }
       } else if (type === "SYNC_SUCCESS") {
         if (target === "drive") {
           setIsDriveLoading(false);
+          setDriveSyncState("synced");
+          setDriveSyncError(null);
           const date = new Date(timestamp);
           setDriveLastSynced(date);
           localStorage.setItem("mp_drive_last_synced", date.toISOString());
+
+          // If remote Drive had newer data merged into payload, update React state!
+          if (mergedPayload && mergedModules && mergedModules.length > 0) {
+            loadStatePayload(mergedPayload);
+          }
+
           if (!isSilent) {
-            triggerToast("📁 Données sauvegardées avec succès sur votre Google Drive !", "success");
+            triggerToast("📁 Données synchronisées avec succès sur votre Google Drive !", "success");
           }
         }
       } else if (type === "SYNC_ERROR") {
         if (target === "drive") {
           setIsDriveLoading(false);
-          if (!isSilent) {
-            triggerToast(`❌ Échec de la sauvegarde Google Drive : ${error}`, "error");
+          setDriveSyncState("error");
+          const errMsg = error || "Erreur de synchronisation inconnue";
+          setDriveSyncError(errMsg);
+
+          if (errMsg.includes("401") || errMsg.includes("403") || errMsg.includes("expiré") || errMsg.includes("Jeton") || errMsg.includes("non autorisé")) {
+            triggerToast("⚠️ Votre session Google Drive a expiré. Veuillez vous reconnecter dans les Réglages.", "error");
+          } else if (!isSilent) {
+            triggerToast(`❌ Échec de la synchronisation Google Drive : ${errMsg}`, "error");
           }
         }
       }
@@ -2445,17 +2466,39 @@ export default function App() {
   // --- GOOGLE DRIVE SYNC ENGINE HANDLERS ---
   const handleConnectDrive = async () => {
     setIsDriveLoading(true);
+    setDriveSyncState("syncing");
     try {
       const result = await driveSignIn();
       if (result) {
         setDriveAccessTokenState(result.accessToken);
-        triggerToast("✅ Google Drive connecté avec succès !", "success");
+        setDriveAutoSync(true);
+        localStorage.setItem("la_drive_auto_sync", "true");
+        setDriveSyncState("synced");
+        setDriveSyncError(null);
+        triggerToast("✅ Google Drive connecté & Synchronisation automatique activée !", "success");
+
+        // Notify background worker and trigger immediate push + merge
+        if (workerRef.current) {
+          workerRef.current.postMessage({
+            type: "CONFIGURE",
+            data: {
+              driveToken: result.accessToken,
+              driveAutoSync: true,
+            },
+          });
+          workerRef.current.postMessage({
+            type: "FORCE_BACKUP",
+            data: { target: "drive", isSilent: true }
+          });
+        }
       }
     } catch (error: any) {
+      setDriveSyncState("error");
       if (error?.code === "auth/popup-closed-by-user" || error?.code === "auth/popup-blocked" || error?.code === "auth/cancelled-popup-request") {
         triggerToast("ℹ️ Connexion Google Drive annulée.", "info");
       } else {
         console.error("Failed to connect Drive:", error);
+        setDriveSyncError(error?.message || "Échec de la connexion à Google Drive.");
         triggerToast("❌ Échec de la connexion à Google Drive. Veuillez ouvrir l'application dans un nouvel onglet si vous êtes dans un iframe.", "error");
       }
     } finally {
@@ -2467,6 +2510,8 @@ export default function App() {
     logoutDrive();
     setDriveAccessTokenState(null);
     setDriveAutoSync(false);
+    setDriveSyncState("offline");
+    setDriveSyncError(null);
     localStorage.removeItem("la_drive_auto_sync");
     triggerToast("ℹ️ Google Drive déconnecté.", "info");
   };
@@ -2476,7 +2521,7 @@ export default function App() {
     localStorage.setItem("la_drive_auto_sync", enabled ? "true" : "false");
     triggerToast(
       enabled 
-        ? "🚀 Synchronisation automatique Google Drive activée (sauvegarde toutes les 15s après modifs) !" 
+        ? "🚀 Synchronisation automatique Google Drive activée !" 
         : "ℹ️ Synchronisation automatique Google Drive désactivée.", 
       "info"
     );
@@ -2494,7 +2539,7 @@ export default function App() {
     if (workerRef.current) {
       workerRef.current.postMessage({
         type: "FORCE_BACKUP",
-        data: { target: "drive" }
+        data: { target: "drive", isSilent }
       });
     }
   };
@@ -2507,21 +2552,33 @@ export default function App() {
     }
     
     const confirmRestore = window.confirm(
-      "Êtes-vous sûr de vouloir restaurer les données depuis Google Drive ? Vos données actuelles seront remplacées par la version de sauvegarde de votre Google Drive."
+      "Êtes-vous sûr de vouloir restaurer les données depuis Google Drive ? Vos données actuelles seront fusionnées avec la version de sauvegarde de votre Google Drive."
     );
     if (!confirmRestore) return;
 
     setIsDriveLoading(true);
+    setDriveSyncState("syncing");
     try {
       const payload = await loadFromDrive(token);
       if (payload) {
-        loadStatePayload(payload);
-        triggerToast("🔄 Données restaurées avec succès depuis Google Drive !", "success");
+        const localPayload = getCurrentStatePayload();
+        const { mergedPayload } = mergePayloads(localPayload, payload);
+        loadStatePayload(mergedPayload);
+        setDriveSyncState("synced");
+        setDriveSyncError(null);
+        const now = new Date();
+        setDriveLastSynced(now);
+        localStorage.setItem("mp_drive_last_synced", now.toISOString());
+        triggerToast("🔄 Données restaurées et fusionnées avec succès depuis Google Drive !", "success");
       } else {
         triggerToast("ℹ️ Aucun fichier de sauvegarde trouvé sur votre Google Drive.", "error");
+        setDriveSyncState("synced");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Restore from Google Drive failed:", error);
+      setDriveSyncState("error");
+      const errMsg = error?.message || String(error);
+      setDriveSyncError(errMsg);
       triggerToast("❌ Échec de la restauration depuis Google Drive.", "error");
     } finally {
       setIsDriveLoading(false);
@@ -2533,18 +2590,22 @@ export default function App() {
     const unsubscribe = initDriveAuth(
       (user, token) => {
         setDriveAccessTokenState(token);
+        if (token) {
+          setDriveSyncState("synced");
+        }
       },
       () => {
         setDriveAccessTokenState(null);
+        setDriveSyncState("offline");
       }
     );
     return () => unsubscribe();
   }, []);
 
-  // --- AUTOMATIC IMPORT ON SITE ACCESS & MIDNIGHT REFRESH ---
+  // --- AUTOMATIC IMPORT ON SITE ACCESS & BACKGROUND PERIODIC SYNC ---
   const autoImportRanRef = useRef(false);
 
-  // 1. Auto-import from Google Drive immediately upon accessing the app
+  // 1. Auto-import & Merge from Google Drive immediately upon accessing the app
   useEffect(() => {
     if (!isDbLoaded || !isUnlocked || autoImportRanRef.current) return;
     
@@ -2552,21 +2613,68 @@ export default function App() {
     if (token) {
       autoImportRanRef.current = true;
       setIsDriveLoading(true);
+      setDriveSyncState("syncing");
       loadFromDrive(token)
-        .then((payload) => {
-          if (payload) {
-            loadStatePayload(payload);
-            triggerToast("⚡ Importation & Synchronisation automatique Google Drive au lancement !", "success");
+        .then((remotePayload) => {
+          if (remotePayload) {
+            const localPayload = getCurrentStatePayload();
+            const { mergedPayload, mergedModules } = mergePayloads(localPayload, remotePayload);
+            loadStatePayload(mergedPayload);
+            setDriveSyncState("synced");
+            setDriveSyncError(null);
+            const now = new Date();
+            setDriveLastSynced(now);
+            localStorage.setItem("mp_drive_last_synced", now.toISOString());
+            if (mergedModules.length > 0) {
+              triggerToast(`⚡ Synchronisation Google Drive : ${mergedModules.length} module(s) à jour !`, "success");
+            }
+          } else {
+            setDriveSyncState("synced");
           }
         })
-        .catch((err) => {
-          console.warn("Auto-import from Google Drive on startup failed or skipped:", err);
+        .catch((err: any) => {
+          console.warn("Auto-import from Google Drive on startup failed:", err);
+          setDriveSyncState("error");
+          const errMsg = err?.message || String(err);
+          setDriveSyncError(errMsg);
+          if (errMsg.includes("401") || errMsg.includes("403") || errMsg.includes("expiré") || errMsg.includes("Jeton") || errMsg.includes("non autorisé")) {
+            triggerToast("⚠️ Session Google Drive expirée. Veuillez vous reconnecter dans les Réglages.", "error");
+          }
         })
         .finally(() => {
           setIsDriveLoading(false);
         });
     }
   }, [isDbLoaded, isUnlocked, driveAccessToken]);
+
+  // 2. Tab-Focus & 60-second Periodic Background Sync Check
+  useEffect(() => {
+    const token = driveAccessToken || getDriveAccessToken();
+    if (!driveAutoSync || !token) return;
+
+    const performBackgroundSyncCheck = () => {
+      if (workerRef.current && !isDriveLoading) {
+        workerRef.current.postMessage({
+          type: "FORCE_BACKUP",
+          data: { target: "drive", isSilent: true }
+        });
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        performBackgroundSyncCheck();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    const intervalId = setInterval(performBackgroundSyncCheck, 60000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearInterval(intervalId);
+    };
+  }, [driveAutoSync, driveAccessToken, isDriveLoading]);
 
   // 2. Midnight Refresh & Sync (runs every day after 00:00:00)
   useEffect(() => {
@@ -4069,6 +4177,63 @@ export default function App() {
               <span className="hidden min-[1650px]:inline">Sauvegarder</span>
             </button>
 
+            {/* Google Drive Cloud Sync Status Indicator */}
+            <button
+              onClick={() => {
+                if (!driveAccessToken || driveSyncState === "error") {
+                  setSettingsModalOpen(true);
+                } else {
+                  handleBackupToDrive(false);
+                }
+              }}
+              className={`p-1.5 px-2 xl:px-2.5 rounded-lg border text-[9.5px] 2xl:text-[11px] font-bold transition-all cursor-pointer select-none flex items-center gap-1.5 shrink-0 ${
+                driveSyncState === "syncing" || isDriveLoading
+                  ? "bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300"
+                  : driveSyncState === "error"
+                  ? "bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 animate-pulse"
+                  : driveAccessToken
+                  ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300"
+                  : "bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border-neutral-200 dark:border-zinc-700 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400"
+              }`}
+              title={
+                driveSyncState === "syncing" || isDriveLoading
+                  ? "Synchronisation Google Drive en cours..."
+                  : driveSyncState === "error"
+                  ? "Erreur de synchronisation Google Drive. Cliquez pour vous reconnecter."
+                  : driveAccessToken
+                  ? `Google Drive synchronisé (${driveLastSynced ? driveLastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "À jour"}). Cliquez pour forcer la synchronisation.`
+                  : "Google Drive non connecté. Cliquez pour ouvrir les réglages de synchronisation."
+              }
+              aria-label="Statut de synchronisation Google Drive"
+            >
+              {driveSyncState === "syncing" || isDriveLoading ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span className="hidden min-[1650px]:inline">Synchro...</span>
+                </>
+              ) : driveSyncState === "error" ? (
+                <>
+                  <CloudOff className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
+                  <span className="hidden min-[1650px]:inline">Erreur Drive</span>
+                </>
+              ) : driveAccessToken ? (
+                <>
+                  <Cloud className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 fill-emerald-500/20 shrink-0" />
+                  <span className="hidden min-[1650px]:inline font-mono">
+                    {driveLastSynced
+                      ? driveLastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : "Drive Synced"}
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                </>
+              ) : (
+                <>
+                  <Cloud className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                  <span className="hidden min-[1650px]:inline">Drive Off</span>
+                </>
+              )}
+            </button>
+
             {/* System Settings Button */}
             <button
               onClick={() => setSettingsModalOpen(true)}
@@ -5542,6 +5707,8 @@ export default function App() {
           driveLastSynced={driveLastSynced}
           driveAutoSync={driveAutoSync}
           onToggleDriveAutoSync={handleToggleDriveAutoSync}
+          driveSyncState={driveSyncState}
+          driveSyncError={driveSyncError}
           autoDarkTheme={autoDarkTheme}
           onToggleAutoDarkTheme={(enabled: boolean) => {
             setAutoDarkTheme(enabled);
