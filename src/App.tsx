@@ -2124,6 +2124,13 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
       if (user) {
+        // Keep session unlocked across mobile app exits unless explicitly locked
+        if (localStorage.getItem("la_is_unlocked") !== "false") {
+          setIsUnlocked(true);
+          localStorage.setItem("la_is_unlocked", "true");
+          sessionStorage.setItem("la_is_unlocked", "true");
+        }
+
         const syncPref = localStorage.getItem("la_cloud_sync_enabled");
         const shouldEnable = syncPref !== "false"; // Default to true if not explicitly turned off
         
@@ -3844,6 +3851,7 @@ export default function App() {
       if (result) {
         setDriveAccessTokenState(result.accessToken);
         setIsUnlocked(true);
+        localStorage.setItem("la_is_unlocked", "true");
         sessionStorage.setItem("la_is_unlocked", "true");
         triggerToast("✅ Connecté avec succès via Google & Google Drive !", "success");
       }
@@ -3914,6 +3922,7 @@ export default function App() {
                 type="button"
                 onClick={() => {
                   setIsUnlocked(true);
+                  localStorage.setItem("la_is_unlocked", "true");
                   sessionStorage.setItem("la_is_unlocked", "true");
                 }}
                 className="w-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 font-semibold text-xs py-2.5 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
@@ -4290,8 +4299,8 @@ export default function App() {
             <button
               onClick={() => {
                 setIsUnlocked(false);
-                localStorage.removeItem("la_is_unlocked");
-                sessionStorage.removeItem("la_is_unlocked");
+                localStorage.setItem("la_is_unlocked", "false");
+                sessionStorage.setItem("la_is_unlocked", "false");
               }}
               className="hidden sm:flex p-1.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 rounded-lg border border-neutral-200 dark:border-zinc-700 transition-all cursor-pointer shrink-0"
               title="Se déconnecter de la session"
@@ -4482,8 +4491,8 @@ export default function App() {
                       onClick={() => {
                         setIsMobileSheetOpen(false);
                         setIsUnlocked(false);
-                        localStorage.removeItem("la_is_unlocked");
-                        sessionStorage.removeItem("la_is_unlocked");
+                        localStorage.setItem("la_is_unlocked", "false");
+                        sessionStorage.setItem("la_is_unlocked", "false");
                       }}
                       className="w-full min-h-[48px] flex items-center gap-3.5 px-4 py-3 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 active:bg-rose-200 text-rose-700 dark:text-rose-300 text-sm font-semibold transition-colors text-left cursor-pointer select-none"
                     >
