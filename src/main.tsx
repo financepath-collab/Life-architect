@@ -32,6 +32,20 @@ if (typeof window !== 'undefined') {
       event.stopImmediatePropagation();
     }
   });
+
+  // Register PWA Service Worker for iOS / Android installability and offline caching
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((reg) => {
+          console.log('[PWA] Service Worker actif:', reg.scope);
+        })
+        .catch((err) => {
+          console.warn('[PWA] Échec de l\'enregistrement du Service Worker:', err);
+        });
+    });
+  }
 }
 
 createRoot(document.getElementById('root')!).render(
