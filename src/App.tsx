@@ -297,7 +297,9 @@ export default function App() {
           setDriveSyncError(errMsg);
 
           if (errMsg.includes("401") || errMsg.includes("403") || errMsg.includes("expiré") || errMsg.includes("Jeton") || errMsg.includes("non autorisé")) {
-            triggerToast("⚠️ Votre session Google Drive a expiré. Veuillez vous reconnecter dans les Réglages.", "error");
+            setDriveAccessTokenState(null);
+            logoutDrive();
+            triggerToast("⚠️ Votre session Google Drive a expiré (HTTP 401). Veuillez vous reconnecter dans les Réglages.", "error");
           } else if (!isSilent) {
             triggerToast(`❌ Échec de la synchronisation Google Drive : ${errMsg}`, "error");
           }
@@ -2650,7 +2652,9 @@ export default function App() {
           const errMsg = err?.message || String(err);
           setDriveSyncError(errMsg);
           if (errMsg.includes("401") || errMsg.includes("403") || errMsg.includes("expiré") || errMsg.includes("Jeton") || errMsg.includes("non autorisé")) {
-            triggerToast("⚠️ Session Google Drive expirée. Veuillez vous reconnecter dans les Réglages.", "error");
+            setDriveAccessTokenState(null);
+            logoutDrive();
+            triggerToast("⚠️ Session Google Drive expirée (HTTP 401). Veuillez vous reconnecter dans les Réglages.", "error");
           }
         })
         .finally(() => {

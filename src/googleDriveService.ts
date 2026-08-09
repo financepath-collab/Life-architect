@@ -77,12 +77,10 @@ export const findBackupFile = async (accessToken: string): Promise<string | null
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        console.warn(`Google Drive token invalid or expired (HTTP ${response.status})`);
-        return null;
+        throw new Error(`Jeton Google Drive expiré ou non autorisé (HTTP ${response.status}). Veuillez vous reconnecter.`);
       }
       const errDetail = response.statusText ? ` (${response.statusText})` : "";
-      console.warn(`Google Drive search response status: ${response.status}${errDetail}`);
-      return null;
+      throw new Error(`Recherche Google Drive échouée: HTTP ${response.status}${errDetail}`);
     }
 
     const data = await response.json();
@@ -91,7 +89,10 @@ export const findBackupFile = async (accessToken: string): Promise<string | null
       return files[0].id;
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message?.includes("401") || error?.message?.includes("403") || error?.message?.includes("expiré")) {
+      throw error;
+    }
     console.warn("Could not search Google Drive backup file:", error);
     return null;
   }
@@ -115,6 +116,9 @@ export const createBackupFile = async (accessToken: string, payload: any): Promi
     });
 
     if (!metaResponse.ok) {
+      if (metaResponse.status === 401 || metaResponse.status === 403) {
+        throw new Error(`Jeton Google Drive expiré ou non autorisé (HTTP ${metaResponse.status}). Veuillez vous reconnecter.`);
+      }
       const errDetail = metaResponse.statusText ? ` (${metaResponse.statusText})` : "";
       throw new Error(`Failed to create file metadata: HTTP ${metaResponse.status}${errDetail}`);
     }
@@ -145,6 +149,9 @@ export const updateBackupFileContent = async (accessToken: string, fileId: strin
     });
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`Jeton Google Drive expiré ou non autorisé (HTTP ${response.status}). Veuillez vous reconnecter.`);
+      }
       const errDetail = response.statusText ? ` (${response.statusText})` : "";
       throw new Error(`Failed to update file content: HTTP ${response.status}${errDetail}`);
     }
@@ -165,6 +172,9 @@ export const readBackupFileContent = async (accessToken: string, fileId: string)
     });
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`Jeton Google Drive expiré ou non autorisé (HTTP ${response.status}). Veuillez vous reconnecter.`);
+      }
       const errDetail = response.statusText ? ` (${response.statusText})` : "";
       throw new Error(`Failed to read file content: HTTP ${response.status}${errDetail}`);
     }
