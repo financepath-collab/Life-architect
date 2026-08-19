@@ -28,7 +28,8 @@ import {
   EditorialEvent,
   ProjectFolder,
   JournalEntry,
-  MediaProgressLog
+  MediaProgressLog,
+  PersonalGrowthItem
 } from "./types";
 
 
