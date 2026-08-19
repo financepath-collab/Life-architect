@@ -24,7 +24,8 @@ import {
   ScreenMediaItem,
   MonthlyGoal,
   EditorialEvent,
-  ProjectFolder
+  ProjectFolder,
+  PersonalGrowthItem
 } from "./types";
 
 
@@ -377,6 +378,56 @@ export const INITIAL_CHANNELS: ChannelInfo[] = [
       { id: "d6", title: "Mise à jour des supports du cours Modélisation", dueDate: "2026-08-10", status: "En cours" },
       { id: "d7", title: "Session Q&A en Direct avec les étudiants", dueDate: "2026-08-25", status: "À faire" }
     ]
+  },
+  {
+    id: "ch6",
+    name: "MA Student",
+    platform: "YouTube",
+    subscriberCount: 4200,
+    niche: "CV, orientation et outils pour étudiants marocains",
+    frequency: "1-2 vidéos / semaine",
+    email: "student@themacircle.ma",
+    ideas: [
+      { id: "id9", title: "Comment rédiger un CV qui passe l'ATS en 2026", description: "Template et erreurs fréquentes des étudiants marocains", status: "Idée", deadline: "2026-09-05" }
+    ],
+    usefulLinks: [],
+    deadlines: []
+  },
+  {
+    id: "ch7",
+    name: "Chno Banlik",
+    platform: "TikTok",
+    subscriberCount: 6100,
+    niche: "Économie et sujets sociaux en darija",
+    frequency: "3 vidéos / semaine",
+    email: "chnobanlik@themacircle.ma",
+    ideas: [],
+    usefulLinks: [],
+    deadlines: []
+  },
+  {
+    id: "ch8",
+    name: "Grotte",
+    platform: "YouTube",
+    subscriberCount: 900,
+    niche: "Bourse et finance personnelle pour le public francophone",
+    frequency: "1 vidéo / semaine",
+    email: "grotte@themacircle.ma",
+    ideas: [],
+    usefulLinks: [],
+    deadlines: []
+  },
+  {
+    id: "ch9",
+    name: "Rusty Wallet",
+    platform: "YouTube",
+    subscriberCount: 500,
+    niche: "Stock market and personal finance for English-speaking audience",
+    frequency: "1 video / week",
+    email: "rustywallet@themacircle.ma",
+    ideas: [],
+    usefulLinks: [],
+    deadlines: []
   }
 ];
 
@@ -762,3 +813,20 @@ export const INITIAL_PROJECT_FOLDERS: ProjectFolder[] = [
 
 
 
+
+export const INITIAL_PERSONAL_GROWTH: PersonalGrowthItem[] = [
+{ id: "pg1", domain: "Langues", title: "Espagnol - Niveau A1 vers A2", details: "20 min/jour sur Duolingo + 1 session hebdo avec un tuteur (italki). Objectif : tenir une conversation basique.", status: "En cours", targetDate: "2026-12-31", priority: "Haute" },
+{ id: "pg2", domain: "Langues", title: "Anglais professionnel - perfectionnement", details: "Vocabulaire finance/EPM avancé pour entretiens à l'international et pour la chaîne Rusty Wallet.", status: "En cours", targetDate: "2026-10-31", priority: "Moyenne" },
+{ id: "pg3", domain: "Voyages", title: "Voyage Thaïlande (Bangkok + îles)", details: "Prévoir budget, visa, saison sèche (nov-fév). Combiner avec repérage contenu pour les chaînes.", status: "Planifié", targetDate: "2027-01-15", priority: "Moyenne" },
+{ id: "pg4", domain: "Voyages", title: "Voyage Indonésie (Bali + Java)", details: "Budget estimé, digital nomad friendly, coworking pour continuer la création de contenu sur place.", status: "Planifié", targetDate: "2027-04-01", priority: "Moyenne" },
+{ id: "pg5", domain: "Style & Image", title: "Garde-robe professionnelle business casual élégant", details: "Investir dans 2-3 costumes/blazers polyvalents, chaussures en cuir de qualité, montre classique.", status: "À faire", targetDate: "2026-09-30", priority: "Moyenne" },
+{ id: "pg6", domain: "Style & Image", title: "Guide personnel de style", details: "Définir une identité vestimentaire cohérente avec la marque personnelle et le personal branding.", status: "À faire", priority: "Basse" },
+{ id: "pg7", domain: "Digital Detox", title: "Nettoyage complet du PC", details: "Trier fichiers, désinstaller logiciels inutiles, organiser dossiers projets, backup cloud.", status: "À faire", targetDate: "2026-08-31", priority: "Haute" },
+{ id: "pg8", domain: "Digital Detox", title: "Audit Instagram, TikTok, YouTube et Facebook perso", details: "Revoir abonnements, désactiver notifications non essentielles, nettoyer contenu ancien.", status: "À faire", targetDate: "2026-09-15", priority: "Moyenne" },
+{ id: "pg9", domain: "Portfolio Pro", title: "Portfolio Power BI", details: "3-4 dashboards démonstratifs (finance, RH, ventes) publiés sur LinkedIn/site perso.", status: "À faire", targetDate: "2026-11-30", priority: "Haute" },
+{ id: "pg10", domain: "Portfolio Pro", title: "Portfolio Anaplan (certifié)", details: "Étude de cas de modélisation EPM complète avec captures d'écran anonymisées.", status: "En cours", targetDate: "2026-10-31", priority: "Haute" },
+{ id: "pg11", domain: "Portfolio Pro", title: "Portfolio Pigment (certifié)", details: "Cas d'usage FP&A / planification budgétaire construit sur Pigment.", status: "En cours", targetDate: "2026-10-31", priority: "Haute" },
+{ id: "pg12", domain: "Portfolio Pro", title: "Portfolio Excel Modeling avancé", details: "Modèles financiers (LBO, valorisation, prévisionnel) démontrant la maîtrise Excel.", status: "À faire", targetDate: "2026-12-15", priority: "Moyenne" },
+{ id: "pg13", domain: "Santé Dentaire", title: "Suivi dentaire régulier", details: "Contrôle/détartrage semestriel, poursuite du protocole blancheur en complément de la routine skincare.", status: "Planifié", targetDate: "2026-09-01", priority: "Moyenne" },
+{ id: "pg14", domain: "Discipline", title: "0 fap - Streak de discipline mentale", details: "Suivi quotidien de la discipline personnelle, lié au Habit Tracker et au Discipline Heatmap.", status: "En cours", priority: "Haute" }
+];

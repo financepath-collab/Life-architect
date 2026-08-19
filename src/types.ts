@@ -564,6 +564,17 @@ export interface MobilityTargetMarket {
   difficulty: number;
 }
 
+export interface PersonalGrowthItem {
+id: string;
+domain: "Langues" | "Voyages" | "Style & Image" | "Digital Detox" | "Portfolio Pro" | "Santé Dentaire" | "Discipline" | string;
+title: string;
+details: string;
+status: "À faire" | "En cours" | "Atteint" | "Planifié";
+targetDate?: string;
+priority?: "Haute" | "Moyenne" | "Basse";
+link?: string;
+}
+
 export interface MediaProgressLog {
   id: string;
   date: string; // "YYYY-MM-DD"
